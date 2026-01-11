@@ -1,0 +1,269 @@
+/* ===== GLOBAL ===== */
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: system-ui, sans-serif;
+}
+
+/* ===== HERO ===== */
+.profile-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.profile-hero .title-wrap h1 {
+  font-size: 1.8rem;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.profile-hero .actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+/* ===== GRID ===== */
+.profile-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 1.25rem;
+}
+
+/* ===== CARD BASE ===== */
+.profile-card,
+.quick-stats,
+.security,
+.activity,
+.modal-content {
+  padding: 1.25rem;
+  background-color: var(--card-bg);
+  color: var(--text);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+/* ===== PROFILE SUMMARY ===== */
+.profile-card .actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+#avatarInput {
+  display: none;
+}
+
+.avatar-block {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-bottom: 0.9rem;
+}
+
+.avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #dbeafe, #bfdbfe);
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+}
+
+.identity .name {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.identity .subtle { color: var(--muted); }
+
+#profileStatus {
+  margin-top: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--muted);
+}
+
+/* Optional states (use via JS by toggling these classes) */
+#profileStatus.is-ok {
+  color: var(--text);
+}
+
+#profileStatus.is-error {
+  color: var(--text);
+}
+
+/* ===== META LIST ===== */
+.meta {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+
+.meta dt {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.meta dd {
+  font-weight: 600;
+  margin: 0;
+}
+
+/* ===== QUICK STATS ===== */
+.quick-stats h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.6rem;
+}
+
+.stats-list {
+  display: grid;
+  gap: 0.6rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.stats-list .stat-label {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.stats-list .stat-value {
+  font-weight: 700;
+}
+
+/* ===== EDIT FORM ===== */
+.edit-form { margin-top: 0.6rem; }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem 1rem;
+}
+
+.form-grid label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.form-grid .span-2 {
+  grid-column: 1 / -1;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+textarea {
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background-color: var(--card-bg);
+  color: var(--text);
+}
+
+input[type="text"]:focus-visible,
+input[type="email"]:focus-visible,
+input[type="tel"]:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+textarea { resize: vertical; }
+
+.form-actions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
+  margin-top: 0.9rem;
+}
+
+/* ===== SECURITY ===== */
+.security h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.6rem;
+}
+
+.security-rows {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.security-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background-color: var(--card-bg);
+  color: var(--text);
+}
+
+.sr-left .label { font-weight: 700; }
+.sr-left .subtle { color: var(--muted); }
+
+.sr-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* ===== MODAL ===== */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: var(--modal-backdrop);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal-content {
+  width: 100%;
+  max-width: 420px;
+  padding: 1.5rem;
+  background-color: var(--card-bg);
+  color: var(--text);
+}
+
+.modal-content form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+}
+
+/* ===== ACTIVITY ===== */
+.activity { grid-column: 1 / -1; }
+
+.activity h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.6rem;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 900px) {
+  .profile-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .profile-grid { grid-template-columns: 1fr; }
+  .form-grid { grid-template-columns: 1fr; }
+}

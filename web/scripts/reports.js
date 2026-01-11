@@ -1,0 +1,379 @@
+// scripts/reports.js
+import { api } from "./api.js";
+
+(() => {
+  const $ = (sel, root = document) => root.querySelector(sel);
+
+  const els = {
+    range: $("#reportsRange"),
+    refresh: $("#btnRefreshReports"),
+    status: $("#reportsStatus"),
+
+    totalExpenses: $("#total-expenses"),
+    totalIncome: $("#total-income"),
+    monthlyAverage: $("#monthly-average"),
+    topCategory: $("#top-category"),
+
+    pieExp: $("#pieChartExpenses"),
+    pieInc: $("#pieChartIncome"),
+    monthly: $("#monthlyChart"),
+
+    toggleExp: $("#toggle-expenses"),
+    toggleInc: $("#toggle-income"),
+  };
+
+  let cache = [];
+  let charts = { expPie: null, incPie: null, monthly: null };
+
+  const debounce = (fn, delay = 200) => {
+    let t;
+    return (...args) => {
+      clearTimeout(t);
+      t = setTimeout(() => fn(...args), delay);
+    };
+  };
+
+  // Parse ISO-ish dates safely. If we get a date-only string (YYYY-MM-DD),
+  // interpret it as local midnight to avoid timezone shifting.
+  const parseISODate = (iso) => {
+    if (!iso) return null;
+    if (typeof iso !== "string") return new Date(iso);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return new Date(`${iso}T00:00:00`);
+    return new Date(iso);
+  };
+
+  const showStatus = (msg, kind = "ok") => {
+    if (!els.status) return;
+    els.status.textContent = msg;
+    els.status.style.display = "block";
+    els.status.classList.toggle("is-ok", kind === "ok");
+    els.status.classList.toggle("is-error", kind === "error");
+  };
+
+  const clearStatusSoon = (ms = 2000) => {
+    if (!els.status) return;
+    window.setTimeout(() => {
+      els.status.style.display = "none";
+      els.status.textContent = "";
+      els.status.classList.remove("is-ok", "is-error");
+    }, ms);
+  };
+
+  // Display currency
+  const getDisplayCurrency = () =>
+    localStorage.getItem("settings_currency") ||
+    localStorage.getItem("auto_currency") ||
+    "USD";
+
+  // Minimal FX rates (same approach as records.js). Replace with live FX in production.
+  const FX_RATES = {
+    USD: { USD: 1, EUR: 0.92, GBP: 0.79, INR: 83.1, CAD: 1.37, AUD: 1.55, JPY: 148 },
+    EUR: { USD: 1.09, EUR: 1, GBP: 0.86, INR: 90.4, CAD: 1.49, AUD: 1.69, JPY: 161 },
+    GBP: { USD: 1.26, EUR: 1.16, GBP: 1, INR: 105.5, CAD: 1.73, AUD: 1.96, JPY: 187 },
+  };
+
+  const convertCurrency = (amount, fromCurrency, toCurrency) => {
+    if (!fromCurrency || !toCurrency || fromCurrency === toCurrency) return amount;
+    if (FX_RATES[fromCurrency] && FX_RATES[fromCurrency][toCurrency]) {
+      return amount * FX_RATES[fromCurrency][toCurrency];
+    }
+    return amount;
+  };
+
+  const fmtMoney = (value, originalCurrency = "USD") => {
+    const currency = getDisplayCurrency();
+    const converted = convertCurrency(Number(value) || 0, originalCurrency, currency);
+    return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(converted);
+  };
+
+  const theme = () => document.documentElement.getAttribute("data-theme") || "light";
+
+  const palette = () =>
+    theme() === "dark"
+      ? ["#60a5fa", "#38bdf8", "#818cf8", "#22d3ee", "#93c5fd", "#67e8f9", "#a5b4fc", "#fca5a5"]
+      : ["#0057b8", "#00a3e0", "#1e3a8a", "#0ea5e9", "#2563eb", "#0891b2", "#3b82f6", "#ef4444"];
+
+  const chartText = () => (theme() === "dark" ? "#e5e7eb" : "#111827");
+  const chartGrid = () => (theme() === "dark" ? "rgba(255,255,255,0.08)" : "rgba(17,24,39,0.10)");
+
+  const destroyCharts = () => {
+    Object.values(charts).forEach((c) => {
+      try {
+        c?.destroy?.();
+      } catch {}
+    });
+    charts = { expPie: null, incPie: null, monthly: null };
+  };
+
+  const withinRange = (iso, rangeVal) => {
+    if (!iso) return false;
+    if (rangeVal === "all") return true;
+    const days = Number(rangeVal);
+    if (!Number.isFinite(days) || days <= 0) return true;
+    const d = parseISODate(iso);
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    return d >= cutoff;
+  };
+
+  const normalize = (records) =>
+    (records || [])
+      .filter((r) => r && (r.type === "expense" || r.type === "income"))
+      .map((r) => ({
+        ...r,
+        amount: Number(r.amount) || 0,
+        currency: r.currency || "USD",
+        category: r.category || "Uncategorized",
+      }));
+
+  const groupByCategory = (records) => {
+    const m = new Map();
+    const displayCur = getDisplayCurrency();
+    records.forEach((r) => {
+      const k = r.category || "Uncategorized";
+      const prev = m.get(k) || 0;
+      const amt = convertCurrency(r.amount, r.currency, displayCur);
+      m.set(k, prev + amt);
+    });
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  };
+
+  const monthKey = (iso) => {
+    const d = parseISODate(iso);
+    if (!d || Number.isNaN(d.getTime())) return "";
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    return `${y}-${m}`;
+  };
+
+  const buildMonthlySeries = (records) => {
+    const displayCur = getDisplayCurrency();
+    const m = new Map();
+    records.forEach((r) => {
+      if (!r.date) return;
+      const key = monthKey(r.date);
+      if (!key) return;
+      const prev = m.get(key) || { income: 0, expense: 0 };
+      const amt = convertCurrency(r.amount, r.currency, displayCur);
+      if (r.type === "income") prev.income += amt;
+      else prev.expense += amt;
+      m.set(key, prev);
+    });
+
+    const keys = [...m.keys()].sort();
+    const labels = keys.map((k) => {
+      const [y, mm] = k.split("-");
+      const d = new Date(Number(y), Number(mm) - 1, 1);
+      return d.toLocaleDateString(undefined, { year: "numeric", month: "short" });
+    });
+
+    return {
+      labels,
+      income: keys.map((k) => m.get(k).income),
+      expense: keys.map((k) => m.get(k).expense),
+    };
+  };
+
+  const setText = (el, text) => {
+    if (!el) return;
+    el.textContent = text;
+  };
+
+  const computeAndRender = () => {
+    const rangeVal = els.range?.value || "all";
+    const records = normalize(cache).filter((r) => withinRange(r.date, rangeVal));
+
+    const expenses = records.filter((r) => r.type === "expense");
+    const income = records.filter((r) => r.type === "income");
+
+    const displayCur = getDisplayCurrency();
+    const totalExp = expenses.reduce(
+      (s, r) => s + convertCurrency(r.amount, r.currency, displayCur),
+      0
+    );
+    const totalInc = income.reduce(
+      (s, r) => s + convertCurrency(r.amount, r.currency, displayCur),
+      0
+    );
+
+    setText(els.totalExpenses, fmtMoney(totalExp, displayCur));
+    setText(els.totalIncome, fmtMoney(totalInc, displayCur));
+
+    const monthly = buildMonthlySeries(records);
+    const monthsCount = Math.max(1, monthly.labels.length);
+    const avgMonthlyExp = monthly.expense.reduce((a, b) => a + b, 0) / monthsCount;
+    setText(els.monthlyAverage, fmtMoney(avgMonthlyExp, displayCur));
+
+    const expCats = groupByCategory(expenses);
+    setText(els.topCategory, expCats[0]?.[0] || "—");
+
+    destroyCharts();
+
+    // Pie: Expenses
+    if (els.pieExp && window.Chart) {
+      const ctx = els.pieExp.getContext("2d");
+      const labels = expCats.map(([k]) => k);
+      const data = expCats.map(([, v]) => v);
+      const colors = labels.map((_, i) => palette()[i % palette().length]);
+
+      charts.expPie = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          labels,
+          datasets: [{ data, backgroundColor: colors, borderWidth: 1 }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "bottom", labels: { color: chartText() } },
+            datalabels: {
+              color: "#fff",
+              font: { weight: "bold" },
+              formatter: (value, ctx) => {
+                const sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                if (!sum) return "0%";
+                return `${((value / sum) * 100).toFixed(1)}%`;
+              },
+            },
+          },
+        },
+        plugins: window.ChartDataLabels ? [window.ChartDataLabels] : [],
+      });
+    }
+
+    // Pie: Income
+    if (els.pieInc && window.Chart) {
+      const ctx = els.pieInc.getContext("2d");
+      const incCats = groupByCategory(income);
+      const labels = incCats.map(([k]) => k);
+      const data = incCats.map(([, v]) => v);
+      const colors = labels.map((_, i) => palette()[i % palette().length]);
+
+      charts.incPie = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          labels,
+          datasets: [{ data, backgroundColor: colors, borderWidth: 1 }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "bottom", labels: { color: chartText() } },
+            datalabels: {
+              color: "#fff",
+              font: { weight: "bold" },
+              formatter: (value, ctx) => {
+                const sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                if (!sum) return "0%";
+                return `${((value / sum) * 100).toFixed(1)}%`;
+              },
+            },
+          },
+        },
+        plugins: window.ChartDataLabels ? [window.ChartDataLabels] : [],
+      });
+    }
+
+    // Monthly trend
+    if (els.monthly && window.Chart) {
+      const ctx = els.monthly.getContext("2d");
+      const showExp = els.toggleExp?.checked ?? true;
+      const showInc = els.toggleInc?.checked ?? true;
+
+      charts.monthly = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: monthly.labels,
+          datasets: [
+            {
+              label: "Expenses",
+              data: monthly.expense,
+              hidden: !showExp,
+              borderWidth: 2,
+              tension: 0.25,
+            },
+            {
+              label: "Income",
+              data: monthly.income,
+              hidden: !showInc,
+              borderWidth: 2,
+              tension: 0.25,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: chartText() } },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.dataset.label}: ${fmtMoney(ctx.parsed.y, displayCur)}`,
+              },
+            },
+          },
+          scales: {
+            x: { ticks: { color: chartText() }, grid: { color: chartGrid() } },
+            y: {
+              beginAtZero: true,
+              ticks: {
+                color: chartText(),
+                callback: (v) => {
+                  try {
+                    return new Intl.NumberFormat(undefined, { notation: "compact" }).format(v);
+                  } catch {
+                    return v;
+                  }
+                },
+              },
+              grid: { color: chartGrid() },
+            },
+          },
+        },
+      });
+    }
+
+    const rangeLabel = rangeVal === "all" ? "all time" : `last ${rangeVal} days`;
+    showStatus(`Updated for ${rangeLabel}.`);
+    clearStatusSoon(2000);
+  };
+
+  const debouncedCompute = debounce(computeAndRender, 150);
+
+  const load = async () => {
+    try {
+      showStatus("Loading reports…");
+      const res = await api.records.getAll();
+      cache = Array.isArray(res) ? res : (res?.records || res?.data || []);
+      computeAndRender();
+    } catch (err) {
+      console.error("Error loading reports:", err);
+      showStatus("Could not load reports.", "error");
+    }
+  };
+
+  // Wire UI once (avoid duplicate listeners)
+  els.range?.addEventListener("change", () => debouncedCompute());
+  els.refresh?.addEventListener("click", () => load());
+  els.toggleExp?.addEventListener("change", () => debouncedCompute());
+  els.toggleInc?.addEventListener("change", () => debouncedCompute());
+
+  // Resize redraw
+  window.addEventListener("resize", debounce(() => computeAndRender(), 200));
+
+  // React to theme/currency updates
+  window.addEventListener("storage", (e) => {
+    if (e.key === "theme" || e.key === "settings_currency" || e.key === "auto_currency") {
+      debouncedCompute();
+    }
+  });
+
+  // Same-tab theme changes: observe data-theme attr
+  const obs = new MutationObserver(() => debouncedCompute());
+  obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  // Initial
+  document.addEventListener("DOMContentLoaded", load);
+})();

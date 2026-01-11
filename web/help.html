@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title> WiseWallet - Help</title>
+
+  <link rel="stylesheet" href="styles/default.css" />
+  <link rel="stylesheet" href="styles/profile.css" />
+
+  <script>
+    const savedTheme = localStorage.getItem("theme") || "light";
+    document.documentElement.setAttribute("data-theme", savedTheme);
+  </script>
+  
+</head>
+
+<body>
+
+  <div id="header"></div>
+
+  <main class="main main--profile">
+
+    <!-- HERO -->
+    <section class="profile-hero">
+      <div class="title-wrap">
+        <h1>Help & Support</h1>
+        <p class="subtle">Find answers and troubleshoot issues</p>
+      </div>
+    </section>
+
+    <div class="profile-grid">
+
+      <!-- FAQ -->
+      <section class="card">
+        <h2>Frequently Asked Questions</h2>
+
+        <details>
+          <summary>How do I reset my password?</summary>
+          <p>You can reset your password from the Security section on your Profile page.</p>
+        </details>
+
+        <details>
+          <summary>Where can I view my financial records?</summary>
+          <p>Your records are under the Records tab in the main navigation.</p>
+        </details>
+
+        <details>
+          <summary>How do I export my data?</summary>
+          <p>Go to Records and use the Export option to download a CSV for budgeting, accounting, or taxes.</p>
+        </details>
+
+        <details>
+          <summary>Why don’t my charts match my records?</summary>
+          <p>Check your selected date range and filters—charts only reflect the currently filtered records.</p>
+        </details>
+
+        <details>
+          <summary>How do I delete or edit a transaction?</summary>
+          <p>Open Records, select the transaction, and choose Edit or Delete from the actions menu.</p>
+        </details>
+
+        <details>
+          <summary>How do I contact support?</summary>
+          <p>Email us at <a href="mailto:support@WiseWallet.app">support@WiseWallet.app</a></p>
+        </details>
+      </section>
+
+      <!-- CONTACT -->
+      <section class="card">
+        <h2>Contact Support</h2>
+
+        <form id="supportForm" novalidate>
+          <label for="supportEmail">
+            <span class="label">Your Email</span>
+            <input
+              id="supportEmail"
+              name="email"
+              type="email"
+              autocomplete="email"
+              placeholder="you@example.com"
+              required
+            />
+          </label>
+
+          <label for="supportMessage">
+            <span class="label">Message</span>
+            <textarea
+              id="supportMessage"
+              name="message"
+              rows="5"
+              placeholder="Tell us what happened (include steps to reproduce and any error messages)."
+              required
+            ></textarea>
+          </label>
+
+          <p id="supportStatus" class="subtle" aria-live="polite" style="display:none;"></p>
+
+          <button type="submit" class="btn btn--primary">Send Message</button>
+        </form>
+      </section>
+
+    </div>
+  </main>
+
+  <div id="footer"></div>
+
+  <script src="scripts/default.js" type="module"></script>
+  <script src="scripts/help.js" type="module"></script>
+
+</body>
+</html>

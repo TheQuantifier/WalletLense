@@ -1,0 +1,76 @@
+<header>
+  <div class="navbar">
+
+    <!-- Left: Logo -->
+    <div class="logo-group">
+      <h1 class="logo">
+        <a href="about.html">WiseWallet</a>
+      </h1>
+      <span class="tagline">Track Smarter. Stress Less.</span>
+    </div>
+
+    <!-- Middle: Navigation -->
+    <nav class="nav-links">
+      <a href="home.html">Home</a>
+      <a href="upload.html">Upload</a>
+      <a href="records.html">Records</a>
+      <a href="reports.html">Reports</a>
+      <a href="about.html">About</a>
+    </nav>
+
+    <!-- Right side: Account dropdown -->
+    <div class="account-controls">
+
+      <div id="accountArea" class="account-area">
+
+        <!-- Avatar / Icon -->
+        <div
+          id="account-icon"
+          class="account-icon"
+          tabindex="0"
+          aria-haspopup="true"
+          aria-expanded="false"
+        >
+          <div id="avatarLetters" class="avatar-initials">?</div>
+        </div>
+
+        <!-- Dropdown -->
+        <ul id="account-menu" class="account-menu" role="menu">
+
+          <!-- Username (replaces "Account") -->
+          <li class="section-title" id="headerUserName">User</li>
+
+          <!-- Menu items -->
+          <li>
+            <button class="menu-btn" onclick="window.location.href='profile.html'">
+              Profile
+            </button>
+          </li>
+
+          <li>
+            <button class="menu-btn" onclick="window.location.href='settings.html'">
+              Settings
+            </button>
+          </li>
+
+          <li>
+            <button class="menu-btn" onclick="window.location.href='help.html'">
+              Help
+            </button>
+          </li>
+
+          <!-- Logout -->
+          <li class="logout">
+            <button id="logoutBtn" role="menuitem" class="menu-btn">
+              Log Out
+            </button>
+          </li>
+
+        </ul>
+
+      </div>
+
+    </div>
+
+  </div>
+</header>

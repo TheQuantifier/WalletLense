@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Welcome | WiseWallet</title>
+
+  <!-- Meta -->
+  <meta name="description" content="WiseWallet helps you effortlessly scan receipts, organize expenses, and stay tax-ready year-round." />
+  <meta name="author" content="WiseWallet" />
+  <link rel="icon" type="image/png" href="images/favicon.png" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles/default.css" />
+  <link rel="stylesheet" href="styles/auth.css" />
+
+  <script>
+    const savedTheme = localStorage.getItem("theme") || "light";
+    document.documentElement.setAttribute("data-theme", savedTheme);
+  </script>
+</head>
+
+<body class="landing-light">
+
+  <!-- Header -->
+  <header class="nf-header" role="banner">
+    <div class="nf-header-inner">
+      <div class="logo-group">
+        <h1 class="logo">
+          <a href="about.html" style="text-decoration:none; color:inherit;">WiseWallet</a>
+        </h1>
+        <span class="tagline">Track Smarter. Stress Less.</span>
+      </div>
+
+      <nav class="nf-auth-right" aria-label="Authentication">
+        <a href="login.html" class="nf-login">Login</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <main class="main main--register">
+    <section class="nf-hero">
+      <div class="nf-hero-content">
+        <h1 class="nf-title">Take control of your finances.</h1>
+        <p class="nf-subtitle">
+          Scan receipts in seconds. Categorize automatically. Be tax-ready all year.
+        </p>
+
+        <!-- Create account box -->
+        <form id="registerForm" class="auth-form" novalidate>
+
+          <label for="name">Full Name</label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            class="nf-input"
+            placeholder="Your Name"
+            autocomplete="name"
+            required
+          />
+
+          <label for="email">Email Address</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            class="nf-input"
+            placeholder="you@example.com"
+            autocomplete="email"
+            required
+          />
+
+          <label for="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            class="nf-input"
+            placeholder="Create a strong password"
+            autocomplete="new-password"
+            minlength="8"
+            required
+          />
+
+          <p class="subtle" style="margin: -0.25rem 0 0.75rem;">
+            Use at least 8 characters.
+          </p>
+
+          <label for="confirmPassword">Confirm Password</label>
+          <input
+            type="password"
+            id="confirmPassword"
+            name="confirmPassword"
+            class="nf-input"
+            placeholder="Re-enter your password"
+            autocomplete="new-password"
+            minlength="8"
+            required
+          />
+
+          <label style="display:flex; gap:0.5rem; align-items:flex-start; margin-top: 0.25rem;">
+            <input type="checkbox" id="agree" name="agree" required style="margin-top:0.2rem;" />
+            <span class="subtle">
+              I agree to the <a href="terms.html">Terms</a> and <a href="privacy.html">Privacy Policy</a>.
+            </span>
+          </label>
+
+          <button type="submit" id="registerBtn" class="nf-btn">Create Account</button>
+
+          <p id="registerMessage" class="form-message" aria-live="polite" style="display:none;"></p>
+        </form>
+
+        <div class="auth-links">
+          <p>Already have an account? <a href="login.html">Login</a></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABOUT SECTION -->
+    <section class="nf-about">
+      <div class="nf-about-inner">
+        <h2>What is WiseWallet?</h2>
+        <p>
+          WiseWallet is your digital assistant for managing expenses and receipts with ease.
+          Whether you’re a freelancer, small business owner, or simply looking to better understand
+          your spending habits, our platform simplifies financial organization from start to finish.
+        </p>
+
+        <div class="nf-about-grid">
+          <div class="nf-about-card">
+            <h3>📸 Smart Scanning</h3>
+            <p>Upload photos or PDFs and let our intelligent OCR automatically extract and categorize receipt data.</p>
+          </div>
+          <div class="nf-about-card">
+            <h3>📊 Instant Insights</h3>
+            <p>Get a clear view of your spending trends with interactive graphs and exportable summaries for tax season.</p>
+          </div>
+          <div class="nf-about-card">
+            <h3>💾 Easy Exports</h3>
+            <p>Download your reports to Excel, QuickBooks, or CSV in one click — ready for accountants or personal review.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="nf-footer" role="contentinfo">
+    <div class="nf-footer-inner">
+      <p>&copy; <span id="year"></span> WiseWallet. All rights reserved.</p>
+      <nav class="nf-legal" aria-label="Footer">
+        <a href="privacy.html">Privacy</a><span class="sep">•</span>
+        <a href="terms.html">Terms</a><span class="sep">•</span>
+        <a href="contact.html">Contact</a>
+      </nav>
+    </div>
+  </footer>
+
+  <!-- JS -->
+  <script type="module" src="scripts/register.js"></script>
+
+</body>
+</html>

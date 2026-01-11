@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WiseWallet — About</title>
+
+  <!-- Meta -->
+  <meta name="description" content="Learn more about the WiseWallet mission, features, and development team." />
+  <meta name="author" content="WiseWallet" />
+  <link rel="icon" type="image/png" href="images/favicon.png" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles/default.css" />
+  <link rel="stylesheet" href="styles/about.css" />
+  <link rel="stylesheet" href="styles/auth.css" />
+
+
+  <script>
+    const savedTheme = localStorage.getItem("theme") || "light";
+    document.documentElement.setAttribute("data-theme", savedTheme);
+  </script>
+</head>
+<body>
+  <!-- Header injected by default.js -->
+  <div id="header"></div>
+
+  <!-- ==================== MAIN ==================== -->
+  <main class="main main--about">
+    <section class="about-hero">
+      <h1>About WiseWallet</h1>
+      <p class="lead">
+        WiseWallet transforms everyday receipts and transactions into structured, actionable financial intelligence.
+        Built for individuals and small teams, WiseWallet reduces financial friction by automating expense tracking, 
+        categorization, and reporting—helping users make faster, smarter financial decisions with less effort.
+      </p>
+    </section>
+
+    <section class="about-content">
+      <article class="card">
+        <h2>Our Mission</h2>
+        <p>
+          Our mission is to remove complexity from personal and small-business finance. WiseWallet exists to 
+          replace manual tracking, fragmented tools, and error-prone workflows with a single, intelligent 
+          platform that delivers clarity, accuracy, and confidence at scale.
+
+          We believe financial tools should work quietly in the background—while users stay focused 
+          on growth, planning, and decision-making.
+        </p>
+      </article>
+
+      <article class="card">
+        <h2>Key Features</h2>
+        <ul class="features">
+          <li>📷 Automated receipt ingestion using OCR to extract structured data</li>
+          <li>📊 Intelligent categorization of spending and income in real time</li>
+          <li>💼 Export-ready financial reports for taxes, accounting, and audits</li>
+          <li>💡 Interactive analytics and visual insights that surface trends instantly</li>
+          <li>☁️ Secure, cloud-based architecture designed for reliability and scale</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <h2>Our Story</h2>
+        <p>
+          WiseWallet was built by developers and data-driven problem solvers who experienced firsthand 
+          how inefficient financial tracking can be. Existing tools were either overly manual, fragmented, 
+          or unintuitive—forcing users to spend more time managing money than understanding it.
+
+          We set out to build a modern alternative: a product that combines automation, thoughtful UX, 
+          and intelligent data handling to turn financial noise into usable insight. WiseWallet is the 
+          result—a focused platform built to scale with users as their financial needs grow.
+        </p>
+      </article>
+
+      <article class="card">
+        <h2>Meet the Team</h2>
+        <p>WiseWallet is developed by a small, execution-focused team with strengths across software engineering, frontend UX, and data systems.</p>
+        <div class="team">
+          <div class="member">
+            <img src="images/team-john.jpg" alt="John Hand – Developer" />
+            <h3>John Hand</h3>
+            <p>Developer & Designer</p>
+          </div>
+          <div class="member">
+            <img src="images/team-atharva.jpg" alt="Atharva Tijare - Developer" />
+            <h3>Atharva Tijare</h3>
+            <p>Developer & Designer</p>
+          </div>
+        </div>
+        <p>We prioritize clean architecture, measurable outcomes, and rapid iteration.</p>
+      </article>
+
+      <article class="card">
+        <h2>Get in Touch</h2>
+        <div class="auth-links">
+          <p>
+          We’re actively exploring feedback, partnerships, and growth opportunities.
+  
+          For inquiries, collaboration, or product discussions, reach us at <a href="mailto:info@financeapp.com">info@financeapp.com</a>
+        </p>
+      </div>
+      </article>
+    </section>
+  </main>
+
+  <!-- Footer injected by default.js -->
+  <div id="footer"></div>
+
+  <!-- Scripts -->
+  <script src="scripts/default.js" type="module" defer></script>
+</body>
+</html>

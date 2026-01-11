@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WiseWallet — Profile</title>
+
+  <link rel="stylesheet" href="styles/default.css" />
+  <link rel="stylesheet" href="styles/profile.css" />
+
+  <script>
+    const savedTheme = localStorage.getItem("theme") || "light";
+    document.documentElement.setAttribute("data-theme", savedTheme);
+  </script>
+</head>
+
+<body>
+  <div id="header"></div>
+
+  <main class="main main--profile">
+
+    <!-- HERO -->
+    <section class="profile-hero">
+      <div class="title-wrap">
+        <h1>Profile</h1>
+        <p class="subtle">View and update your personal info</p>
+      </div>
+      <div class="actions" role="group">
+        <button id="editProfileBtn" class="btn btn--primary" type="button">
+          Edit Profile
+        </button>
+      </div>
+    </section>
+
+    <div class="profile-grid">
+
+      <!-- SUMMARY + EDIT FORM -->
+      <section class="card profile-card">
+        <div class="avatar-block">
+          <div class="avatar"></div>
+          <div class="identity">
+            <h3 class="name" id="fullName">—</h3>
+            <p class="subtle" id="username">@—</p>
+          </div>
+        </div>
+
+        <dl class="meta">
+          <div><dt>Email</dt><dd id="email">—</dd></div>
+          <div><dt>Phone</dt><dd id="phoneNumber">—</dd></div>
+          <div><dt>Location</dt><dd id="location">—</dd></div>
+          <div><dt>Role</dt><dd id="role">—</dd></div>
+          <div><dt>Member Since</dt><dd id="createdAt">—</dd></div>
+          <div><dt>Bio</dt><dd id="bio">—</dd></div>
+        </dl>
+
+        <!-- EDIT FORM -->
+        <form id="editForm" class="edit-form" hidden>
+          <div class="form-grid">
+            <label><span class="label">Full Name</span><input id="input_fullName" name="fullName" type="text" autocomplete="name" required></label>
+            <label><span class="label">Username</span><input id="input_username" name="username" type="text" autocomplete="username" required></label>
+            <label><span class="label">Email</span><input id="input_email" name="email" type="email" autocomplete="email" required></label>
+            <label><span class="label">Phone Number</span><input id="input_phoneNumber" name="phoneNumber" type="tel" autocomplete="tel"></label>
+            <label><span class="label">Location</span><input id="input_location" name="location" type="text" autocomplete="address-level2"></label>
+            <label><span class="label">Role</span><input id="input_role" name="role" type="text" autocomplete="organization-title"></label>
+            <label class="span-2"><span class="label">Bio</span><textarea id="input_bio" name="bio" rows="4" autocomplete="off"></textarea></label>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" id="cancelEditBtn" class="btn">Cancel</button>
+            <button type="submit" class="btn btn--primary">Save Changes</button>
+          </div>
+        </form>
+
+        <p id="profileStatus" class="subtle" aria-live="polite" style="display:none;"></p>
+
+        <div class="actions">
+          <button class="btn" id="changeAvatarBtn" type="button">Change Avatar</button>
+          <input id="avatarInput" type="file" accept="image/*" hidden />
+          <button class="btn btn--link" id="copyProfileLinkBtn" type="button">Copy Profile Link</button>
+        </div>
+      </section>
+
+      <!-- SECURITY + STATS -->
+      <section class="card security">
+        <h2>Security & Stats</h2>
+
+        <div class="security-rows">
+
+          <div class="security-row">
+            <div class="sr-left">
+              <p class="label">Two-Factor Authentication</p>
+              <p class="subtle">Protect your account with a second step.</p>
+            </div>
+            <div class="sr-right align-right">
+              <span id="stat_2FA">—</span>
+              <button class="btn btn--primary" id="toggle2FA" type="button">Configure</button>
+            </div>
+          </div>
+
+          <div class="security-row">
+            <div class="sr-left">
+              <p class="label">Password</p>
+              <p class="subtle">Use a strong unique password.</p>
+            </div>
+            <div class="sr-right align-right">
+              <button class="btn btn--primary" id="changePasswordBtn" type="button">Change</button>
+            </div>
+          </div>
+
+          <!-- CHANGE PASSWORD MODAL -->
+          <div id="passwordModal" class="modal hidden">
+            <div class="modal-content card">
+              <h2>Change Password</h2>
+
+              <form id="passwordForm" class="form-grid">
+                <label class="span-2">
+                  <span class="label">Current Password</span>
+                  <input id="currentPassword" type="password" autocomplete="current-password" required />
+                </label>
+
+                <label class="span-2">
+                  <span class="label">New Password</span>
+                  <input id="newPassword" type="password" autocomplete="new-password" required minlength="8" />
+                </label>
+
+                <label class="span-2">
+                  <span class="label">Confirm New Password</span>
+                  <input id="confirmPassword" type="password" autocomplete="new-password" required minlength="8" />
+                </label>
+
+                <div class="form-actions span-2">
+                  <button type="button" class="btn" id="closePasswordModal">Cancel</button>
+                  <button type="submit" class="btn btn--primary">Update Password</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div class="security-row">
+            <div class="sr-left">
+              <p class="label">Sessions</p>
+              <p class="subtle">Manage signed-in devices.</p>
+            </div>
+            <div class="sr-right align-right">
+              <button class="btn btn--primary" id="signOutAllBtn" type="button">Sign Out All</button>
+            </div>
+          </div>
+
+          <div class="security-row">
+            <div class="sr-left"><p class="label">Last Login</p></div>
+            <div class="sr-right align-right" id="stat_lastLogin">—</div>
+          </div>
+
+          <div class="security-row">
+            <div class="sr-left"><p class="label">Records Uploaded</p></div>
+            <div class="sr-right align-right" id="stat_uploads">—</div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ACTIVITY -->
+      <section class="card activity">
+        <h2>Recent Activity</h2>
+        <div class="table-wrap">
+          <table class="txn-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Activity</th>
+                <th>IP</th>
+                <th class="num">Result</th>
+              </tr>
+            </thead>
+            <tbody id="activityBody">
+              <tr><td colspan="4" class="subtle">No activity yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <div id="footer"></div>
+
+  <script src="scripts/default.js" type="module"></script>
+  <script src="scripts/profile.js" type="module"></script>
+</body>
+</html>

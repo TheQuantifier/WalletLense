@@ -1,0 +1,99 @@
+// src/app.js
+import express from "express";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import morgan from "morgan";
+
+import env from "./config/env.js";
+import apiRouter from "./routes/index.js";
+import { errorHandler } from "./middleware/error.js";
+
+const app = express();
+
+// --------------------------------------------------
+// Logging
+// --------------------------------------------------
+if (env.nodeEnv !== "test") {
+  app.use(morgan("dev"));
+}
+
+// --------------------------------------------------
+// JSON + Form Parsing
+// --------------------------------------------------
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
+
+// --------------------------------------------------
+// Cookies
+// --------------------------------------------------
+app.use(cookieParser());
+
+// --------------------------------------------------
+// CORS CONFIG — REQUIRED FOR RENDER + FRONTENDS
+// --------------------------------------------------
+
+// Combine env-configured origins + your hardcoded production/dev list.
+// De-duped to avoid repeats.
+const allowedOrigins = Array.from(
+  new Set([
+    ...(env.clientOrigins || []),
+
+    // Your live frontend(s)
+    "https://app.thequantifier.com",
+    "https://thequantifier.com",
+    "https://www.thequantifier.com",
+
+    // Local dev
+    "http://localhost:5000",
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+    "http://localhost:3000",
+  ])
+);
+
+// Must come BEFORE cors()
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  next();
+});
+
+// Main CORS handler
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true); // Postman / curl / server-side
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      console.warn("❌ BLOCKED CORS ORIGIN:", origin);
+      return callback(new Error("CORS: Not allowed by server"), false);
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  })
+);
+
+// Preflight
+app.options("*", cors());
+
+// --------------------------------------------------
+// Health Check
+// --------------------------------------------------
+app.get("/health", (_req, res) => {
+  res.json({ status: "ok" });
+});
+
+// --------------------------------------------------
+// API ROUTES
+// --------------------------------------------------
+app.use("/api", apiRouter);
+
+// --------------------------------------------------
+// GLOBAL ERROR HANDLER
+// --------------------------------------------------
+app.use(errorHandler);
+
+export default app;

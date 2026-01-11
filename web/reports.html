@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reports | WiseWallet</title>
+
+  <meta name="description" content="View spending reports, category breakdowns, and monthly trends." />
+  <meta name="author" content="WiseWallet" />
+  <link rel="icon" type="image/png" href="images/favicon.png" />
+
+  <link rel="stylesheet" href="styles/default.css" />
+  <link rel="stylesheet" href="styles/reports.css" />
+
+  <script>
+    const savedTheme = localStorage.getItem("theme") || "light";
+    document.documentElement.setAttribute("data-theme", savedTheme);
+  </script>
+</head>
+
+<body>
+  <div id="header"></div>
+
+  <main class="main main--reports">
+
+    <!-- ========== SUMMARY ========== -->
+    <section class="summary">
+      <h2>Transaction Overview</h2>
+      <div class="reports-controls">
+        <label class="control">
+          <span class="label">Date Range</span>
+          <select id="reportsRange" name="reportsRange">
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="365">Last 12 months</option>
+            <option value="all" selected>All time</option>
+          </select>
+        </label>
+
+        <button class="btn btn--primary" id="btnRefreshReports" type="button">Refresh</button>
+
+        <p id="reportsStatus" class="subtle" aria-live="polite" style="display:none;"></p>
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <h3>Total Expenses</h3>
+          <p id="total-expenses" aria-live="polite">Loading...</p>
+        </div>
+
+        <div class="card">
+          <h3>Total Income</h3>
+          <p id="total-income" aria-live="polite">Loading...</p>
+        </div>
+
+        <div class="card">
+          <h3>Monthly Average</h3>
+          <p id="monthly-average" aria-live="polite">Loading...</p>
+        </div>
+
+        <div class="card">
+          <h3>Top Category</h3>
+          <p id="top-category" aria-live="polite">Loading...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== PIE CHARTS ========== -->
+    <section class="chart-section">
+      <h2>Category Breakdown</h2>
+
+      <div class="chart-row">
+        <div class="chart-box">
+          <h3>Expenses by Category</h3>
+          <canvas id="pieChartExpenses"></canvas>
+        </div>
+
+        <div class="chart-box">
+          <h3>Income by Category</h3>
+          <canvas id="pieChartIncome"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== MONTHLY TREND ========== -->
+    <section class="chart-section">
+      <div class="section-head">
+        <h2>Income & Expenses Over Time</h2>
+
+        <div class="toggles">
+          <label class="toggle"><input type="checkbox" id="toggle-expenses" checked /> <span>Expenses</span></label>
+          <label class="toggle"><input type="checkbox" id="toggle-income" checked /> <span>Income</span></label>
+        </div>
+      </div>
+
+      <canvas id="monthlyChart"></canvas>
+    </section>
+
+  </main>
+
+  <div id="footer"></div>
+
+  <script src="scripts/default.js" type="module" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <script src="scripts/reports.js" type="module" defer></script>
+
+</body>
+</html>

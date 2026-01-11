@@ -1,0 +1,231 @@
+/* ========== REPORTS PAGE STYLES — page-specific only ========== */
+
+/* ===== SUMMARY CARDS ===== */
+.summary {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+/* Controls row (range + refresh + status) */
+.reports-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+  justify-content: center;
+  margin: 0.75rem 0 1rem;
+}
+
+.reports-controls .control {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 220px;
+  text-align: left;
+}
+
+#reportsStatus {
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--muted);
+}
+
+#reportsStatus.is-ok { color: var(--text); }
+#reportsStatus.is-error { color: var(--text); }
+
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.card {
+  width: 220px;
+  text-align: center;
+  background: var(--card-bg);
+  color: var(--text);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  padding: 1rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.card h3 {
+  color: var(--primary);
+  margin-bottom: 0.5rem;
+}
+
+.card p {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: var(--text);
+}
+
+/* ===== CHART SECTIONS ===== */
+.chart-section {
+  background-color: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 2rem;
+  margin: 2rem 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  color: var(--text);
+  min-width: 0;
+}
+
+.chart-section h2 {
+  text-align: center;
+  margin-bottom: 1rem;
+  color: var(--primary);
+  font-size: 1.3rem;
+}
+
+/* ===== LINE CHART HEADER WITH TOGGLES ===== */
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.section-head h2 {
+  margin: 0;
+}
+
+.toggles {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.toggles label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.toggles input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+
+.toggles input[type="checkbox"]:focus-visible,
+.reports-controls select:focus-visible,
+.reports-controls button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ===== CHART LAYOUT ===== */
+.chart-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+  justify-content: center;
+}
+
+.chart-box {
+  min-width: 0;
+  text-align: center;
+}
+
+/* ===== RESPONSIVE PIE CHARTS ===== */
+#pieChartExpenses,
+#pieChartIncome {
+  width: 100% !important;
+  height: 320px !important;
+  max-width: 100%;
+  display: block;
+  margin: 0 auto;
+}
+
+/* ===== LINE CHART (FILL WIDTH) ===== */
+#monthlyChart {
+  width: 100% !important;
+  height: 320px !important;
+  max-width: 100%;
+  display: block;
+  margin: 0 auto;
+}
+
+/* ===== DATLABELS ===== */
+.chartjs-datalabels {
+  font-family: system-ui, sans-serif;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  color: #ffffff !important;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width: 1024px) {
+  .chart-row {
+    grid-template-columns: 1fr;
+  }
+  #monthlyChart {
+    height: 300px !important;
+  }
+  #pieChartExpenses,
+  #pieChartIncome {
+    height: 300px !important;
+  }
+}
+
+@media(max-width: 640px) {
+  .cards {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .chart-section h2 {
+    font-size: 1.15rem;
+  }
+
+  #monthlyChart {
+    height: 260px !important;
+  }
+
+  #pieChartExpenses,
+  #pieChartIncome {
+    height: 260px !important;
+  }
+
+  .section-head {
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+/* ===== DARK MODE OVERRIDES ===== */
+[data-theme="dark"] .card,
+[data-theme="dark"] .chart-section {
+  background-color: var(--card-bg);
+  color: var(--text);
+  border-color: var(--border);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+
+[data-theme="dark"] .toggles label {
+  color: var(--text);
+}
+
+[data-theme="dark"] #pieChartExpenses,
+[data-theme="dark"] #pieChartIncome,
+[data-theme="dark"] #monthlyChart {
+  background-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition: none;
+  }
+}

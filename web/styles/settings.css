@@ -1,0 +1,189 @@
+/* =========================================================
+   SETTINGS PAGE STYLES — THEME-SAFE + BLUE CONSISTENCY
+   ========================================================= */
+
+.settings-container {
+  max-width: 1100px;
+  margin: var(--space-4) auto;
+  padding: var(--space-4);
+}
+
+.settings-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: var(--space-4);
+  color: var(--text);
+}
+
+.settings-card {
+  background: var(--card-bg);
+  padding: var(--space-4);
+  border-radius: 12px;
+  margin-bottom: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.settings-card h2 {
+  margin-bottom: var(--space-3);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* =========================================================
+   FORM ROWS
+   ========================================================= */
+
+.settings-row {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--space-3);
+}
+
+.settings-row label {
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+  color: var(--text);
+}
+
+.settings-row input,
+.settings-row select {
+  padding: var(--space-3);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 0.95rem;
+  background: var(--card-bg);
+  color: var(--text);
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.settings-row input:focus,
+.settings-row select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(0,163,224,0.15); /* matches global */
+  outline: none;
+}
+
+.settings-row input:focus-visible,
+.settings-row select:focus-visible,
+.settings-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* =========================================================
+   SAVE BUTTON — MATCHES APP-WIDE BUTTON COLORS
+   ========================================================= */
+
+.settings-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+
+  margin-top: var(--space-2);
+  padding: 0.6rem 1.1rem;
+
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--primary);
+  cursor: pointer;
+
+  font-weight: 600;
+  font-size: 0.95rem;
+
+  transition: filter 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.settings-btn:hover {
+  filter: brightness(0.92); /* matches global .btn--primary:hover */
+}
+
+/* =========================================================
+   DARK MODE OVERRIDES
+   ========================================================= */
+
+[data-theme="dark"] .settings-card {
+  background: var(--card-bg);
+  box-shadow: var(--shadow-sm);
+}
+
+[data-theme="dark"] .settings-row label,
+[data-theme="dark"] .settings-card h2,
+[data-theme="dark"] .settings-title {
+  color: var(--text);
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 768px) {
+  .settings-row {
+    flex-direction: column;
+  }
+}
+
+/* ===============================
+   Settings actions + status
+   =============================== */
+.settings-actions {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+#settingsStatus,
+#deleteAccountStatus {
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--muted);
+}
+
+#settingsStatus.is-ok,
+#deleteAccountStatus.is-ok {
+  color: var(--text);
+}
+
+#settingsStatus.is-error,
+#deleteAccountStatus.is-error {
+  color: var(--text);
+}
+
+/* Make checkbox labels align nicely */
+.settings-row label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.settings-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+/* Modal spacing to match other pages */
+#deleteAccountModal .modal-content {
+  max-width: 520px;
+}
+
+#deleteAccountModal .modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+#deleteAccountModal .modal-actions .btn {
+  width: auto;
+  min-width: 160px;
+}
+
+@media (max-width: 520px) {
+  #deleteAccountModal .modal-actions .btn {
+    width: 100%;
+    min-width: 0;
+  }
+}

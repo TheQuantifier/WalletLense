@@ -1,0 +1,387 @@
+/* =========================================================
+   WalletWise — Records Page (page-specific enhancements)
+   ========================================================= */
+
+/* Completely divide Income and Expenses */
+.records-section {
+  margin-bottom: 4rem;
+  padding-bottom: 3rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Title (left) + Actions (right) */
+.records-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.records-title p {
+  margin-top: 0.25rem;
+}
+
+/* Buttons aligned on the right */
+.records-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Space between subsections (filters → table → pagination) */
+.records-subsection {
+  margin-top: 1.75rem;
+  margin-bottom: 1.75rem;
+}
+
+#recordsStatusExpense,
+#recordsStatusIncome {
+  margin: -0.5rem 0 1.25rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--muted);
+}
+
+#recordsStatusExpense.is-ok,
+#recordsStatusIncome.is-ok {
+  color: var(--text);
+}
+
+#recordsStatusExpense.is-error,
+#recordsStatusIncome.is-error {
+  color: var(--text);
+}
+
+/* Ensure label text always above input */
+.records-filters-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+/* Grid for filter inputs */
+.records-filters-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+/* Pagination centered */
+.records-pager {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+/* =========================================================
+  PAGINATION BUTTONS (Prev / Next) — THEME MATCHING
+  ========================================================= */
+
+.records-pager button {
+  padding: 0.5rem 1.2rem;
+  border-radius: var(--radius);
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  color: #fff;
+  font-weight: 600;
+  transition: filter 0.15s ease, transform 0.05s ease;
+}
+
+/* Hover/Active (same as .btn--primary) */
+.records-pager button:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+
+.records-pager button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* Disabled state */
+.records-pager button:disabled {
+  background: color-mix(in srgb, var(--primary) 35%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+  cursor: not-allowed;
+  color: #fff;
+  opacity: 0.75;
+}
+
+/* =========================================================
+   ACTIONS MENU (⋮ dropdown)
+   ========================================================= */
+
+.actions-menu-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.actions-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  line-height: 1;
+  color: var(--text);
+}
+
+.actions-btn:hover {
+  background: rgba(0,0,0,0.06);
+}
+
+.actions-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.actions-dropdown button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Updated dropdown box */
+.actions-dropdown {
+  position: absolute;
+  top: 28px;
+  right: 0;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+  padding: 6px 0;
+  z-index: 50;
+  min-width: 150px;
+
+  overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+}
+
+/* Hidden state */
+.actions-dropdown.hidden {
+  display: none;
+}
+
+/* Invisible-style buttons */
+.actions-dropdown button {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text);
+  border-radius: 0;
+}
+
+.actions-dropdown button:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* =========================================================
+   BADGES (Receipt / Manual)
+   ========================================================= */
+
+.badge {
+  display: inline-block;
+  padding: 3px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 8px;
+  line-height: 1;
+}
+
+.badge-receipt {
+  background: rgba(37, 99, 235, 0.16);
+  color: #2563eb;
+}
+
+.badge-manual {
+  background: rgba(107, 114, 128, 0.16);
+  color: #6b7280;
+}
+
+/* =========================================================
+   MODAL STYLES (SAME AS UPLOAD PAGE)
+   ========================================================= */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+/* Backdrop */
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+/* Modal Box */
+.modal-box,
+.modal-content {
+  position: relative;
+  z-index: 1;
+  width: min(90%, 400px);
+  background: var(--card-bg);
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.modal-box h2,
+.modal-content h2 {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+}
+
+.modal-box p,
+.modal-content p {
+  margin: 0;
+  color: var(--text);
+}
+
+/* Modal buttons */
+.modal-actions {
+  margin-top: 1.25rem;
+
+  /* centered buttons (same fix as Upload modal) */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 0.75rem;
+}
+
+.modal-actions .btn {
+  width: min(100%, 320px);
+  min-width: 0;
+  text-align: center;
+}
+
+/* Red */
+.btn--danger {
+  background: #b00020;
+  color: #fff;
+}
+
+/* Yellow */
+.btn--warning {
+  background: #e6a100;
+  color: #111;
+}
+
+:root[data-theme="dark"] .btn--warning {
+  background: #e6a100;
+  color: var(--grey-0);
+}
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .records-filters-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .records-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .records-filters-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .records-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .records-table .txn-table {
+    min-width: 720px;
+  }
+}
+
+/* ============================================================
+   RECORDS TABLE — MATCH HOME PAGE TABLE FIXES
+   ============================================================ */
+
+.records-table .txn-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+/* ----- COLUMN WIDTHS ----- */
+
+/* Date */
+.records-table .txn-table th:nth-child(1),
+.records-table .txn-table td:nth-child(1) {
+  width: 110px;
+}
+
+/* Type */
+.records-table .txn-table th:nth-child(2),
+.records-table .txn-table td:nth-child(2) {
+  width: 110px;
+}
+
+/* Category */
+.records-table .txn-table th:nth-child(3),
+.records-table .txn-table td:nth-child(3) {
+  width: 130px;
+}
+
+/* Amount (right aligned) */
+.records-table .txn-table th:nth-child(4),
+.records-table .txn-table td:nth-child(4) {
+  width: 110px;
+  text-align: right;
+  padding-right: 0.75rem;
+}
+
+/* Notes — flexible width */
+.records-table .txn-table th:nth-child(5),
+.records-table .txn-table td:nth-child(5) {
+  width: auto;
+  white-space: normal;
+  word-wrap: break-word;
+}
+
+/* Origin */
+.records-table .txn-table th:nth-child(6),
+.records-table .txn-table td:nth-child(6) {
+  width: 110px;
+}
+
+/* Actions column */
+.records-table .txn-table th.actions-col,
+.records-table .txn-table td.actions-col {
+  width: 95px;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .records-pager button {
+    transition: none;
+  }
+}

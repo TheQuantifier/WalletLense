@@ -1,0 +1,334 @@
+============================================================
+ FRONTEND API REFERENCE — FinanceApp
+ All callable functions from web/scripts/api.js
+============================================================
+
+BASE URL (auto-switched):
+  Production: https://financeapp-5u9g.onrender.com/api
+  Local:      http://localhost:4000/api
+
+All functions return Promises:
+  const user = await api.auth.login(...)
+  const list = await api.records.getAll()
+
+
+============================================================
+ 1. AUTH MODULE
+============================================================
+
+------------------------------------------------------------
+ auth.register(email, password, fullName)
+------------------------------------------------------------
+DESCRIPTION:
+  Creates a new user account and logs them in automatically.
+
+ARGUMENTS:
+  email     (string)
+  password  (string)
+  fullName  (string)
+
+RETURNS:
+  { user }
+
+EXAMPLE:
+  await api.auth.register("john@example.com", "mypassword", "John");
+
+
+------------------------------------------------------------
+ auth.login(identifier, password)
+------------------------------------------------------------
+DESCRIPTION:
+  Logs in a user using *email OR username*.
+
+ARGUMENTS:
+  identifier (string)
+  password   (string)
+
+RETURNS:
+  { user }
+
+EXAMPLE:
+  await api.auth.login("johnhand", "mypassword");
+
+
+------------------------------------------------------------
+ auth.logout()
+------------------------------------------------------------
+DESCRIPTION:
+  Logs the user out by clearing their secure cookie.
+
+EXAMPLE:
+  await api.auth.logout();
+
+
+------------------------------------------------------------
+ auth.me()
+------------------------------------------------------------
+DESCRIPTION:
+  Retrieves the authenticated user.
+
+EXAMPLE:
+  const me = await api.auth.me();
+
+
+------------------------------------------------------------
+ auth.updateProfile(updates)
+------------------------------------------------------------
+DESCRIPTION:
+  Updates editable user profile fields.
+
+ARGUMENTS:
+  updates (object)
+
+RETURNS:
+  { user }
+
+EXAMPLE:
+  await api.auth.updateProfile({ fullName: "John A. Hand" });
+
+
+------------------------------------------------------------
+ auth.changePassword(currentPassword, newPassword)
+------------------------------------------------------------
+DESCRIPTION:
+  Changes the authenticated user’s password.
+
+EXAMPLE:
+  await api.auth.changePassword("oldPass", "newPass");
+
+
+------------------------------------------------------------
+ auth.deleteAccount()
+------------------------------------------------------------
+DESCRIPTION:
+  Permanently deletes:
+    - user account
+    - all records
+    - all receipts
+    - all stored receipt files (Cloudflare R2)
+
+EXAMPLE:
+  await api.auth.deleteAccount();
+
+
+
+============================================================
+ 2. RECORDS MODULE
+============================================================
+
+------------------------------------------------------------
+ records.getAll(params?)
+------------------------------------------------------------
+DESCRIPTION:
+  Returns all financial records belonging to the user.
+
+ARGUMENTS:
+  params (object) — optional
+
+EXAMPLE:
+  const list = await api.records.getAll();
+
+
+------------------------------------------------------------
+ records.getOne(recordId)
+------------------------------------------------------------
+DESCRIPTION:
+  Fetch a single record.
+
+ARGUMENTS:
+  recordId (string | uuid)
+
+EXAMPLE:
+  const record = await api.records.getOne("7f3a1c1e-9d8e-4f1a-a1a2-acde01234567");
+
+
+------------------------------------------------------------
+ records.create({ type, amount, category, date, note })
+------------------------------------------------------------
+DESCRIPTION:
+  Creates a new manual financial record.
+
+ARGUMENTS:
+  type      ("income" | "expense")
+  amount    (number)
+  category  (string)
+  date      ("YYYY-MM-DD" optional)
+  note      (string optional)
+
+EXAMPLE:
+  await api.records.create({
+    type: "expense",
+    amount: 25.50,
+    category: "Food",
+    date: "2025-01-28",
+    note: "Lunch"
+  });
+
+
+------------------------------------------------------------
+ records.update(recordId, updates)
+------------------------------------------------------------
+DESCRIPTION:
+  Updates fields on an existing record, including those created
+  automatically by receipt uploads.
+
+ARGUMENTS:
+  recordId (string | uuid)
+  updates  (object)
+
+RETURNS:
+  { message, record }
+
+EXAMPLE:
+  await api.records.update(id, {
+    amount: 40,
+    category: "Dining",
+    note: "Updated entry"
+  });
+
+
+------------------------------------------------------------
+ records.remove(recordId, deleteReceipt)
+------------------------------------------------------------
+DESCRIPTION:
+  Deletes a record AND optionally deletes its linked receipt.
+
+deleteReceipt values:
+  true       → Deletes the linked receipt (metadata + file)
+  false      → Unlinks from receipt but keeps receipt
+  undefined  → Deletes only the record (default)
+
+EXAMPLES:
+  await api.records.remove(id);
+  await api.records.remove(id, true);
+  await api.records.remove(id, false);
+
+
+
+============================================================
+ 3. RECEIPTS MODULE (R2 PRESIGNED FLOW)
+============================================================
+
+------------------------------------------------------------
+ receipts.upload(file)
+------------------------------------------------------------
+DESCRIPTION:
+  Three-step upload flow using Cloudflare R2:
+
+  1) Request a presigned upload URL
+  2) Upload file directly from browser to R2
+  3) Confirm upload → OCR → AI parsing → metadata save
+     → auto-create financial record (if amount detected)
+
+ARGUMENTS:
+  file (File object)
+
+RETURNS:
+  {
+    receipt: { ...receiptData },
+    autoRecord: { ...recordData } | null
+  }
+
+EXAMPLE:
+  const file = document.querySelector("#fileInput").files[0];
+  const result = await api.receipts.upload(file);
+
+
+------------------------------------------------------------
+ receipts.getAll()
+------------------------------------------------------------
+DESCRIPTION:
+  Fetches all receipts for the user.
+
+EXAMPLE:
+  const list = await api.receipts.getAll();
+
+
+------------------------------------------------------------
+ receipts.getOne(receiptId)
+------------------------------------------------------------
+DESCRIPTION:
+  Fetch one receipt, including:
+    - OCR text
+    - parsed data
+    - linked record (if any)
+
+ARGUMENTS:
+  receiptId (string | uuid)
+
+
+------------------------------------------------------------
+ receipts.download(receiptId)
+------------------------------------------------------------
+DESCRIPTION:
+  Downloads the original uploaded file via a presigned URL
+  and returns it as a Blob.
+
+EXAMPLE:
+  const blob = await api.receipts.download(id);
+
+
+------------------------------------------------------------
+ receipts.downloadToFile(receiptId, filename)
+------------------------------------------------------------
+DESCRIPTION:
+  Downloads the file and triggers a save to disk.
+
+EXAMPLE:
+  await api.receipts.downloadToFile(id, "receipt.pdf");
+
+
+------------------------------------------------------------
+ receipts.remove(receiptId, deleteRecord)
+------------------------------------------------------------
+DESCRIPTION:
+  Deletes a receipt AND optionally its linked record.
+
+deleteRecord values:
+  true       → delete receipt + linked record
+  false      → keep record but unlink
+  undefined  → delete only the receipt
+
+EXAMPLES:
+  await api.receipts.remove(id);
+  await api.receipts.remove(id, true);
+  await api.receipts.remove(id, false);
+
+
+
+============================================================
+ 4. HELPER FUNCTIONS (UI convenience)
+============================================================
+
+------------------------------------------------------------
+ api.getUploadType(record)
+------------------------------------------------------------
+RETURNS:
+  "Receipt" if generated from a receipt,
+  "Manual"  if user-created.
+
+
+------------------------------------------------------------
+ api.getPayMethodLabel(method)
+------------------------------------------------------------
+DESCRIPTION:
+  Maps internal payment method values to readable labels.
+
+
+------------------------------------------------------------
+ api.getReceiptSummary(receipt)
+------------------------------------------------------------
+DESCRIPTION:
+  Returns a normalized summary object containing:
+    - parsed purchase date
+    - date added
+    - store / source
+    - subAmount / amount / tax
+    - payment method
+    - parsed items list
+
+
+
+============================================================
+ END OF FILE
+============================================================

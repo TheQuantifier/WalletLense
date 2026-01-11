@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WiseWallet — Home</title>
+
+  <!-- Meta -->
+  <meta name="description" content="View spending reports, category breakdowns, and monthly trends." />
+  <meta name="author" content="WiseWallet" />
+  <link rel="icon" type="image/png" href="images/favicon.png" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles/default.css" />
+  <link rel="stylesheet" href="styles/home.css" />
+
+  <script>
+    const savedTheme = localStorage.getItem("theme") || "light";
+    document.documentElement.setAttribute("data-theme", savedTheme);
+  </script>
+  
+</head>
+<body>
+  
+  <!-- Header injected by default.js -->
+  <div id="header"></div>
+
+  <!-- ==================== MAIN ==================== -->
+  <main class="main main--home">
+    
+    <!-- Greeting -->
+    <section class="welcome">
+      <div class="welcome-left">
+        <h1 id="welcomeTitle">Welcome back</h1>
+        <p class="subtle" id="lastUpdated">Loading summary…</p>
+      </div>
+
+      <div class="quick-actions" role="group" aria-label="Quick actions">
+        <button class="btn btn--primary" id="btnUpload">Upload Receipt</button>
+        <button class="btn" id="btnAddTxn">Add Transaction</button>
+        <button class="btn" id="btnExport">Export CSV</button>
+        <a class="btn btn--link" href="reports.html" id="btnReports">Go to Reports →</a>
+      </div>
+    </section>
+
+    <!-- KPI cards -->
+    <section class="kpis" aria-label="Summary metrics">
+      <article class="kpi card">
+        <h2>Total Income</h2>
+        <p class="kpi-value" id="kpiIncome">—</p>
+        <span class="kpi-sub" id="kpiPeriodIncome">This month</span>
+      </article>
+
+      <article class="kpi card">
+        <h2>Total Spending</h2>
+        <p class="kpi-value negative" id="kpiSpending">—</p>
+        <span class="kpi-sub" id="kpiPeriodSpending">This month</span>
+      </article>
+
+      <article class="kpi card">
+        <h2>Net Balance</h2>
+        <p class="kpi-value" id="kpiBalance">—</p>
+        <span class="kpi-sub" id="kpiPeriodBalance">Income − Spending</span>
+      </article>
+    </section>
+
+    <!-- Chart + breakdown -->
+    <section class="chart-section">
+      <div class="chart-card card">
+        <div class="chart-header">
+          <h2>Spending by Category</h2>
+          <div class="legend" id="chartLegend"></div>
+        </div>
+        <canvas id="categoriesChart"></canvas>
+        <p class="chart-caption subtle">Bars scaled to the highest category.</p>
+      </div>
+
+      <aside class="breakdown card">
+        <h3>Category Breakdown</h3>
+        <ul id="categoryList" class="cat-list"></ul>
+      </aside>
+    </section>
+
+    <!-- Recent transactions -->
+    <section class="recent" aria-label="Recent transactions">
+      <div class="recent-header">
+        <h2>Recent Transactions</h2>
+        <a class="btn btn--link" href="records.html">View all</a>
+      </div>
+
+      <div class="table-wrap card" role="region" aria-label="Recent transactions table" tabindex="0">
+        <table class="txn-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Category</th>
+              <th class="num">Amount</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="txnTbody">
+            <tr><td colspan="4" class="subtle">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer injected by default.js -->
+  <div id="footer"></div>
+
+  <!-- ========== ADD TRANSACTION MODAL ========== -->
+  <div id="addTxnModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-content card">
+      <h2 id="modalTitle">Add New Transaction</h2>
+
+      <form id="txnForm" class="txn-form">
+        
+        <div class="form-row">
+          <label>
+            <span>Type</span>
+            <select id="txnType" required>
+              <option value="expense">Expense</option>
+              <option value="income">Income</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Date</span>
+            <input type="date" id="txnDate" required />
+          </label>
+        </div>
+
+        <div class="form-row">
+          <label>
+            <span>Amount</span>
+            <input type="number" id="txnAmount" step="0.01" required />
+          </label>
+
+          <label>
+            <span>Category</span>
+            <input type="text" id="txnCategory" required />
+          </label>
+        </div>
+
+        <div class="form-row">
+          <label style="width:100%">
+            <span>Notes</span>
+            <input type="text" id="txnNotes" />
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button type="submit" class="btn btn--primary">Save</button>
+          <button type="button" class="btn" id="btnCancelModal">Cancel</button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="scripts/default.js" type="module" defer></script>
+  <script src="scripts/home.js" type="module" defer></script>
+</body>
+</html>
