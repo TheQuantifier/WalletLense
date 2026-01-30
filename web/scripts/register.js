@@ -12,9 +12,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const setPasswordStyle = (input, isValid) => {
     if (!input) return;
     if (isValid) {
-      input.style.borderColor = "";
-      input.style.color = "";
-      input.style.boxShadow = "";
+      input.style.borderColor = "#16a34a";
+      input.style.color = "#166534";
+      if (document.activeElement === input) {
+        input.style.boxShadow = "0 0 0 3px rgba(22,163,74,0.2)";
+      } else {
+        input.style.boxShadow = "none";
+      }
       return;
     }
     input.style.borderColor = "#b91c1c";
