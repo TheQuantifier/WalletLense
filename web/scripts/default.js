@@ -36,8 +36,8 @@ async function runAuthGuard() {
   try {
     await api.auth.me(); // succeeds if logged in
   } catch {
-    console.warn("User not authenticated. Redirecting to /index.html");
-    window.location.href = "/index.html";
+    console.warn("User not authenticated. Redirecting to index.html");
+    window.location.href = "index.html";
   }
 }
 
@@ -75,7 +75,7 @@ document.addEventListener("DOMContentLoaded", () => {
 */
 function loadHeaderAndFooter() {
   // --- Load Header ---
-  fetch("/components/header.html")
+  fetch("components/header.html")
     .then((res) => {
       if (!res.ok) throw new Error("Header not found");
       return res.text();
@@ -92,7 +92,7 @@ function loadHeaderAndFooter() {
     .catch((err) => console.error("Header load failed:", err));
 
   // --- Load Footer ---
-  fetch("/components/footer.html")
+  fetch("components/footer.html")
     .then((res) => {
       if (!res.ok) throw new Error("Footer not found");
       return res.text();
@@ -220,7 +220,7 @@ function wireLogoutButton() {
 
     try {
       await api.auth.logout();
-      window.location.href = "/login.html";
+      window.location.href = "login.html";
     } catch (err) {
       console.error("Logout failed:", err);
       alert("Could not log out.");

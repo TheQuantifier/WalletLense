@@ -348,7 +348,7 @@ import { api } from "./api.js";
     const openModal = () => modal?.classList.remove("hidden");
 
     $("#btnUpload")?.addEventListener("click", () => {
-      window.location.href = "/upload.html";
+      window.location.href = "upload.html";
     });
 
     $("#btnExport")?.addEventListener("click", async () => {

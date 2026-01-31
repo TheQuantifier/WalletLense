@@ -156,7 +156,7 @@ async function loadUserProfile() {
     }
   } catch (err) {
     showStatus("Please log in to view your profile.", "error");
-    window.location.href = "/login.html";
+    window.location.href = "login.html";
   }
 }
 

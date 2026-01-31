@@ -299,7 +299,7 @@ import { api } from "./api.js";
       localStorage.removeItem("refresh_token");
 
       window.setTimeout(() => {
-        window.location.href = "/login.html";
+      window.location.href = "login.html";
       }, 900);
     } catch (err) {
       console.error(err);
@@ -406,7 +406,7 @@ import { api } from "./api.js";
       localStorage.removeItem("refresh_token");
 
       window.setTimeout(() => {
-        window.location.href = "/login.html";
+      window.location.href = "login.html";
       }, 900);
     } catch (err) {
       console.error(err);
