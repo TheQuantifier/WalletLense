@@ -348,6 +348,44 @@ footer {
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
 .grid { display: grid; }
 
+/* Profile/Settings/Help shared layout */
+.profile-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--profile-hero-gap, 1rem);
+  margin-bottom: var(--profile-hero-margin, 1.25rem);
+}
+
+.profile-hero .title-wrap h1 {
+  font-size: var(--profile-hero-title-size, 1.8rem);
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.profile-hero .actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: var(--profile-grid-cols, 320px 1fr);
+  gap: var(--profile-grid-gap, 1.25rem);
+}
+
+@media (max-width: 900px) {
+  .profile-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Buttons */
 .btn {
   display: inline-flex;
