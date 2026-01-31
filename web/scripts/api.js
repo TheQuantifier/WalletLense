@@ -101,6 +101,19 @@ export const auth = {
     return request("/auth/me");
   },
 
+  sessions() {
+    return request("/auth/sessions");
+  },
+
+  async signOutAll(password) {
+    const data = await request("/auth/sessions/logout-all", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    });
+    clearAuthToken();
+    return data;
+  },
+
   updateProfile(updates) {
     return request("/auth/me", {
       method: "PUT",
@@ -108,11 +121,13 @@ export const auth = {
     });
   },
 
-  changePassword(currentPassword, newPassword) {
-    return request("/auth/change-password", {
+  async changePassword(currentPassword, newPassword) {
+    const data = await request("/auth/change-password", {
       method: "POST",
       body: JSON.stringify({ currentPassword, newPassword }),
     });
+    if (data?.token) setAuthToken(data.token);
+    return data;
   },
 
   deleteAccount() {

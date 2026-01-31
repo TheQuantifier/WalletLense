@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 
 import env from "../config/env.js";
 import { findUserById } from "../models/user.model.js";
+import { getSessionById, updateSessionLastSeen } from "../models/session.model.js";
 
 export default async function auth(req, res, next) {
   try {
@@ -44,7 +45,21 @@ export default async function auth(req, res, next) {
     }
 
     /* ----------------------------------------------
-       5. Fetch user from Postgres (safe fields only)
+       5. Validate session
+    ---------------------------------------------- */
+    if (!payload?.sid) {
+      return res.status(401).json({ message: "Session required" });
+    }
+
+    const session = await getSessionById(payload.sid);
+    if (!session || session.revoked_at || session.user_id !== payload.id) {
+      return res.status(401).json({ message: "Session expired" });
+    }
+
+    await updateSessionLastSeen(session.id);
+
+    /* ----------------------------------------------
+       6. Fetch user from Postgres (safe fields only)
     ---------------------------------------------- */
     const user = await findUserById(payload.id);
 
@@ -53,9 +68,10 @@ export default async function auth(req, res, next) {
     }
 
     /* ----------------------------------------------
-       6. Attach safe user to req
+       7. Attach safe user to req
     ---------------------------------------------- */
     req.user = user;
+    req.sessionId = session.id;
 
     return next();
   } catch (err) {

@@ -30,6 +30,10 @@ router.put("/me", auth, controller.updateMe);
 // Body: { currentPassword, newPassword }
 router.post("/change-password", auth, controller.changePassword);
 
+// Active sessions
+router.get("/sessions", auth, controller.listSessions);
+router.post("/sessions/logout-all", auth, controller.logoutAll);
+
 // Delete current user account and all related data
 router.delete("/me", auth, controller.deleteMe);
 

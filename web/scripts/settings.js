@@ -28,6 +28,14 @@ import { api } from "./api.js";
     deleteConfirmBtn: $("#confirmDeleteAccountBtn"),
     deleteCancelBtn: $("#cancelDeleteAccountBtn"),
     deleteStatus: $("#deleteAccountStatus"),
+
+    sessionsList: $("#sessionsList"),
+    signOutAllBtn: $("#signOutAllBtn"),
+    signOutAllModal: $("#signOutAllModal"),
+    signOutAllPassword: $("#signOutAllPassword"),
+    signOutAllConfirmBtn: $("#confirmSignOutAllBtn"),
+    signOutAllCancelBtn: $("#cancelSignOutAllBtn"),
+    signOutAllStatus: $("#signOutAllStatus"),
   };
 
   // ===============================
@@ -48,6 +56,13 @@ import { api } from "./api.js";
       el.textContent = "";
       el.classList.remove("is-ok", "is-error");
     }, ms);
+  };
+
+  const formatDateTime = (value) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleString();
   };
 
   // ===============================
@@ -298,6 +313,117 @@ import { api } from "./api.js";
   };
 
   // ===============================
+  // SESSIONS
+  // ===============================
+  const renderSessions = (sessions = [], currentSessionId = "") => {
+    if (!els.sessionsList) return;
+
+    if (!sessions.length) {
+      els.sessionsList.innerHTML = `<p class="subtle">No active sessions found.</p>`;
+      return;
+    }
+
+    const frag = document.createDocumentFragment();
+    sessions.forEach((s) => {
+      const item = document.createElement("div");
+      item.className = "session-item";
+
+      const title = document.createElement("div");
+      const isCurrent = s.id === currentSessionId;
+      title.textContent = isCurrent ? "Current device" : "Active device";
+      title.style.fontWeight = "600";
+
+      const meta = document.createElement("div");
+      meta.className = "session-meta";
+      const ua = s.userAgent || "Unknown device";
+      const ip = s.ipAddress ? ` • ${s.ipAddress}` : "";
+      const lastSeen = s.lastSeenAt ? ` • Last seen ${formatDateTime(s.lastSeenAt)}` : "";
+      meta.textContent = `${ua}${ip}${lastSeen}`;
+
+      item.appendChild(title);
+      item.appendChild(meta);
+      frag.appendChild(item);
+    });
+
+    els.sessionsList.innerHTML = "";
+    els.sessionsList.appendChild(frag);
+  };
+
+  const loadSessions = async () => {
+    if (!els.sessionsList) return;
+    els.sessionsList.innerHTML = `<p class="subtle">Loading sessions…</p>`;
+
+    try {
+      const data = await api.auth.sessions();
+      renderSessions(data?.sessions || [], data?.currentSessionId || "");
+    } catch (err) {
+      console.error(err);
+      els.sessionsList.innerHTML = `<p class="subtle">Failed to load sessions.</p>`;
+    }
+  };
+
+  // ===============================
+  // SIGN OUT ALL MODAL
+  // ===============================
+  const openSignOutAllModal = () => {
+    if (!els.signOutAllModal) return;
+    if (els.signOutAllPassword) els.signOutAllPassword.value = "";
+    if (els.signOutAllStatus) {
+      els.signOutAllStatus.style.display = "none";
+      els.signOutAllStatus.textContent = "";
+      els.signOutAllStatus.classList.remove("is-ok", "is-error");
+    }
+    showModal(els.signOutAllModal);
+    els.signOutAllPassword?.focus?.();
+  };
+
+  const closeSignOutAllModal = () => hideModal(els.signOutAllModal);
+
+  const performSignOutAll = async () => {
+    const password = (els.signOutAllPassword?.value || "").trim();
+    if (!password) {
+      showStatus(els.signOutAllStatus, "Please enter your password.", "error");
+      clearStatusSoon(els.signOutAllStatus, 3000);
+      return;
+    }
+
+    if (els.signOutAllConfirmBtn) {
+      els.signOutAllConfirmBtn.disabled = true;
+      els.signOutAllConfirmBtn.textContent = "Signing out…";
+    }
+
+    showStatus(els.signOutAllStatus, "Signing out all sessions…");
+
+    try {
+      await api.auth.signOutAll(password);
+
+      showStatus(els.signOutAllStatus, "All sessions signed out. Redirecting…", "ok");
+
+      localStorage.removeItem("token");
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("jwt");
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+
+      window.setTimeout(() => {
+        window.location.href = "/login.html";
+      }, 900);
+    } catch (err) {
+      console.error(err);
+      showStatus(
+        els.signOutAllStatus,
+        "Sign out failed: " + (err?.message || "Unknown error"),
+        "error"
+      );
+    } finally {
+      if (els.signOutAllConfirmBtn) {
+        els.signOutAllConfirmBtn.disabled = false;
+        els.signOutAllConfirmBtn.textContent = "Sign Out All";
+      }
+    }
+  };
+
+  // ===============================
   // WIRE EVENTS
   // ===============================
   const wire = () => {
@@ -323,6 +449,21 @@ import { api } from "./api.js";
         closeDeleteModal();
       }
     });
+
+    // Sign out all flow
+    els.signOutAllBtn?.addEventListener("click", openSignOutAllModal);
+    els.signOutAllCancelBtn?.addEventListener("click", closeSignOutAllModal);
+    els.signOutAllConfirmBtn?.addEventListener("click", performSignOutAll);
+
+    els.signOutAllModal?.addEventListener("click", (e) => {
+      if (e.target.classList.contains("modal")) closeSignOutAllModal();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && els.signOutAllModal && !els.signOutAllModal.classList.contains("hidden")) {
+        closeSignOutAllModal();
+      }
+    });
   };
 
   // ===============================
@@ -332,6 +473,7 @@ import { api } from "./api.js";
     ensureFirstRunDefaults();
     initTheme();
     loadSettingsIntoUI();
+    loadSessions();
     wire();
   });
 })();

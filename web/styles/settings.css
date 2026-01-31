@@ -133,7 +133,8 @@
 }
 
 #settingsStatus,
-#deleteAccountStatus {
+#deleteAccountStatus,
+#signOutAllStatus {
   margin: 0;
   padding: 0.55rem 0.7rem;
   border-radius: calc(var(--radius) - 2px);
@@ -143,13 +144,34 @@
 }
 
 #settingsStatus.is-ok,
-#deleteAccountStatus.is-ok {
+#deleteAccountStatus.is-ok,
+#signOutAllStatus.is-ok {
   color: var(--text);
 }
 
 #settingsStatus.is-error,
-#deleteAccountStatus.is-error {
+#deleteAccountStatus.is-error,
+#signOutAllStatus.is-error {
   color: var(--text);
+}
+
+/* Sessions list */
+.session-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.session-item {
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+}
+
+.session-item .session-meta {
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 /* Make checkbox labels align nicely */
@@ -181,8 +203,28 @@
   min-width: 160px;
 }
 
+#signOutAllModal .modal-content {
+  max-width: 520px;
+}
+
+#signOutAllModal .modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+#signOutAllModal .modal-actions .btn {
+  width: auto;
+  min-width: 160px;
+}
+
 @media (max-width: 520px) {
   #deleteAccountModal .modal-actions .btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #signOutAllModal .modal-actions .btn {
     width: 100%;
     min-width: 0;
   }

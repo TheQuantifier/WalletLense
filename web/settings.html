@@ -135,6 +135,18 @@
           <label>Delete Account</label>
           <button class="settings-btn btn--danger" id="deleteAccountBtn" type="button">Delete</button>
         </div>
+
+        <div class="settings-row">
+          <label>Active Sessions</label>
+          <div id="sessionsList" class="session-list">
+            <p class="subtle">Loading sessions…</p>
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <label>Sign Out All Devices</label>
+          <button class="settings-btn btn--danger" id="signOutAllBtn" type="button">Sign Out All</button>
+        </div>
       </section>
 
     </div>
@@ -159,6 +171,26 @@
       </div>
 
       <p id="deleteAccountStatus" class="subtle" aria-live="polite" style="display:none;"></p>
+    </div>
+  </div>
+
+  <!-- SIGN OUT ALL CONFIRM MODAL -->
+  <div class="modal hidden" id="signOutAllModal" aria-hidden="true">
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="signOutAllTitle">
+      <h2 id="signOutAllTitle">Sign Out All Devices</h2>
+      <p class="subtle">Please re-enter your password to sign out of all devices.</p>
+
+      <label>
+        <span class="label">Password</span>
+        <input id="signOutAllPassword" type="password" autocomplete="current-password" placeholder="Password" />
+      </label>
+
+      <div class="modal-actions">
+        <button class="btn btn--danger" id="confirmSignOutAllBtn" type="button">Sign Out All</button>
+        <button class="btn" id="cancelSignOutAllBtn" type="button">Cancel</button>
+      </div>
+
+      <p id="signOutAllStatus" class="subtle" aria-live="polite" style="display:none;"></p>
     </div>
   </div>
 

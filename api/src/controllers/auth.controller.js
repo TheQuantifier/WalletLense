@@ -14,13 +14,19 @@ import {
   updateUserById,
   updateUserPasswordHash,
 } from "../models/user.model.js";
+import {
+  createSession,
+  listActiveSessionsForUser,
+  revokeAllSessionsForUser,
+  revokeSessionById,
+} from "../models/session.model.js";
 
 // If you have an R2 service, we’ll use it to delete objects on account deletion.
 // If your service file name differs, adjust the import path accordingly.
 import { deleteObject } from "../services/r2.service.js";
 
-function createToken(id) {
-  return jwt.sign({ id }, env.jwtSecret, { expiresIn: env.jwtExpiresIn });
+function createToken(id, sessionId) {
+  return jwt.sign({ id, sid: sessionId }, env.jwtSecret, { expiresIn: env.jwtExpiresIn });
 }
 
 function setTokenCookie(res, token) {
@@ -43,6 +49,14 @@ function clearTokenCookie(res) {
     sameSite: isProd ? "none" : "lax",
     expires: new Date(0),
   });
+}
+
+function getRequestIp(req) {
+  const forwarded = req.headers["x-forwarded-for"];
+  if (typeof forwarded === "string" && forwarded.length > 0) {
+    return forwarded.split(",")[0].trim();
+  }
+  return req.ip || "";
 }
 
 /* =====================================================
@@ -84,7 +98,12 @@ export const register = asyncHandler(async (req, res) => {
     bio: "",
   });
 
-  const token = createToken(user.id);
+  const session = await createSession({
+    userId: user.id,
+    userAgent: req.get("user-agent") || "",
+    ipAddress: getRequestIp(req),
+  });
+  const token = createToken(user.id, session.id);
   setTokenCookie(res, token);
 
   res.status(201).json({ user, token });
@@ -111,7 +130,12 @@ export const login = asyncHandler(async (req, res) => {
     return res.status(401).json({ message: "Invalid credentials" });
   }
 
-  const token = createToken(user.id);
+  const session = await createSession({
+    userId: user.id,
+    userAgent: req.get("user-agent") || "",
+    ipAddress: getRequestIp(req),
+  });
+  const token = createToken(user.id, session.id);
   setTokenCookie(res, token);
 
   // Return safe user shape (no password_hash)
@@ -122,7 +146,10 @@ export const login = asyncHandler(async (req, res) => {
 /* =====================================================
    LOGOUT
 ===================================================== */
-export const logout = asyncHandler(async (_req, res) => {
+export const logout = asyncHandler(async (req, res) => {
+  if (req.sessionId) {
+    await revokeSessionById(req.sessionId);
+  }
   clearTokenCookie(res);
   res.json({ message: "Logged out" });
 });
@@ -207,7 +234,7 @@ export const changePassword = asyncHandler(async (req, res) => {
 
   await updateUserPasswordHash(userId, newHash);
 
-  const token = createToken(userId);
+  const token = createToken(userId, req.sessionId);
   setTokenCookie(res, token);
 
   const safeUser = await findUserById(userId);
@@ -217,6 +244,51 @@ export const changePassword = asyncHandler(async (req, res) => {
     user: safeUser,
     token,
   });
+});
+
+/* =====================================================
+   LIST ACTIVE SESSIONS
+===================================================== */
+export const listSessions = asyncHandler(async (req, res) => {
+  const sessions = await listActiveSessionsForUser(req.user.id);
+
+  res.json({
+    currentSessionId: req.sessionId,
+    sessions: sessions.map((s) => ({
+      id: s.id,
+      userId: s.user_id,
+      userAgent: s.user_agent,
+      ipAddress: s.ip_address,
+      createdAt: s.created_at,
+      lastSeenAt: s.last_seen_at,
+      revokedAt: s.revoked_at,
+    })),
+  });
+});
+
+/* =====================================================
+   LOGOUT ALL SESSIONS (password required)
+===================================================== */
+export const logoutAll = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const { password } = req.body;
+
+  if (!password) {
+    return res.status(400).json({ message: "Password is required" });
+  }
+
+  const user = await findUserAuthById(userId);
+  if (!user) return res.status(404).json({ message: "User not found" });
+
+  const ok = await bcrypt.compare(String(password), user.password_hash);
+  if (!ok) {
+    return res.status(401).json({ message: "Password is incorrect" });
+  }
+
+  await revokeAllSessionsForUser(userId);
+  clearTokenCookie(res);
+
+  res.json({ message: "All sessions have been signed out" });
 });
 
 /* =====================================================
