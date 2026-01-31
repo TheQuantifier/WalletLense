@@ -14,6 +14,12 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
+  const redirectMsg = sessionStorage.getItem("authRedirectMessage");
+  if (redirectMsg && errorEl) {
+    errorEl.textContent = redirectMsg;
+    sessionStorage.removeItem("authRedirectMessage");
+  }
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     errorEl.textContent = "";

@@ -13,15 +13,39 @@ const API_BASE =
     : "https://wisewallet-l1d5.onrender.com/api";
 
 // --------------------------------------
+// AUTH TOKEN STORAGE (fallback for blocked cookies)
+// --------------------------------------
+const AUTH_TOKEN_KEY = "auth_token";
+
+function getAuthToken() {
+  return localStorage.getItem(AUTH_TOKEN_KEY) || "";
+}
+
+function setAuthToken(token) {
+  if (!token) return;
+  localStorage.setItem(AUTH_TOKEN_KEY, token);
+}
+
+function clearAuthToken() {
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+}
+
+// --------------------------------------
 // INTERNAL REQUEST WRAPPER
 // --------------------------------------
 async function request(path, options = {}) {
+  const token = getAuthToken();
+  const headers = {
+    ...(options.body ? { "Content-Type": "application/json" } : {}),
+    ...(options.headers || {}),
+    ...(token && !options.headers?.Authorization
+      ? { Authorization: `Bearer ${token}` }
+      : {}),
+  };
+
   const res = await fetch(`${API_BASE}${path}`, {
     credentials: "include",
-    headers: {
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-      ...(options.headers || {}),
-    },
+    headers,
     ...options,
   });
 
@@ -33,6 +57,9 @@ async function request(path, options = {}) {
   }
 
   if (!res.ok) {
+    if (res.status === 401) {
+      clearAuthToken();
+    }
     const message = data?.message || `Request failed (${res.status})`;
     throw new Error(message);
   }
@@ -44,22 +71,30 @@ async function request(path, options = {}) {
 // AUTH MODULE
 // ======================================================================
 export const auth = {
-  register(email, password, fullName) {
-    return request("/auth/register", {
+  async register(email, password, fullName) {
+    const data = await request("/auth/register", {
       method: "POST",
       body: JSON.stringify({ email, password, fullName }),
     });
+    if (data?.token) setAuthToken(data.token);
+    return data;
   },
 
-  login(identifier, password) {
-    return request("/auth/login", {
+  async login(identifier, password) {
+    const data = await request("/auth/login", {
       method: "POST",
       body: JSON.stringify({ identifier, password }),
     });
+    if (data?.token) setAuthToken(data.token);
+    return data;
   },
 
-  logout() {
-    return request("/auth/logout", { method: "POST" });
+  async logout() {
+    try {
+      return await request("/auth/logout", { method: "POST" });
+    } finally {
+      clearAuthToken();
+    }
   },
 
   me() {

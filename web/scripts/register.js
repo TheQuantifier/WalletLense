@@ -119,9 +119,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
       showMsg("✅ Account created! Redirecting…", "ok");
 
-      // Wait briefly then redirect
-      setTimeout(() => {
-        window.location.href = "/login.html";
+      // Wait briefly then verify auth before redirect
+      setTimeout(async () => {
+        try {
+          await api.auth.me();
+          window.location.href = "/home.html";
+        } catch {
+          sessionStorage.setItem(
+            "authRedirectMessage",
+            "Session expired. Please log in again."
+          );
+          window.location.href = "/login.html";
+        }
       }, 1200);
 
     } catch (err) {

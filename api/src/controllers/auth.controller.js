@@ -87,7 +87,7 @@ export const register = asyncHandler(async (req, res) => {
   const token = createToken(user.id);
   setTokenCookie(res, token);
 
-  res.status(201).json({ user });
+  res.status(201).json({ user, token });
 });
 
 /* =====================================================
@@ -116,7 +116,7 @@ export const login = asyncHandler(async (req, res) => {
 
   // Return safe user shape (no password_hash)
   const safeUser = await findUserById(user.id);
-  res.json({ user: safeUser });
+  res.json({ user: safeUser, token });
 });
 
 /* =====================================================
@@ -215,6 +215,7 @@ export const changePassword = asyncHandler(async (req, res) => {
   res.json({
     message: "Password updated successfully",
     user: safeUser,
+    token,
   });
 });
 
