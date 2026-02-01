@@ -5,7 +5,7 @@ import { query } from "../config/db.js";
  * Expected Postgres table: users
  * Columns:
  * id (uuid), username, email, password_hash, full_name, location, role, phone_number, bio,
- * avatar_url, custom_expense_categories, custom_income_categories, custom_categories, created_at, updated_at
+ * avatar_url, custom_expense_categories, custom_income_categories, created_at, updated_at
  */
 
 export function normalizeIdentifier(value) {
@@ -33,7 +33,7 @@ export async function createUser({
       ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     RETURNING
       id, username, email, full_name, location, role, phone_number, bio, avatar_url,
-      custom_expense_categories, custom_income_categories, custom_categories,
+      custom_expense_categories, custom_income_categories,
       created_at, updated_at
     `,
     [
@@ -76,7 +76,7 @@ export async function findUserAuthById(id) {
     `
     SELECT
       id, username, email, password_hash, full_name, location, role, phone_number, bio, avatar_url,
-      custom_expense_categories, custom_income_categories, custom_categories,
+      custom_expense_categories, custom_income_categories,
       two_fa_enabled, two_fa_method, two_fa_confirmed_at,
       created_at, updated_at
     FROM users
@@ -95,7 +95,7 @@ export async function findUserAuthByIdentifier(identifier) {
     `
     SELECT
       id, username, email, password_hash, full_name, location, role, phone_number, bio, avatar_url,
-      custom_expense_categories, custom_income_categories, custom_categories,
+      custom_expense_categories, custom_income_categories,
       two_fa_enabled, two_fa_method, two_fa_confirmed_at,
       created_at, updated_at
     FROM users
@@ -147,7 +147,7 @@ export async function updateUserById(id, changes = {}) {
     WHERE id = $${i}
     RETURNING
       id, username, email, full_name, location, role, phone_number, bio, avatar_url,
-      custom_expense_categories, custom_income_categories, custom_categories,
+      custom_expense_categories, custom_income_categories,
       created_at, updated_at
     `,
     values

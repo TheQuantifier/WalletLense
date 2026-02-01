@@ -118,8 +118,6 @@ import { api } from "./api.js";
       const expList =
         me?.user?.custom_expense_categories ??
         me?.user?.customExpenseCategories ??
-        me?.user?.custom_categories ??
-        me?.user?.customCategories ??
         [];
       const incList =
         me?.user?.custom_income_categories ??
