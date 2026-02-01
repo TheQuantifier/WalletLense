@@ -12,8 +12,9 @@ import { api } from "./api.js";
     { id: "weekly", label: "Weekly", days: 7 },
     { id: "biweekly", label: "Biweekly", days: 14 },
     { id: "monthly", label: "Monthly", months: 1 },
-    { id: "3m", label: "3 Months", months: 3 },
-    { id: "6m", label: "6 Months", months: 6 },
+    { id: "quarterly", label: "Quarterly", months: 3 },
+    { id: "semi", label: "Semi-Annually", months: 6 },
+    { id: "annually", label: "Annually", months: 12 },
   ];
   const CADENCE_LOOKUP = new Map(CADENCE_OPTIONS.map((c) => [c.id, c]));
 
@@ -150,9 +151,10 @@ import { api } from "./api.js";
     const cadence = CADENCE_LOOKUP.get(cadenceId) || CADENCE_LOOKUP.get("monthly");
     const now = new Date();
     const options = [];
-    const count = 12;
+    let count = 12;
 
     if (cadence.days) {
+      count = cadence.days === 7 ? 52 : 26;
       const baseStart = startOfWeek(now);
       for (let i = 0; i < count; i += 1) {
         const start = new Date(baseStart);
@@ -171,6 +173,7 @@ import { api } from "./api.js";
     }
 
     const span = cadence.months || 1;
+    count = Math.max(1, Math.ceil(12 / span));
     for (let i = 0; i < count; i += 1) {
       const start = new Date(now.getFullYear(), now.getMonth() - i * span, 1);
       const end = new Date(start.getFullYear(), start.getMonth() + span, 0, 23, 59, 59, 999);
