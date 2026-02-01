@@ -21,15 +21,16 @@ export async function createUser({
   role = "user",
   phoneNumber = "",
   bio = "",
+  avatarUrl = "",
 }) {
   const { rows } = await query(
     `
     INSERT INTO users
-      (username, email, password_hash, full_name, location, role, phone_number, bio)
+      (username, email, password_hash, full_name, location, role, phone_number, bio, avatar_url)
     VALUES
-      ($1, $2, $3, $4, $5, $6, $7, $8)
+      ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     RETURNING
-      id, username, email, full_name, location, role, phone_number, bio, created_at, updated_at
+      id, username, email, full_name, location, role, phone_number, bio, avatar_url, created_at, updated_at
     `,
     [
       normalizeIdentifier(username),
@@ -40,6 +41,7 @@ export async function createUser({
       role,
       phoneNumber,
       bio,
+      avatarUrl,
     ]
   );
   return rows[0];
@@ -49,7 +51,7 @@ export async function findUserById(id) {
   const { rows } = await query(
     `
     SELECT
-      id, username, email, full_name, location, role, phone_number, bio,
+      id, username, email, full_name, location, role, phone_number, bio, avatar_url,
       two_fa_enabled, two_fa_method, two_fa_confirmed_at,
       created_at, updated_at
     FROM users
@@ -66,7 +68,7 @@ export async function findUserAuthById(id) {
   const { rows } = await query(
     `
     SELECT
-      id, username, email, password_hash, full_name, location, role, phone_number, bio,
+      id, username, email, password_hash, full_name, location, role, phone_number, bio, avatar_url,
       two_fa_enabled, two_fa_method, two_fa_confirmed_at,
       created_at, updated_at
     FROM users
@@ -84,7 +86,7 @@ export async function findUserAuthByIdentifier(identifier) {
   const { rows } = await query(
     `
     SELECT
-      id, username, email, password_hash, full_name, location, role, phone_number, bio,
+      id, username, email, password_hash, full_name, location, role, phone_number, bio, avatar_url,
       two_fa_enabled, two_fa_method, two_fa_confirmed_at,
       created_at, updated_at
     FROM users
@@ -106,6 +108,7 @@ export async function updateUserById(id, changes = {}) {
     role: "role",
     phoneNumber: "phone_number",
     bio: "bio",
+    avatarUrl: "avatar_url",
   };
 
   const sets = [];
@@ -132,7 +135,7 @@ export async function updateUserById(id, changes = {}) {
         updated_at = now()
     WHERE id = $${i}
     RETURNING
-      id, username, email, full_name, location, role, phone_number, bio, created_at, updated_at
+      id, username, email, full_name, location, role, phone_number, bio, avatar_url, created_at, updated_at
     `,
     values
   );
