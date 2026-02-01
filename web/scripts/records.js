@@ -81,7 +81,6 @@ document.addEventListener("DOMContentLoaded", () => {
     { name: "Shopping" },
     { name: "Membership" },
     { name: "Miscellaneous" },
-    { name: "Travel" },
     { name: "Education" },
     { name: "Giving" },
     { name: "Savings" },

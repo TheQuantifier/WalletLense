@@ -12,7 +12,6 @@ export const CATEGORY_COLUMNS = [
   "shopping",
   "membership",
   "miscellaneous",
-  "travel",
   "education",
   "giving",
   "savings",

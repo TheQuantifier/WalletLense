@@ -15,7 +15,6 @@ import { api } from "./api.js";
     "Shopping",
     "Membership",
     "Miscellaneous",
-    "Travel",
     "Education",
     "Giving",
     "Savings",

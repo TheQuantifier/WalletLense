@@ -18,7 +18,6 @@ create table if not exists budget_sheets (
   shopping numeric(12,2) null,
   membership numeric(12,2) null,
   miscellaneous numeric(12,2) null,
-  travel numeric(12,2) null,
   education numeric(12,2) null,
   giving numeric(12,2) null,
   savings numeric(12,2) null,
