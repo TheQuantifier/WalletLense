@@ -16,6 +16,13 @@ const setText = (el, text) => {
   if (el) el.innerText = text;
 };
 
+const getInitials = (name) => {
+  if (!name) return "?";
+  const parts = String(name).trim().split(/\s+/);
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
 const editBtn = $("editProfileBtn");
 const form = $("editForm");
 const cancelBtn = $("cancelEditBtn");
@@ -63,6 +70,7 @@ const cancelAvatarBtn = $("cancelAvatarBtn");
 const closeAvatarModalBtn = $("closeAvatarModal");
 let currentAvatarUrl = "";
 let pendingAvatarUrl = "";
+let currentDisplayName = "";
 let avatarChoicesRendered = false;
 
 /* ----------------------------------------
@@ -130,10 +138,16 @@ const AVATAR_OPTIONS = Array.from({ length: 15 }, (_, index) => {
   };
 });
 
-const applyAvatarPreview = (avatarUrl) => {
+const applyAvatarPreview = (avatarUrl, fallbackName = "") => {
   if (!avatarBlock) return;
-  avatarBlock.style.backgroundImage = avatarUrl ? `url(${avatarUrl})` : "";
-  avatarBlock.textContent = "";
+  if (avatarUrl) {
+    avatarBlock.style.backgroundImage = `url(${avatarUrl})`;
+    avatarBlock.textContent = "";
+    return;
+  }
+
+  avatarBlock.style.backgroundImage = "";
+  avatarBlock.textContent = getInitials(fallbackName);
 };
 
 const applyHeaderAvatar = (avatarUrl) => {
@@ -149,8 +163,10 @@ async function loadUserProfile() {
 
     const createdAt = user?.createdAt || user?.created_at;
     const avatarUrl = user?.avatarUrl || user?.avatar_url;
+    const displayName = user?.fullName || user?.full_name || user?.username || "";
+    currentDisplayName = displayName;
 
-    setText(f.fullName, user?.fullName || user?.full_name || user?.username || "—");
+    setText(f.fullName, displayName || "—");
     setText(f.username, "@" + (user?.username || "—"));
     setText(f.email, user?.email || "—");
     setText(f.phoneNumber, user?.phoneNumber || user?.phone_number || "—");
@@ -169,7 +185,7 @@ async function loadUserProfile() {
 
     currentAvatarUrl = avatarUrl || "";
     pendingAvatarUrl = currentAvatarUrl;
-    applyAvatarPreview(currentAvatarUrl);
+    applyAvatarPreview(currentAvatarUrl, displayName);
     applyHeaderAvatar(currentAvatarUrl);
   } catch (err) {
     showStatus("Please log in to view your profile.", "error");
@@ -268,7 +284,7 @@ saveAvatarBtn?.addEventListener("click", async () => {
     showStatus("Updating avatar...");
     await api.auth.updateProfile({ avatarUrl: pendingAvatarUrl });
     currentAvatarUrl = pendingAvatarUrl;
-    applyAvatarPreview(currentAvatarUrl);
+    applyAvatarPreview(currentAvatarUrl, currentDisplayName);
     applyHeaderAvatar(currentAvatarUrl);
     closeAvatarModal();
     showStatus("Avatar updated.");
