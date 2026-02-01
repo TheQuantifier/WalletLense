@@ -2,6 +2,33 @@
 import { query } from "../config/db.js";
 
 export async function createSession({ userId, userAgent = "", ipAddress = "" }) {
+  // Reuse active session for the same user + IP to avoid duplicates.
+  const existing = await query(
+    `
+    SELECT id
+    FROM user_sessions
+    WHERE user_id = $1 AND ip_address = $2 AND revoked_at IS NULL
+    ORDER BY last_seen_at DESC
+    LIMIT 1
+    `,
+    [userId, ipAddress]
+  );
+
+  if (existing.rows?.length) {
+    const { rows } = await query(
+      `
+      UPDATE user_sessions
+      SET last_seen_at = now(),
+          user_agent = $2
+      WHERE id = $1
+      RETURNING
+        id, user_id, user_agent, ip_address, created_at, last_seen_at, revoked_at
+      `,
+      [existing.rows[0].id, userAgent]
+    );
+    return rows[0];
+  }
+
   const { rows } = await query(
     `
     INSERT INTO user_sessions
@@ -70,11 +97,19 @@ export async function listActiveSessionsForUser(userId) {
       id, user_id, user_agent, ip_address, created_at, last_seen_at, revoked_at
     FROM user_sessions
     WHERE user_id = $1 AND revoked_at IS NULL
-    ORDER BY last_seen_at DESC
+    ORDER BY ip_address, last_seen_at DESC
     `,
     [userId]
   );
-  return rows;
+  // Deduplicate by IP, keeping the most recent session per IP.
+  const seen = new Set();
+  const deduped = [];
+  for (const row of rows) {
+    if (seen.has(row.ip_address)) continue;
+    seen.add(row.ip_address);
+    deduped.push(row);
+  }
+  return deduped;
 }
 
 export async function cleanupOldSessions({ cutoffDays = 30 } = {}) {
