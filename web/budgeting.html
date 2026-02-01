@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Budgeting | WiseWallet</title>
+
+  <meta name="description" content="Plan category budgets, track spending, and reallocate unused funds." />
+  <meta name="author" content="WiseWallet" />
+  <link rel="icon" type="image/png" href="images/favicon.png" />
+
+  <link rel="stylesheet" href="styles/default.css" />
+  <link rel="stylesheet" href="styles/budgeting.css" />
+
+  <script>
+    const savedTheme = localStorage.getItem("theme") || "light";
+    document.documentElement.setAttribute("data-theme", savedTheme);
+  </script>
+</head>
+<body>
+  <div id="header"></div>
+
+  <main class="main main--budgeting">
+    <section class="budget-hero">
+      <div>
+        <h1>Budgeting</h1>
+        <p class="subtle">Plan your monthly spend, track actuals, and move unused funds to savings or another category.</p>
+      </div>
+      <div class="budget-hero-meta">
+        <label class="subtle" for="budgetMonthSelect">Month</label>
+        <select id="budgetMonthSelect" class="month-select" aria-label="Select budget month"></select>
+        <span class="pill" id="budgetPeriod" aria-live="polite">—</span>
+        <button class="btn" id="btnResetBudgets" type="button">Reset defaults</button>
+      </div>
+    </section>
+
+    <section class="budget-summary" aria-label="Budget summary">
+      <article class="summary-card">
+        <h2>Total Budget</h2>
+        <p id="summaryTotalBudget">—</p>
+      </article>
+      <article class="summary-card">
+        <h2>Spent</h2>
+        <p id="summarySpent">—</p>
+      </article>
+      <article class="summary-card">
+        <h2>Remaining</h2>
+        <p id="summaryRemaining">—</p>
+      </article>
+      <article class="summary-card">
+        <h2>Unused (reallocatable)</h2>
+        <p id="summaryUnused">—</p>
+      </article>
+    </section>
+
+    <section class="budget-actions" aria-label="Budget actions">
+      <div class="action-card">
+        <h3>Move unused funds</h3>
+        <p class="subtle">Unused amounts can be reallocated to another category or added to savings.</p>
+        <div class="action-row">
+          <button class="btn btn--primary" id="btnAddUnusedToSavings" type="button">Add unused to Savings</button>
+          <div class="reallocate">
+            <label for="reallocateTarget" class="subtle">Or reallocate to</label>
+            <select id="reallocateTarget"></select>
+            <button class="btn" id="btnReallocateUnused" type="button">Move unused</button>
+          </div>
+        </div>
+      </div>
+      <p id="budgetStatus" class="status-banner subtle is-hidden" aria-live="polite"></p>
+    </section>
+
+    <section class="budget-table" aria-label="Category budgets">
+      <div class="table-header">
+        <h2>Categories</h2>
+        <span class="subtle">Edit your budget to update remaining totals.</span>
+      </div>
+      <div class="table-wrap" role="region" aria-label="Budget table" tabindex="0">
+        <table>
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th class="num">Budget</th>
+              <th class="num">Spent</th>
+              <th class="num">Remaining</th>
+              <th>Progress</th>
+            </tr>
+          </thead>
+          <tbody id="budgetTbody">
+            <tr><td colspan="5" class="subtle">Loading budgets…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div id="footer"></div>
+
+  <script src="scripts/default.js" type="module" defer></script>
+  <script src="scripts/budgeting.js" type="module" defer></script>
+</body>
+</html>

@@ -55,6 +55,93 @@
   font-size: 0.9rem;
 }
 
+/* ===== Net Worth ===== */
+.net-worth {
+  margin-bottom: 1.5rem;
+}
+
+.net-worth-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.net-worth-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr);
+  gap: 1rem;
+}
+
+.net-worth-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 1.5rem;
+  align-items: center;
+  padding: 1.25rem;
+}
+
+.net-worth-total .label {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-bottom: 0.35rem;
+}
+
+.net-worth-total .value {
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.net-worth-total .delta {
+  margin-top: 0.35rem;
+}
+
+.net-worth-chart canvas {
+  width: 100% !important;
+  height: auto !important;
+  max-width: 100%;
+  display: block;
+}
+
+.net-worth-breakdown {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  padding: 1.25rem !important;
+}
+
+.breakdown-col h3 {
+  margin-bottom: 0.5rem;
+}
+
+.networth-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.networth-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.networth-list li:last-child {
+  border-bottom: 0;
+}
+
+.breakdown-total {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+  font-weight: 700;
+}
+
 /* ===== Chart + Breakdown layout ===== */
 .chart-section {
   display: grid;
@@ -179,6 +266,15 @@
 /* Small screens */
 @media (max-width: 800px) {
   .chart-section {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .net-worth-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .net-worth-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .net-worth-breakdown {
     grid-template-columns: minmax(0, 1fr);
   }
   .welcome {

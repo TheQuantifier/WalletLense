@@ -5,15 +5,13 @@
 - Add fast editing flows: bulk recategorize, split transactions, undo.
 - Add explainable insights (spending spikes, MoM changes, goal progress).
 - Accessibility (WCAG AA), offline-tolerant views, locale/currency support.
-- Budgeting modes: envelope, zero-based, and category caps.
 - Goal automation rules (round-ups, allocate X% on paycheck).
 - Cash-flow forecasting (30/60/90 days) with confidence bands.
 - Recurring transaction detection with reminders.
-- Net worth dashboard with assets/liabilities and trend.
 - Data quality: dedupe, reconciliation, import normalization.
 - Categorization model with user overrides and feedback loop.
 - Data integrity checks (balances vs transactions) with confidence indicators.
-- Security: MFA, session management, anomaly detection.
+- Security: session management, anomaly detection.
 - Encryption at rest/in transit; secret rotation; least-privilege RBAC.
 - Privacy controls: export, delete account, retention policy.
 - Background jobs with retries and dead-letter queue.
@@ -25,3 +23,8 @@
 - Compliance: terms/privacy, consent, GDPR/CCPA readiness.
 - Bank-connection provider compliance requirements (if applicable).
 - Competition “wow”: money coach, scenario simulations, summaries, shareable report.
+
+Need to do on John's End (Backend API):
+
+- Net worth dashboard with assets/liabilities and trend. // Next step: john needs to create the backend API endpint for this functionality
+- Budgeting modes: envelope, zero-based, and category caps.

@@ -64,6 +64,50 @@
       </article>
     </section>
 
+    <!-- Net worth dashboard -->
+    <section class="net-worth" aria-label="Net worth dashboard">
+      <div class="net-worth-header">
+        <div>
+          <h2>Net Worth</h2>
+          <p class="subtle" id="netWorthUpdated">Loading net worth…</p>
+        </div>
+        <a class="btn btn--link" href="reports.html">View full reports →</a>
+      </div>
+
+      <div class="net-worth-grid">
+        <article class="card net-worth-summary">
+          <div class="net-worth-total">
+            <p class="label">Total Net Worth</p>
+            <p class="value" id="netWorthTotal">—</p>
+            <p class="delta subtle" id="netWorthDelta">—</p>
+          </div>
+          <div class="net-worth-chart">
+            <canvas id="netWorthChart" aria-label="Net worth trend" role="img"></canvas>
+            <p class="chart-caption subtle">Last 6 months</p>
+          </div>
+        </article>
+
+        <article class="card net-worth-breakdown">
+          <div class="breakdown-col">
+            <h3>Assets</h3>
+            <ul id="assetsList" class="networth-list"></ul>
+            <div class="breakdown-total">
+              <span>Total Assets</span>
+              <strong id="assetsTotal">—</strong>
+            </div>
+          </div>
+          <div class="breakdown-col">
+            <h3>Liabilities</h3>
+            <ul id="liabilitiesList" class="networth-list"></ul>
+            <div class="breakdown-total">
+              <span>Total Liabilities</span>
+              <strong id="liabilitiesTotal">—</strong>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <!-- Chart + breakdown -->
     <section class="chart-section">
       <div class="chart-card card">

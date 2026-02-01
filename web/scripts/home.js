@@ -33,6 +33,9 @@ import { api } from "./api.js";
       currency: currency || CURRENCY_FALLBACK,
     }).format(Number.isFinite(value) ? value : 0);
 
+  const getCSSVar = (name) =>
+    getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
   const fmtDate = (iso) =>
     new Date(iso + (iso?.length === 10 ? "T00:00:00" : ""))
       .toLocaleDateString(undefined, {
@@ -152,6 +155,99 @@ import { api } from "./api.js";
   }
 
   // ============================================================
+  //  NET WORTH LINE CHART
+  // ============================================================
+  function hexToRgba(hex, alpha) {
+    const cleaned = hex.replace("#", "");
+    if (cleaned.length !== 6) return `rgba(0,0,0,${alpha})`;
+    const r = parseInt(cleaned.slice(0, 2), 16);
+    const g = parseInt(cleaned.slice(2, 4), 16);
+    const b = parseInt(cleaned.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  function drawNetWorthChart(canvas, series, currency) {
+    if (!canvas) return;
+    const parent = canvas.parentElement || canvas;
+    const parentWidth = parent.clientWidth || 600;
+    const dpr = window.devicePixelRatio || 1;
+
+    canvas.width = parentWidth * dpr;
+    canvas.height = 220 * dpr;
+
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+
+    ctx.clearRect(0, 0, parentWidth, 220);
+
+    if (!series?.length) return;
+
+    const P = { t: 20, r: 20, b: 30, l: 40 };
+    const innerW = canvas.width / dpr - P.l - P.r;
+    const innerH = canvas.height / dpr - P.t - P.b;
+
+    const values = series.map((p) => p.value);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const pad = Math.max(1, (max - min) * 0.1);
+    const yMin = min - pad;
+    const yMax = max + pad;
+
+    const primary = getCSSVar("--primary") || "#0057b8";
+    const accent = getCSSVar("--accent") || "#00a3e0";
+
+    ctx.strokeStyle = "#e5e7eb";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(P.l, P.t + innerH);
+    ctx.lineTo(P.l + innerW, P.t + innerH);
+    ctx.stroke();
+
+    const stepX = innerW / Math.max(series.length - 1, 1);
+    const points = series.map((p, i) => {
+      const x = P.l + stepX * i;
+      const y = P.t + innerH - ((p.value - yMin) / (yMax - yMin)) * innerH;
+      return { x, y };
+    });
+
+    ctx.beginPath();
+    points.forEach((pt, i) => {
+      if (i === 0) ctx.moveTo(pt.x, pt.y);
+      else ctx.lineTo(pt.x, pt.y);
+    });
+    ctx.strokeStyle = primary;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.lineTo(P.l + innerW, P.t + innerH);
+    ctx.lineTo(P.l, P.t + innerH);
+    ctx.closePath();
+    ctx.fillStyle = hexToRgba(primary, 0.12);
+    ctx.fill();
+
+    ctx.fillStyle = accent;
+    points.forEach((pt) => {
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    ctx.fillStyle = "#6b7280";
+    ctx.font = "12px system-ui";
+    ctx.textAlign = "right";
+    ctx.fillText(fmtMoney(yMax, currency), P.l - 6, P.t + 4);
+    ctx.fillText(fmtMoney(yMin, currency), P.l - 6, P.t + innerH);
+
+    ctx.textAlign = "center";
+    series.forEach((p, i) => {
+      if (i % 2 === 1 && series.length > 4) return;
+      const x = P.l + stepX * i;
+      ctx.fillText(p.label, x, P.t + innerH + 20);
+    });
+  }
+
+  // ============================================================
   //  UI HELPERS
   // ============================================================
   function renderLegend(container, categories) {
@@ -228,6 +324,147 @@ import { api } from "./api.js";
       currency,
       last_updated: latestISO || new Date().toISOString(),
     };
+  }
+
+  // ============================================================
+  //  NET WORTH DATA + RENDER
+  // ============================================================
+  function buildDemoNetWorth(currency) {
+    return {
+      currency,
+      asOf: new Date().toISOString(),
+      assets: [
+        { name: "Checking", amount: 4200 },
+        { name: "Savings", amount: 7800 },
+        { name: "Investments", amount: 15300 },
+        { name: "Property", amount: 62000 },
+      ],
+      liabilities: [
+        { name: "Credit Card", amount: 1800 },
+        { name: "Auto Loan", amount: 6200 },
+        { name: "Student Loan", amount: 12400 },
+      ],
+      trend: [
+        { label: "Aug", value: 68000 },
+        { label: "Sep", value: 69200 },
+        { label: "Oct", value: 70100 },
+        { label: "Nov", value: 71450 },
+        { label: "Dec", value: 70980 },
+        { label: "Jan", value: 72620 },
+      ],
+    };
+  }
+
+  function buildMonthlyNet(records, monthsBack = 6) {
+    const now = new Date();
+    const months = [];
+    for (let i = monthsBack - 1; i >= 0; i -= 1) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({
+        key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+        label: d.toLocaleDateString(undefined, { month: "short" }),
+        net: 0,
+      });
+    }
+
+    records.forEach((r) => {
+      if (!r.date) return;
+      const d = new Date(r.date);
+      if (Number.isNaN(d.getTime())) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const bucket = months.find((m) => m.key === key);
+      if (!bucket) return;
+      const amt = Number(r.amount || 0);
+      bucket.net += r.type === "income" ? amt : -amt;
+    });
+
+    return months;
+  }
+
+  function getNetWorthData(records, currency) {
+    const stored = localStorage.getItem("netWorthData");
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed?.assets && parsed?.liabilities && parsed?.trend) return parsed;
+      } catch {
+        // fall through to demo
+      }
+    }
+
+    const demo = buildDemoNetWorth(currency);
+    if (!records?.length) return demo;
+
+    const assetsTotal = demo.assets.reduce((s, a) => s + a.amount, 0);
+    const liabilitiesTotal = demo.liabilities.reduce((s, l) => s + l.amount, 0);
+    const base = assetsTotal - liabilitiesTotal;
+    const months = buildMonthlyNet(records, 6);
+
+    let running = base;
+    const trend = months.map((m) => {
+      running += m.net;
+      return { label: m.label, value: Math.max(0, running) };
+    });
+
+    return {
+      ...demo,
+      trend,
+      asOf: new Date().toISOString(),
+    };
+  }
+
+  function renderNetWorth(data) {
+    if (!data) return;
+    const assetsTotal = (data.assets || []).reduce((s, a) => s + a.amount, 0);
+    const liabilitiesTotal = (data.liabilities || []).reduce((s, l) => s + l.amount, 0);
+    const netWorth = assetsTotal - liabilitiesTotal;
+
+    setText("#netWorthTotal", fmtMoney(netWorth, data.currency));
+    setText("#assetsTotal", fmtMoney(assetsTotal, data.currency));
+    setText("#liabilitiesTotal", fmtMoney(liabilitiesTotal, data.currency));
+
+    const deltaBase = data.trend?.length ? data.trend[0].value : netWorth;
+    const delta = netWorth - deltaBase;
+    const deltaLabel = delta >= 0 ? "up" : "down";
+    setText(
+      "#netWorthDelta",
+      `${delta >= 0 ? "+" : "-"}${fmtMoney(Math.abs(delta), data.currency)} ${deltaLabel} vs 6 months ago`
+    );
+    setText(
+      "#netWorthUpdated",
+      `Updated ${new Date(data.asOf).toLocaleDateString()}`
+    );
+
+    const assetsList = $("#assetsList");
+    const liabilitiesList = $("#liabilitiesList");
+    if (assetsList) assetsList.innerHTML = "";
+    if (liabilitiesList) liabilitiesList.innerHTML = "";
+
+    const renderList = (el, items) => {
+      if (!el) return;
+      if (!items?.length) {
+        const li = document.createElement("li");
+        li.className = "subtle";
+        li.textContent = "No items yet.";
+        el.appendChild(li);
+        return;
+      }
+      items.forEach((item) => {
+        const li = document.createElement("li");
+        const name = document.createElement("span");
+        name.textContent = item.name;
+        const value = document.createElement("span");
+        value.textContent = fmtMoney(item.amount, data.currency);
+        li.appendChild(name);
+        li.appendChild(value);
+        el.appendChild(li);
+      });
+    };
+
+    renderList(assetsList, data.assets);
+    renderList(liabilitiesList, data.liabilities);
+
+    drawNetWorthChart($("#netWorthChart"), data.trend, data.currency);
   }
 
   function renderKpis(comp, viewLabel) {
@@ -410,7 +647,7 @@ import { api } from "./api.js";
   async function personalizeWelcome() {
     try {
       const { user } = await api.auth.me();
-      const displayName = user?.fullName ?? user?.username ?? "";
+      const displayName = user?.fullName ?? user?.full_name ?? user?.username ?? "";
       setText("#welcomeTitle", `Welcome back, ${displayName}`);
     } catch {
       setText("#welcomeTitle", "Welcome back");
@@ -446,8 +683,10 @@ import { api } from "./api.js";
       const filteredRecords = filterRecordsByView(records, dashboardView);
 
       const computed = computeOverview(filteredRecords);
+      const netWorthData = getNetWorthData(records, computed.currency);
 
       renderKpis(computed, viewLabel);
+      renderNetWorth(netWorthData);
       renderExpensesTable($("#txnTbody"), filteredRecords, computed.currency);
 
       const canvas = $("#categoriesChart");
@@ -458,6 +697,7 @@ import { api } from "./api.js";
 
       const redraw = debounce(() => {
         drawBarChart(canvas, computed.categories);
+        drawNetWorthChart($("#netWorthChart"), netWorthData.trend, netWorthData.currency);
       }, 150);
 
       window.addEventListener("resize", redraw);

@@ -1,0 +1,206 @@
+/* ========== BUDGETING PAGE STYLES — page-specific only ========== */
+
+.budget-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.budget-hero h1 {
+  font-size: 1.8rem;
+}
+
+.budget-hero-meta {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.month-select {
+  min-width: 160px;
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: var(--blue-3);
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.budget-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.summary-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.summary-card h2 {
+  font-size: 0.95rem;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+.summary-card p {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.budget-actions {
+  margin-bottom: 1.5rem;
+}
+
+.action-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  background: var(--card-bg);
+  box-shadow: var(--shadow-sm);
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.reallocate {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.reallocate select {
+  min-width: 160px;
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+}
+
+.budget-table .table-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  gap: 1rem;
+}
+
+.table-wrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--card-bg);
+}
+
+.table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-wrap th,
+.table-wrap td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.table-wrap th {
+  background: linear-gradient(135deg, rgba(0,87,184,0.12), rgba(0,163,224,0.08));
+  font-size: 0.9rem;
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.table-wrap td.num,
+.table-wrap th.num {
+  text-align: right;
+}
+
+.table-wrap tr:last-child td {
+  border-bottom: 0;
+}
+
+.budget-input {
+  width: 120px;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  text-align: right;
+}
+
+.progress {
+  height: 8px;
+  background: var(--grey-1);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.progress > span {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+  width: 0%;
+  transition: width 0.2s ease;
+}
+
+.progress.over > span {
+  background: var(--bad);
+}
+
+.remaining.negative {
+  color: var(--bad);
+  font-weight: 600;
+}
+
+.status-banner {
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .budget-hero {
+    flex-direction: column;
+  }
+
+  .budget-hero-meta {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 720px) {
+  .table-wrap {
+    overflow-x: auto;
+  }
+
+  .budget-input {
+    width: 100px;
+  }
+}
