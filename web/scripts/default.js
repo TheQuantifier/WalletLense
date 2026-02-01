@@ -136,6 +136,15 @@ function initMobileNavMenu() {
     toggle.setAttribute("aria-expanded", isOpen);
   });
 
+  menu.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", (e) => {
+      const href = link.getAttribute("href");
+      if (!href) return;
+      e.preventDefault();
+      window.location.href = href;
+    });
+  });
+
   document.addEventListener("click", (e) => {
     if (!toggle.contains(e.target) && !menu.contains(e.target)) {
       menu.classList.remove("show");
