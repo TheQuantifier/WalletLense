@@ -126,7 +126,6 @@
 
 .budget-table-actions {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   margin-top: 0.85rem;
 }
@@ -135,6 +134,7 @@
   display: inline-flex;
   gap: 0.6rem;
   align-items: center;
+  margin-left: auto;
 }
 
 .category-cell {
