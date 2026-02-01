@@ -44,11 +44,13 @@ import { api } from "./api.js";
     };
   };
 
-  const fmtMoney = (value, currency) =>
-    new Intl.NumberFormat(undefined, {
+  const fmtMoney = (value, currency) => {
+    const num = Number(value);
+    return new Intl.NumberFormat(undefined, {
       style: "currency",
       currency: currency || CURRENCY_FALLBACK,
-    }).format(Number.isFinite(value) ? value : 0);
+    }).format(Number.isFinite(num) ? num : 0);
+  };
 
   const getCSSVar = (name) =>
     getComputedStyle(document.documentElement).getPropertyValue(name).trim();
