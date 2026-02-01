@@ -294,6 +294,39 @@ export const receipts = {
 };
 
 // ======================================================================
+// BUDGET SHEETS MODULE
+// ======================================================================
+export const budgetSheets = {
+  getAll(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return request(`/budget-sheets${query ? `?${query}` : ""}`);
+  },
+
+  lookup({ cadence, period }) {
+    const query = new URLSearchParams({ cadence, period }).toString();
+    return request(`/budget-sheets/lookup?${query}`);
+  },
+
+  getOne(id) {
+    return request(`/budget-sheets/${id}`);
+  },
+
+  create({ cadence, period, categories, customCategories }) {
+    return request("/budget-sheets", {
+      method: "POST",
+      body: JSON.stringify({ cadence, period, categories, customCategories }),
+    });
+  },
+
+  update(id, updates) {
+    return request(`/budget-sheets/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    });
+  },
+};
+
+// ======================================================================
 // UI HELPERS (shared by all frontend pages)
 // ======================================================================
 
@@ -339,6 +372,7 @@ export const api = {
   auth,
   records,
   receipts,
+  budgetSheets,
   getUploadType,
   getReceiptSummary,
   getPayMethodLabel,

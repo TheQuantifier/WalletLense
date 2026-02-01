@@ -13,8 +13,8 @@ import { api } from "./api.js";
     { id: "biweekly", label: "Biweekly", days: 14 },
     { id: "monthly", label: "Monthly", months: 1 },
     { id: "quarterly", label: "Quarterly", months: 3 },
-    { id: "semi", label: "Semi-Annually", months: 6 },
-    { id: "annually", label: "Annually", months: 12 },
+    { id: "semi-annually", label: "Semi-Annually", months: 6 },
+    { id: "yearly", label: "Yearly", months: 12 },
   ];
   const CADENCE_LOOKUP = new Map(CADENCE_OPTIONS.map((c) => [c.id, c]));
 
@@ -34,6 +34,27 @@ import { api } from "./api.js";
     { name: "Giving", budget: null },
     { name: "Savings", budget: null },
   ];
+
+  const CATEGORY_COLUMN_MAP = new Map([
+    ["Housing", "housing"],
+    ["Utilities", "utilities"],
+    ["Groceries", "groceries"],
+    ["Transportation", "transportation"],
+    ["Dining", "dining"],
+    ["Health", "health"],
+    ["Entertainment", "entertainment"],
+    ["Shopping", "shopping"],
+    ["Membership", "membership"],
+    ["Miscellaneous", "miscellaneous"],
+    ["Travel", "travel"],
+    ["Education", "education"],
+    ["Giving", "giving"],
+    ["Savings", "savings"],
+  ]);
+
+  const COLUMN_CATEGORY_MAP = new Map(
+    Array.from(CATEGORY_COLUMN_MAP.entries()).map(([name, col]) => [col, name])
+  );
 
   const $ = (sel, root = document) => root.querySelector(sel);
 
@@ -222,6 +243,54 @@ import { api } from "./api.js";
     });
 
     return [...baseNames, ...eligibleCustom];
+  };
+
+  const buildBudgetPayload = (categories) => {
+    const categoryValues = {};
+    CATEGORY_COLUMN_MAP.forEach((col, name) => {
+      const match = categories.find((c) => c.name === name);
+      const value = match?.budget;
+      categoryValues[col] = Number.isFinite(value) ? value : null;
+    });
+
+    const customCategories = categories
+      .filter((c) => isCustomCategory(c.name))
+      .map((c) => ({
+        category: c.name,
+        amount: Number.isFinite(c.budget) ? c.budget : null,
+      }));
+
+    return { categories: categoryValues, customCategories };
+  };
+
+  const applySheetToState = (sheet, state) => {
+    if (!sheet) return;
+    const baseCategories = BASE_CATEGORIES.map((base) => {
+      const col = CATEGORY_COLUMN_MAP.get(base.name);
+      return {
+        name: base.name,
+        budget: Number.isFinite(Number(sheet?.[col])) ? Number(sheet[col]) : null,
+      };
+    });
+
+    const custom = Array.isArray(sheet.custom_categories)
+      ? sheet.custom_categories.map((entry) => ({
+          name: String(entry?.category || "").trim(),
+          budget: Number.isFinite(Number(entry?.amount)) ? Number(entry.amount) : null,
+        }))
+      : [];
+
+    const merged = [
+      ...baseCategories,
+      ...custom.filter((c) => c.name && isCustomCategory(c.name)),
+    ];
+
+    state.categories = merged.map((c) => ({ ...c }));
+    saveCategories(
+      state.categories.map(({ name, budget }) => ({ name, budget })),
+      state.cadence,
+      state.periodKey
+    );
   };
 
   const purgeCategoryFromAllMonths = (name) => {
@@ -558,9 +627,79 @@ import { api } from "./api.js";
       categories: [],
       spentMap: new Map(),
       records,
+      sheetId: null,
     };
 
-    const renderForPeriod = (periodKey) => {
+    const getPeriodRecords = () =>
+      records.filter((r) => {
+        if (!r.date) return false;
+        const d = new Date(r.date);
+        if (Number.isNaN(d.getTime())) return false;
+        return d >= state.periodStart && d <= state.periodEnd;
+      });
+
+    const refreshView = () => {
+      const periodRecords = getPeriodRecords();
+      state.spentMap = buildSpentMap(periodRecords, state.categories);
+      state.categories = state.categories.map((c) => ({
+        ...c,
+        spent: state.spentMap.get(normalizeName(c.name)) || 0,
+      }));
+
+      renderSummary(computeTotals(state.categories, state.spentMap), CURRENCY_FALLBACK);
+      renderReallocateOptions(state.categories);
+      renderTable(state.categories, state.spentMap, CURRENCY_FALLBACK);
+    };
+
+    const saveBudgetSheet = async ({ forceCreate = false, silent = false } = {}) => {
+      const payload = buildBudgetPayload(state.categories);
+      try {
+        if (state.sheetId && !forceCreate) {
+          const updated = await api.budgetSheets.update(state.sheetId, {
+            cadence: state.cadence,
+            period: state.periodKey,
+            categories: payload.categories,
+            customCategories: payload.customCategories,
+          });
+          state.sheetId = updated?.id || state.sheetId;
+        } else {
+          const created = await api.budgetSheets.create({
+            cadence: state.cadence,
+            period: state.periodKey,
+            categories: payload.categories,
+            customCategories: payload.customCategories,
+          });
+          state.sheetId = created?.id || null;
+        }
+        if (!silent) showStatus("Budget saved.", "ok");
+      } catch (err) {
+        if (!silent) showStatus("Failed to save budget.", "error");
+        console.warn("Failed to save budget sheet:", err);
+      }
+    };
+
+    const loadBudgetSheet = async ({ autoCreate = false } = {}) => {
+      try {
+        const sheet = await api.budgetSheets.lookup({
+          cadence: state.cadence,
+          period: state.periodKey,
+        });
+        state.sheetId = sheet?.id || null;
+        applySheetToState(sheet, state);
+        refreshView();
+      } catch (err) {
+        if (err?.message?.includes("not found")) {
+          state.sheetId = null;
+          if (autoCreate) {
+            await saveBudgetSheet({ forceCreate: true, silent: true });
+          }
+          return;
+        }
+        console.warn("Failed to load budget sheet:", err);
+      }
+    };
+
+    const renderForPeriod = async (periodKey, { autoCreate = false } = {}) => {
       const selected = periodOptions.find((p) => p.key === periodKey) || periodOptions[0];
       state.periodKey = selected.key;
       state.periodLabel = selected.label;
@@ -573,40 +712,25 @@ import { api } from "./api.js";
         periodEl.textContent = `${getCadenceLabel(state.cadence)} · ${selected.label}`;
       }
 
-      const periodRecords = records.filter((r) => {
-        if (!r.date) return false;
-        const d = new Date(r.date);
-        if (Number.isNaN(d.getTime())) return false;
-        return d >= selected.start && d <= selected.end;
-      });
-
       state.categories = loadCategories(state.cadence, selected.key);
-      state.spentMap = buildSpentMap(periodRecords, state.categories);
-
-      state.categories = state.categories.map((c) => ({
-        ...c,
-        spent: state.spentMap.get(normalizeName(c.name)) || 0,
-      }));
-
-      renderSummary(computeTotals(state.categories, state.spentMap), CURRENCY_FALLBACK);
-      renderReallocateOptions(state.categories);
-      renderTable(state.categories, state.spentMap, CURRENCY_FALLBACK);
+      refreshView();
+      await loadBudgetSheet({ autoCreate });
     };
 
-    renderForPeriod(state.periodKey);
+    await renderForPeriod(state.periodKey, { autoCreate: true });
 
-    cadenceSelect?.addEventListener("change", (e) => {
+    cadenceSelect?.addEventListener("change", async (e) => {
       const next = e.target.value;
       state.cadence = CADENCE_LOOKUP.has(next) ? next : "monthly";
       localStorage.setItem(CADENCE_STORAGE_KEY, state.cadence);
       const selected = setPeriodOptions(state.cadence);
-      renderForPeriod(selected.key);
+      await renderForPeriod(selected.key, { autoCreate: true });
       hideStatus();
     });
 
-    periodSelect?.addEventListener("change", (e) => {
+    periodSelect?.addEventListener("change", async (e) => {
       const next = e.target.value;
-      renderForPeriod(next);
+      await renderForPeriod(next, { autoCreate: true });
       hideStatus();
     });
 
@@ -734,6 +858,32 @@ import { api } from "./api.js";
       renderReallocateOptions(state.categories);
       renderTable(state.categories, state.spentMap, CURRENCY_FALLBACK);
       showStatus(`Moved ${fmtMoney(moved, CURRENCY_FALLBACK)} to ${target}.`);
+    });
+
+    const btnSaveBudget = $("#btnSaveBudget");
+    const btnExportBudgetCsv = $("#btnExportBudgetCsv");
+
+    btnSaveBudget?.addEventListener("click", async () => {
+      await saveBudgetSheet();
+    });
+
+    btnExportBudgetCsv?.addEventListener("click", async () => {
+      await saveBudgetSheet({ silent: true });
+      const headers = ["Category", "Budget"];
+      const rows = [headers.join(",")];
+      state.categories.forEach((c) => {
+        const amount = Number.isFinite(c.budget) ? c.budget : "";
+        rows.push([`"${c.name.replace(/"/g, '""')}"`, amount].join(","));
+      });
+
+      const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `budget_${state.cadence}_${state.periodKey}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showStatus("Export started.", "ok");
     });
 
     const customCategoryModal = $("#customCategoryModal");
