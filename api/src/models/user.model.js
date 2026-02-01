@@ -58,7 +58,7 @@ export async function findUserById(id) {
     `
     SELECT
       id, username, email, full_name, location, role, phone_number, bio, avatar_url,
-      custom_expense_categories, custom_income_categories, custom_categories,
+      custom_expense_categories, custom_income_categories,
       two_fa_enabled, two_fa_method, two_fa_confirmed_at,
       created_at, updated_at
     FROM users
