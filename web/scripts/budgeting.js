@@ -650,18 +650,31 @@ import { api } from "./api.js";
       renderTable(state.categories, state.spentMap, CURRENCY_FALLBACK);
     };
 
-    const saveBudgetSheet = async ({ forceCreate = false, silent = false } = {}) => {
+    const saveBudgetSheet = async ({ silent = false } = {}) => {
       const saveBtn = $("#btnSaveBudget");
       const payload = buildBudgetPayload(state.categories);
       try {
-        if (state.sheetId && !forceCreate) {
-          const updated = await api.budgetSheets.update(state.sheetId, {
+        let targetId = state.sheetId;
+        if (!targetId) {
+          try {
+            const existing = await api.budgetSheets.lookup({
+              cadence: state.cadence,
+              period: state.periodKey,
+            });
+            targetId = existing?.id || null;
+          } catch {
+            targetId = null;
+          }
+        }
+
+        if (targetId) {
+          const updated = await api.budgetSheets.update(targetId, {
             cadence: state.cadence,
             period: state.periodKey,
             categories: payload.categories,
             customCategories: payload.customCategories,
           });
-          state.sheetId = updated?.id || state.sheetId;
+          state.sheetId = updated?.id || targetId;
         } else {
           const created = await api.budgetSheets.create({
             cadence: state.cadence,
@@ -680,7 +693,7 @@ import { api } from "./api.js";
       }
     };
 
-    const loadBudgetSheet = async ({ autoCreate = false } = {}) => {
+    const loadBudgetSheet = async () => {
       try {
         const sheet = await api.budgetSheets.lookup({
           cadence: state.cadence,
@@ -695,16 +708,13 @@ import { api } from "./api.js";
       } catch (err) {
         if (err?.message?.includes("not found")) {
           state.sheetId = null;
-          if (autoCreate) {
-            await saveBudgetSheet({ forceCreate: true, silent: true });
-          }
           return;
         }
         console.warn("Failed to load budget sheet:", err);
       }
     };
 
-    const renderForPeriod = async (periodKey, { autoCreate = false } = {}) => {
+    const renderForPeriod = async (periodKey) => {
       const selected = periodOptions.find((p) => p.key === periodKey) || periodOptions[0];
       state.periodKey = selected.key;
       state.periodLabel = selected.label;
@@ -722,23 +732,23 @@ import { api } from "./api.js";
       const saveBtn = $("#btnSaveBudget");
       if (saveBtn) saveBtn.disabled = true;
       refreshView();
-      await loadBudgetSheet({ autoCreate });
+      await loadBudgetSheet();
     };
 
-    await renderForPeriod(state.periodKey, { autoCreate: true });
+    await renderForPeriod(state.periodKey);
 
     cadenceSelect?.addEventListener("change", async (e) => {
       const next = e.target.value;
       state.cadence = CADENCE_LOOKUP.has(next) ? next : "monthly";
       localStorage.setItem(CADENCE_STORAGE_KEY, state.cadence);
       const selected = setPeriodOptions(state.cadence);
-      await renderForPeriod(selected.key, { autoCreate: true });
+      await renderForPeriod(selected.key);
       hideStatus();
     });
 
     periodSelect?.addEventListener("change", async (e) => {
       const next = e.target.value;
-      await renderForPeriod(next, { autoCreate: true });
+      await renderForPeriod(next);
       hideStatus();
     });
 
