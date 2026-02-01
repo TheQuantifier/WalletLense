@@ -382,7 +382,7 @@ import { api } from "./api.js";
     // Clear in CSS pixels (since we've scaled the context).
     ctx.clearRect(0, 0, parentWidth, 300);
 
-    const P = { t: 20, r: 20, b: 50, l: 40 };
+    const P = { t: 20, r: 20, b: 70, l: 40 };
     const innerW = canvas.width / dpr - P.l - P.r;
     const innerH = canvas.height / dpr - P.t - P.b;
 
@@ -425,6 +425,16 @@ import { api } from "./api.js";
       ctx.fillText(labels[i], 0, 0);
       ctx.restore();
     });
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "700 18px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText("Category", P.l + innerW / 2, P.t + innerH + 52);
+    ctx.save();
+    ctx.translate(12, P.t + innerH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText("Amount", 0, 0);
+    ctx.restore();
   }
 
   // ============================================================
@@ -456,7 +466,7 @@ import { api } from "./api.js";
 
     if (!series?.length) return;
 
-    const P = { t: 20, r: 20, b: 30, l: 40 };
+    const P = { t: 20, r: 20, b: 45, l: 40 };
     const innerW = canvas.width / dpr - P.l - P.r;
     const innerH = canvas.height / dpr - P.t - P.b;
 
@@ -518,6 +528,97 @@ import { api } from "./api.js";
       const x = P.l + stepX * i;
       ctx.fillText(p.label, x, P.t + innerH + 20);
     });
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "700 18px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText("Month", P.l + innerW / 2, P.t + innerH + 38);
+    ctx.save();
+    ctx.translate(12, P.t + innerH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText("Net Worth", 0, 0);
+    ctx.restore();
+
+    canvas.__netWorthSeries = series;
+    canvas.__netWorthCurrency = currency;
+    canvas.__netWorthDims = {
+      P,
+      innerW,
+      innerH,
+      yMin,
+      yMax,
+      stepX,
+      dpr,
+      parentWidth,
+    };
+
+    if (!canvas.__netWorthHoverBound) {
+      canvas.__netWorthHoverBound = true;
+      canvas.addEventListener("mousemove", (e) => {
+        const s = canvas.__netWorthSeries;
+        const dims = canvas.__netWorthDims;
+        if (!s?.length || !dims) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const index = Math.round((x - dims.P.l) / dims.stepX);
+        const clamped = Math.max(0, Math.min(s.length - 1, index));
+        drawNetWorthChart(canvas, s, canvas.__netWorthCurrency);
+        const ctxHover = canvas.getContext("2d");
+        ctxHover.setTransform(1, 0, 0, 1, 0, 0);
+        ctxHover.scale(dims.dpr, dims.dpr);
+
+        const pointX = dims.P.l + dims.stepX * clamped;
+        const value = s[clamped].value;
+        const pointY =
+          dims.P.t +
+          dims.innerH -
+          ((value - dims.yMin) / (dims.yMax - dims.yMin)) * dims.innerH;
+
+        ctxHover.strokeStyle = "rgba(255,255,255,0.35)";
+        ctxHover.lineWidth = 1;
+        ctxHover.beginPath();
+        ctxHover.moveTo(pointX, dims.P.t);
+        ctxHover.lineTo(pointX, dims.P.t + dims.innerH);
+        ctxHover.stroke();
+
+        ctxHover.fillStyle = "#ffffff";
+        ctxHover.beginPath();
+        ctxHover.arc(pointX, pointY, 4, 0, Math.PI * 2);
+        ctxHover.fill();
+
+        const label = fmtMoney(value, canvas.__netWorthCurrency);
+        ctxHover.font = "600 12px system-ui";
+        const pad = 6;
+        const textW = ctxHover.measureText(label).width;
+        const boxW = textW + pad * 2;
+        const boxH = 22;
+        const boxX = Math.min(
+          Math.max(dims.P.l, pointX - boxW / 2),
+          dims.P.l + dims.innerW - boxW
+        );
+        const boxY = Math.max(dims.P.t, pointY - 30);
+
+        ctxHover.fillStyle = "rgba(17,24,39,0.75)";
+        ctxHover.beginPath();
+        if (ctxHover.roundRect) {
+          ctxHover.roundRect(boxX, boxY, boxW, boxH, 6);
+        } else {
+          ctxHover.rect(boxX, boxY, boxW, boxH);
+        }
+        ctxHover.fill();
+
+        ctxHover.fillStyle = "#ffffff";
+        ctxHover.textAlign = "center";
+        ctxHover.textBaseline = "middle";
+        ctxHover.fillText(label, boxX + boxW / 2, boxY + boxH / 2);
+      });
+
+      canvas.addEventListener("mouseleave", () => {
+        const s = canvas.__netWorthSeries;
+        if (!s?.length) return;
+        drawNetWorthChart(canvas, s, canvas.__netWorthCurrency);
+      });
+    }
   }
 
   // ============================================================
