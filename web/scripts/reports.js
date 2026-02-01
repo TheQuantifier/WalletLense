@@ -45,6 +45,7 @@ import { api } from "./api.js";
   const showStatus = (msg, kind = "ok") => {
     if (!els.status) return;
     els.status.textContent = msg;
+    els.status.classList.remove("is-hidden");
     els.status.style.display = "block";
     els.status.classList.toggle("is-ok", kind === "ok");
     els.status.classList.toggle("is-error", kind === "error");
@@ -55,6 +56,7 @@ import { api } from "./api.js";
     window.setTimeout(() => {
       els.status.style.display = "none";
       els.status.textContent = "";
+      els.status.classList.add("is-hidden");
       els.status.classList.remove("is-ok", "is-error");
     }, ms);
   };

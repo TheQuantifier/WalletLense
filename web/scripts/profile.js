@@ -1,15 +1,5 @@
 import { api } from "./api.js";
 
-/* --------------------------------------------------
-   STUB FUNCTIONS FOR UNIMPLEMENTED AUTH FEATURES
--------------------------------------------------- */
-if (!api.auth.toggle2FA) {
-  api.auth.toggle2FA = async () => ({
-    status: false,
-    message: "Two-factor authentication is not implemented yet.",
-  });
-}
-
 if (!api.auth.signOutAll) {
   api.auth.signOutAll = async () => ({
     status: false,
@@ -105,6 +95,7 @@ const hideForm = () => {
 const showStatus = (msg, kind = "ok") => {
   if (!statusEl) return;
   statusEl.textContent = msg;
+  statusEl.classList.remove("is-hidden");
   statusEl.style.display = "block";
   statusEl.classList.toggle("is-ok", kind === "ok");
   statusEl.classList.toggle("is-error", kind === "error");
@@ -115,6 +106,7 @@ const clearStatusSoon = (ms = 2000) => {
   window.setTimeout(() => {
     statusEl.style.display = "none";
     statusEl.textContent = "";
+    statusEl.classList.add("is-hidden");
     statusEl.classList.remove("is-ok", "is-error");
   }, ms);
 };
@@ -139,7 +131,7 @@ async function loadUserProfile() {
     setText(f.bio, user?.bio || "—");
 
     setText(stats.lastLogin, "Not available");
-    setText(stats.twoFA, "Not available");
+    setText(stats.twoFA, user?.two_fa_enabled ? "Enabled" : "Disabled");
     setText(stats.uploads, "Not available");
 
     Object.keys(input).forEach((k) => {
@@ -308,18 +300,10 @@ passwordForm?.addEventListener("submit", async (e) => {
 });
 
 /* ----------------------------------------
-   TWO-FACTOR AUTH (STUB)
----------------------------------------- */
-$("toggle2FA")?.addEventListener("click", async () => {
-  try {
-    const result = await api.auth.toggle2FA();
-    if(stats.twoFA) stats.twoFA.innerText = "Not available";
-    showStatus(result.message, "error");
-    clearStatusSoon(3500);
-  } catch (err) {
-    showStatus("Could not update Two-Factor Authentication.", "error");
-    clearStatusSoon(3500);
-  }
+   TWO-FACTOR AUTH
+----------------------------------------- */
+$("toggle2FA")?.addEventListener("click", () => {
+  window.location.href = "settings.html";
 });
 
 /* ----------------------------------------

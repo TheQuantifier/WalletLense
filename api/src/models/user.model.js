@@ -49,7 +49,9 @@ export async function findUserById(id) {
   const { rows } = await query(
     `
     SELECT
-      id, username, email, full_name, location, role, phone_number, bio, created_at, updated_at
+      id, username, email, full_name, location, role, phone_number, bio,
+      two_fa_enabled, two_fa_method, two_fa_confirmed_at,
+      created_at, updated_at
     FROM users
     WHERE id = $1
     LIMIT 1
@@ -64,7 +66,9 @@ export async function findUserAuthById(id) {
   const { rows } = await query(
     `
     SELECT
-      id, username, email, password_hash, full_name, location, role, phone_number, bio, created_at, updated_at
+      id, username, email, password_hash, full_name, location, role, phone_number, bio,
+      two_fa_enabled, two_fa_method, two_fa_confirmed_at,
+      created_at, updated_at
     FROM users
     WHERE id = $1
     LIMIT 1
@@ -80,7 +84,9 @@ export async function findUserAuthByIdentifier(identifier) {
   const { rows } = await query(
     `
     SELECT
-      id, username, email, password_hash, full_name, location, role, phone_number, bio, created_at, updated_at
+      id, username, email, password_hash, full_name, location, role, phone_number, bio,
+      two_fa_enabled, two_fa_method, two_fa_confirmed_at,
+      created_at, updated_at
     FROM users
     WHERE lower(username) = $1 OR lower(email) = $1
     LIMIT 1

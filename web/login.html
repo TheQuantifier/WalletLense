@@ -43,11 +43,11 @@
 
         <form id="loginForm" class="nf-signup" autocomplete="off">
           <input
-            type="email"
+            type="text"
             id="email"
             class="nf-input"
-            placeholder="Email address"
-            aria-label="Email address"
+            placeholder="Email or username"
+            aria-label="Email or username"
             required
           />
           <input
@@ -59,6 +59,19 @@
             required
           />
           <button type="submit" class="nf-btn">Login</button>
+
+          <div id="twoFactorWrap" class="two-factor-wrap is-hidden">
+            <p class="subtle">Enter the code sent to your email.</p>
+            <input
+              type="text"
+              id="twoFactorCode"
+              class="nf-input"
+              placeholder="6-digit code"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+            />
+            <button type="button" id="verifyTwoFactorBtn" class="nf-btn">Verify Code</button>
+          </div>
         </form>
 
         <p class="auth-links">

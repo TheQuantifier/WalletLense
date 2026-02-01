@@ -1,6 +1,7 @@
 // src/controllers/auth.controller.js
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 import env from "../config/env.js";
 import asyncHandler from "../middleware/async.js";
@@ -20,6 +21,18 @@ import {
   revokeAllSessionsForUser,
   revokeSessionById,
 } from "../models/session.model.js";
+import {
+  clearTwoFaCodes,
+  createTwoFaCode,
+  deleteTwoFaCodeById,
+  findValidTwoFaCode,
+  getTrustedDevice,
+  setTwoFaEnabled,
+  touchTrustedDevice,
+  upsertTrustedDevice,
+  clearTrustedDevices,
+} from "../models/twofa.model.js";
+import { sendEmail } from "../services/email.service.js";
 
 // If you have an R2 service, we’ll use it to delete objects on account deletion.
 // If your service file name differs, adjust the import path accordingly.
@@ -27,6 +40,22 @@ import { deleteObject } from "../services/r2.service.js";
 
 function createToken(id, sessionId) {
   return jwt.sign({ id, sid: sessionId }, env.jwtSecret, { expiresIn: env.jwtExpiresIn });
+}
+
+function createTwoFaToken(id, purpose) {
+  return jwt.sign({ id, purpose }, env.jwtSecret, { expiresIn: "10m" });
+}
+
+function hashCode(code) {
+  return crypto
+    .createHmac("sha256", env.jwtSecret)
+    .update(String(code))
+    .digest("hex");
+}
+
+function generateSixDigitCode() {
+  const n = Math.floor(Math.random() * 1000000);
+  return String(n).padStart(6, "0");
 }
 
 function setTokenCookie(res, token) {
@@ -37,6 +66,17 @@ function setTokenCookie(res, token) {
     secure: isProd, // secure cookies require HTTPS in production
     sameSite: isProd ? "none" : "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+}
+
+function setDeviceCookie(res, deviceId) {
+  const isProd = env.nodeEnv === "production";
+
+  res.cookie("device_id", deviceId, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+    maxAge: 365 * 24 * 60 * 60 * 1000,
   });
 }
 
@@ -128,6 +168,54 @@ export const login = asyncHandler(async (req, res) => {
   const ok = await bcrypt.compare(String(password), user.password_hash);
   if (!ok) {
     return res.status(401).json({ message: "Invalid credentials" });
+  }
+
+  if (user.two_fa_enabled) {
+    const deviceId = req.cookies?.device_id || "";
+
+    if (deviceId) {
+      const trusted = await getTrustedDevice(user.id, deviceId);
+      if (trusted?.last_verified_at) {
+        const lastVerifiedMs = new Date(trusted.last_verified_at).getTime();
+        const trustedWindowMs = Math.max(0, env.twoFaTrustedDays) * 24 * 60 * 60 * 1000;
+        if (Number.isFinite(lastVerifiedMs) && Date.now() - lastVerifiedMs <= trustedWindowMs) {
+          await touchTrustedDevice(user.id, deviceId);
+
+          const session = await createSession({
+            userId: user.id,
+            userAgent: req.get("user-agent") || "",
+            ipAddress: getRequestIp(req),
+          });
+          const token = createToken(user.id, session.id);
+          setTokenCookie(res, token);
+          setDeviceCookie(res, deviceId);
+
+          const safeUser = await findUserById(user.id);
+          return res.json({ user: safeUser, token });
+        }
+      }
+    }
+
+    const code = generateSixDigitCode();
+    const codeHash = hashCode(code);
+    const expiresAt = new Date(Date.now() + env.twoFaCodeMinutes * 60 * 1000);
+
+    await clearTwoFaCodes(user.id, "login");
+    await createTwoFaCode({
+      userId: user.id,
+      purpose: "login",
+      codeHash,
+      expiresAt,
+    });
+
+    await sendEmail({
+      to: user.email,
+      subject: "Your WiseWallet login code",
+      text: `Your login code is ${code}. It expires in ${env.twoFaCodeMinutes} minutes.`,
+    });
+
+    const twoFaToken = createTwoFaToken(user.id, "login");
+    return res.json({ requires2fa: true, twoFactorToken: twoFaToken });
   }
 
   const session = await createSession({
@@ -244,6 +332,133 @@ export const changePassword = asyncHandler(async (req, res) => {
     user: safeUser,
     token,
   });
+});
+
+/* =====================================================
+   2FA: REQUEST ENABLE (email code)
+===================================================== */
+export const requestTwoFaEnable = asyncHandler(async (req, res) => {
+  const user = await findUserById(req.user.id);
+  if (!user) return res.status(404).json({ message: "User not found" });
+
+  if (user.two_fa_enabled) {
+    return res.status(400).json({ message: "Two-factor authentication is already enabled" });
+  }
+
+  const code = generateSixDigitCode();
+  const codeHash = hashCode(code);
+  const expiresAt = new Date(Date.now() + env.twoFaCodeMinutes * 60 * 1000);
+
+  await clearTwoFaCodes(user.id, "enable");
+  await createTwoFaCode({
+    userId: user.id,
+    purpose: "enable",
+    codeHash,
+    expiresAt,
+  });
+
+  await sendEmail({
+    to: user.email,
+    subject: "Your WiseWallet verification code",
+    text: `Your verification code is ${code}. It expires in ${env.twoFaCodeMinutes} minutes.`,
+  });
+
+  res.json({ message: "Verification code sent" });
+});
+
+/* =====================================================
+   2FA: CONFIRM ENABLE (email code)
+===================================================== */
+export const confirmTwoFaEnable = asyncHandler(async (req, res) => {
+  const { code } = req.body;
+  if (!code) return res.status(400).json({ message: "Code is required" });
+
+  const codeHash = hashCode(code);
+  const match = await findValidTwoFaCode({
+    userId: req.user.id,
+    purpose: "enable",
+    codeHash,
+  });
+
+  if (!match) {
+    return res.status(401).json({ message: "Invalid or expired code" });
+  }
+
+  await deleteTwoFaCodeById(match.id);
+  const updated = await setTwoFaEnabled(req.user.id, true);
+
+  res.json({ message: "Two-factor authentication enabled", user: updated });
+});
+
+/* =====================================================
+   2FA: DISABLE (password required)
+===================================================== */
+export const disableTwoFa = asyncHandler(async (req, res) => {
+  const { password } = req.body;
+  if (!password) return res.status(400).json({ message: "Password is required" });
+
+  const user = await findUserAuthById(req.user.id);
+  if (!user) return res.status(404).json({ message: "User not found" });
+
+  const ok = await bcrypt.compare(String(password), user.password_hash);
+  if (!ok) return res.status(401).json({ message: "Password is incorrect" });
+
+  await clearTrustedDevices(req.user.id);
+  const updated = await setTwoFaEnabled(req.user.id, false);
+  res.json({ message: "Two-factor authentication disabled", user: updated });
+});
+
+/* =====================================================
+   2FA: VERIFY LOGIN (code + token)
+===================================================== */
+export const verifyTwoFaLogin = asyncHandler(async (req, res) => {
+  const { code, twoFactorToken } = req.body;
+  if (!code || !twoFactorToken) {
+    return res.status(400).json({ message: "Code and token are required" });
+  }
+
+  let payload;
+  try {
+    payload = jwt.verify(twoFactorToken, env.jwtSecret);
+  } catch {
+    return res.status(401).json({ message: "Invalid or expired token" });
+  }
+
+  if (payload?.purpose !== "login") {
+    return res.status(401).json({ message: "Invalid token purpose" });
+  }
+
+  const codeHash = hashCode(code);
+  const match = await findValidTwoFaCode({
+    userId: payload.id,
+    purpose: "login",
+    codeHash,
+  });
+
+  if (!match) {
+    return res.status(401).json({ message: "Invalid or expired code" });
+  }
+
+  await deleteTwoFaCodeById(match.id);
+
+  const deviceId = req.cookies?.device_id || crypto.randomUUID();
+  await upsertTrustedDevice({
+    userId: payload.id,
+    deviceId,
+    userAgent: req.get("user-agent") || "",
+  });
+
+  const session = await createSession({
+    userId: payload.id,
+    userAgent: req.get("user-agent") || "",
+    ipAddress: getRequestIp(req),
+  });
+  const token = createToken(payload.id, session.id);
+  setTokenCookie(res, token);
+  setDeviceCookie(res, deviceId);
+
+  const safeUser = await findUserById(payload.id);
+  res.json({ user: safeUser, token });
 });
 
 /* =====================================================

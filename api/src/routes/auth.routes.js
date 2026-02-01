@@ -15,6 +15,9 @@ router.post("/register", controller.register);
 // Controller supports username OR email
 router.post("/login", controller.login);
 
+// 2FA login verify
+router.post("/2fa/verify-login", controller.verifyTwoFaLogin);
+
 // --------------------------------------------------
 // PROTECTED LOGOUT (requires auth)
 // --------------------------------------------------
@@ -29,6 +32,11 @@ router.put("/me", auth, controller.updateMe);
 // Change password for current user
 // Body: { currentPassword, newPassword }
 router.post("/change-password", auth, controller.changePassword);
+
+// 2FA (optional) management
+router.post("/2fa/request-enable", auth, controller.requestTwoFaEnable);
+router.post("/2fa/confirm-enable", auth, controller.confirmTwoFaEnable);
+router.post("/2fa/disable", auth, controller.disableTwoFa);
 
 // Active sessions
 router.get("/sessions", auth, controller.listSessions);

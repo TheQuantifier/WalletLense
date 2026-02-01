@@ -35,6 +35,8 @@ const env = {
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
   sessionIdleDays: Number(process.env.SESSION_IDLE_DAYS || 1),
   sessionCleanupDays: Number(process.env.SESSION_CLEANUP_DAYS || 30),
+  twoFaCodeMinutes: Number(process.env.TWO_FA_CODE_MINUTES || 10),
+  twoFaTrustedDays: Number(process.env.TWO_FA_TRUSTED_DAYS || 10),
 
   // CORS
   clientOrigins: (process.env.CORS_ORIGIN || "http://localhost:5500")

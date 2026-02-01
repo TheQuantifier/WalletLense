@@ -132,6 +132,15 @@
         <h2>Account</h2>
 
         <div class="settings-row">
+          <label>Two-Factor Authentication (Email)</label>
+          <div class="settings-actions-inline">
+            <span id="twoFaStatus" class="subtle">Loading…</span>
+            <button class="settings-btn btn--primary" id="enableTwoFaBtn" type="button">Enable</button>
+            <button class="settings-btn btn--danger is-hidden" id="disableTwoFaBtn" type="button">Disable</button>
+          </div>
+        </div>
+
+        <div class="settings-row">
           <label>Delete Account</label>
           <button class="settings-btn btn--danger" id="deleteAccountBtn" type="button">Delete</button>
         </div>
@@ -191,6 +200,46 @@
       </div>
 
       <p id="signOutAllStatus" class="status-banner subtle is-hidden" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <!-- 2FA ENABLE MODAL -->
+  <div class="modal hidden" id="enableTwoFaModal" aria-hidden="true">
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="enableTwoFaTitle">
+      <h2 id="enableTwoFaTitle">Enable Two-Factor Authentication</h2>
+      <p class="subtle">Enter the code sent to your email to enable 2FA.</p>
+
+      <label>
+        <span class="label">Verification Code</span>
+        <input id="twoFaCodeInput" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="6-digit code" />
+      </label>
+
+      <div class="modal-actions">
+        <button class="btn btn--primary" id="confirmEnableTwoFaBtn" type="button">Verify & Enable</button>
+        <button class="btn" id="cancelEnableTwoFaBtn" type="button">Cancel</button>
+      </div>
+
+      <p id="enableTwoFaStatus" class="status-banner subtle is-hidden" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <!-- 2FA DISABLE MODAL -->
+  <div class="modal hidden" id="disableTwoFaModal" aria-hidden="true">
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="disableTwoFaTitle">
+      <h2 id="disableTwoFaTitle">Disable Two-Factor Authentication</h2>
+      <p class="subtle">Enter your password to disable 2FA.</p>
+
+      <label>
+        <span class="label">Password</span>
+        <input id="twoFaDisablePassword" type="password" autocomplete="current-password" placeholder="Password" />
+      </label>
+
+      <div class="modal-actions">
+        <button class="btn btn--danger" id="confirmDisableTwoFaBtn" type="button">Disable 2FA</button>
+        <button class="btn" id="cancelDisableTwoFaBtn" type="button">Cancel</button>
+      </div>
+
+      <p id="disableTwoFaStatus" class="status-banner subtle is-hidden" aria-live="polite"></p>
     </div>
   </div>
 

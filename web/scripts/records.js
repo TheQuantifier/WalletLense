@@ -66,6 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const el = type === "income" ? statusIncome : statusExpense;
     if (!el) return;
     el.textContent = msg;
+    el.classList.remove("is-hidden");
     el.style.display = "block";
     el.classList.toggle("is-ok", kind === "ok");
     el.classList.toggle("is-error", kind === "error");
@@ -77,6 +78,7 @@ document.addEventListener("DOMContentLoaded", () => {
     window.setTimeout(() => {
       el.style.display = "none";
       el.textContent = "";
+      el.classList.add("is-hidden");
       el.classList.remove("is-ok", "is-error");
     }, ms);
   };

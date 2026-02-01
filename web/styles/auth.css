@@ -326,6 +326,14 @@ body.landing-light {
   text-decoration: underline;
 }
 
+/* 2FA on login */
+.two-factor-wrap {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
 /* =========================================================
    ⭐ FIX AUTOFILL — MOVED HERE BELOW INPUT RULES
    ========================================================= */

@@ -47,6 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!msg) return;
     msg.textContent = text;
     msg.style.display = "block";
+    msg.classList.remove("is-hidden");
     msg.style.color =
       kind === "error" ? "#b91c1c" : kind === "ok" ? "#166534" : "#111827";
   };
@@ -55,6 +56,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!msg) return;
     msg.textContent = "";
     msg.style.display = "none";
+    msg.classList.add("is-hidden");
     msg.style.color = "";
   };
 

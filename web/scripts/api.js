@@ -89,6 +89,15 @@ export const auth = {
     return data;
   },
 
+  async verifyTwoFaLogin(code, twoFactorToken) {
+    const data = await request("/auth/2fa/verify-login", {
+      method: "POST",
+      body: JSON.stringify({ code, twoFactorToken }),
+    });
+    if (data?.token) setAuthToken(data.token);
+    return data;
+  },
+
   async logout() {
     try {
       return await request("/auth/logout", { method: "POST" });
@@ -112,6 +121,24 @@ export const auth = {
     });
     clearAuthToken();
     return data;
+  },
+
+  requestTwoFaEnable() {
+    return request("/auth/2fa/request-enable", { method: "POST" });
+  },
+
+  confirmTwoFaEnable(code) {
+    return request("/auth/2fa/confirm-enable", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    });
+  },
+
+  disableTwoFa(password) {
+    return request("/auth/2fa/disable", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    });
   },
 
   updateProfile(updates) {

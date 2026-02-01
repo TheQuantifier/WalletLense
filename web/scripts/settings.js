@@ -36,6 +36,20 @@ import { api } from "./api.js";
     signOutAllConfirmBtn: $("#confirmSignOutAllBtn"),
     signOutAllCancelBtn: $("#cancelSignOutAllBtn"),
     signOutAllStatus: $("#signOutAllStatus"),
+
+    twoFaStatus: $("#twoFaStatus"),
+    enableTwoFaBtn: $("#enableTwoFaBtn"),
+    disableTwoFaBtn: $("#disableTwoFaBtn"),
+    enableTwoFaModal: $("#enableTwoFaModal"),
+    disableTwoFaModal: $("#disableTwoFaModal"),
+    twoFaCodeInput: $("#twoFaCodeInput"),
+    confirmEnableTwoFaBtn: $("#confirmEnableTwoFaBtn"),
+    cancelEnableTwoFaBtn: $("#cancelEnableTwoFaBtn"),
+    enableTwoFaStatus: $("#enableTwoFaStatus"),
+    twoFaDisablePassword: $("#twoFaDisablePassword"),
+    confirmDisableTwoFaBtn: $("#confirmDisableTwoFaBtn"),
+    cancelDisableTwoFaBtn: $("#cancelDisableTwoFaBtn"),
+    disableTwoFaStatus: $("#disableTwoFaStatus"),
   };
 
   // ===============================
@@ -44,6 +58,7 @@ import { api } from "./api.js";
   const showStatus = (el, msg, kind = "ok") => {
     if (!el) return;
     el.textContent = msg;
+    el.classList.remove("is-hidden");
     el.style.display = "block";
     el.classList.toggle("is-ok", kind === "ok");
     el.classList.toggle("is-error", kind === "error");
@@ -54,6 +69,7 @@ import { api } from "./api.js";
     window.setTimeout(() => {
       el.style.display = "none";
       el.textContent = "";
+      el.classList.add("is-hidden");
       el.classList.remove("is-ok", "is-error");
     }, ms);
   };
@@ -313,6 +329,128 @@ import { api } from "./api.js";
   };
 
   // ===============================
+  // TWO-FACTOR AUTH
+  // ===============================
+  const updateTwoFaUI = async () => {
+    if (!els.twoFaStatus) return;
+    try {
+      const { user } = await api.auth.me();
+      const enabled = !!user?.two_fa_enabled || !!user?.twoFaEnabled;
+      els.twoFaStatus.textContent = enabled ? "Enabled" : "Disabled";
+      els.enableTwoFaBtn?.classList.toggle("is-hidden", enabled);
+      els.disableTwoFaBtn?.classList.toggle("is-hidden", !enabled);
+    } catch {
+      els.twoFaStatus.textContent = "Unavailable";
+      els.enableTwoFaBtn?.classList.add("is-hidden");
+      els.disableTwoFaBtn?.classList.add("is-hidden");
+    }
+  };
+
+  const openEnableTwoFaModal = () => {
+    if (!els.enableTwoFaModal) return;
+    if (els.enableTwoFaStatus) {
+      els.enableTwoFaStatus.classList.add("is-hidden");
+      els.enableTwoFaStatus.textContent = "";
+      els.enableTwoFaStatus.classList.remove("is-ok", "is-error");
+    }
+    if (els.twoFaCodeInput) els.twoFaCodeInput.value = "";
+    showModal(els.enableTwoFaModal);
+    els.twoFaCodeInput?.focus?.();
+  };
+
+  const closeEnableTwoFaModal = () => hideModal(els.enableTwoFaModal);
+
+  const openDisableTwoFaModal = () => {
+    if (!els.disableTwoFaModal) return;
+    if (els.disableTwoFaStatus) {
+      els.disableTwoFaStatus.classList.add("is-hidden");
+      els.disableTwoFaStatus.textContent = "";
+      els.disableTwoFaStatus.classList.remove("is-ok", "is-error");
+    }
+    if (els.twoFaDisablePassword) els.twoFaDisablePassword.value = "";
+    showModal(els.disableTwoFaModal);
+    els.twoFaDisablePassword?.focus?.();
+  };
+
+  const closeDisableTwoFaModal = () => hideModal(els.disableTwoFaModal);
+
+  const requestEnableTwoFa = async () => {
+    try {
+      await api.auth.requestTwoFaEnable();
+      openEnableTwoFaModal();
+    } catch (err) {
+      console.error(err);
+      if (els.twoFaStatus) {
+        els.twoFaStatus.textContent = err?.message || "Failed to send code";
+      }
+    }
+  };
+
+  const confirmEnableTwoFa = async () => {
+    const code = (els.twoFaCodeInput?.value || "").trim();
+    if (!code) {
+      showStatus(els.enableTwoFaStatus, "Enter the code from your email.", "error");
+      return;
+    }
+
+    if (els.confirmEnableTwoFaBtn) {
+      els.confirmEnableTwoFaBtn.disabled = true;
+      els.confirmEnableTwoFaBtn.textContent = "Verifying…";
+    }
+
+    try {
+      await api.auth.confirmTwoFaEnable(code);
+      showStatus(els.enableTwoFaStatus, "Two-factor authentication enabled.", "ok");
+      await updateTwoFaUI();
+      window.setTimeout(() => closeEnableTwoFaModal(), 800);
+    } catch (err) {
+      console.error(err);
+      showStatus(
+        els.enableTwoFaStatus,
+        err?.message || "Verification failed.",
+        "error"
+      );
+    } finally {
+      if (els.confirmEnableTwoFaBtn) {
+        els.confirmEnableTwoFaBtn.disabled = false;
+        els.confirmEnableTwoFaBtn.textContent = "Verify & Enable";
+      }
+    }
+  };
+
+  const confirmDisableTwoFa = async () => {
+    const password = (els.twoFaDisablePassword?.value || "").trim();
+    if (!password) {
+      showStatus(els.disableTwoFaStatus, "Enter your password.", "error");
+      return;
+    }
+
+    if (els.confirmDisableTwoFaBtn) {
+      els.confirmDisableTwoFaBtn.disabled = true;
+      els.confirmDisableTwoFaBtn.textContent = "Disabling…";
+    }
+
+    try {
+      await api.auth.disableTwoFa(password);
+      showStatus(els.disableTwoFaStatus, "Two-factor authentication disabled.", "ok");
+      await updateTwoFaUI();
+      window.setTimeout(() => closeDisableTwoFaModal(), 800);
+    } catch (err) {
+      console.error(err);
+      showStatus(
+        els.disableTwoFaStatus,
+        err?.message || "Disable failed.",
+        "error"
+      );
+    } finally {
+      if (els.confirmDisableTwoFaBtn) {
+        els.confirmDisableTwoFaBtn.disabled = false;
+        els.confirmDisableTwoFaBtn.textContent = "Disable 2FA";
+      }
+    }
+  };
+
+  // ===============================
   // SESSIONS
   // ===============================
   const renderSessions = (sessions = [], currentSessionId = "") => {
@@ -464,6 +602,31 @@ import { api } from "./api.js";
         closeSignOutAllModal();
       }
     });
+
+    // 2FA enable/disable
+    els.enableTwoFaBtn?.addEventListener("click", requestEnableTwoFa);
+    els.disableTwoFaBtn?.addEventListener("click", openDisableTwoFaModal);
+    els.cancelEnableTwoFaBtn?.addEventListener("click", closeEnableTwoFaModal);
+    els.confirmEnableTwoFaBtn?.addEventListener("click", confirmEnableTwoFa);
+    els.cancelDisableTwoFaBtn?.addEventListener("click", closeDisableTwoFaModal);
+    els.confirmDisableTwoFaBtn?.addEventListener("click", confirmDisableTwoFa);
+
+    els.enableTwoFaModal?.addEventListener("click", (e) => {
+      if (e.target.classList.contains("modal")) closeEnableTwoFaModal();
+    });
+
+    els.disableTwoFaModal?.addEventListener("click", (e) => {
+      if (e.target.classList.contains("modal")) closeDisableTwoFaModal();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && els.enableTwoFaModal && !els.enableTwoFaModal.classList.contains("hidden")) {
+        closeEnableTwoFaModal();
+      }
+      if (e.key === "Escape" && els.disableTwoFaModal && !els.disableTwoFaModal.classList.contains("hidden")) {
+        closeDisableTwoFaModal();
+      }
+    });
   };
 
   // ===============================
@@ -474,6 +637,7 @@ import { api } from "./api.js";
     initTheme();
     loadSettingsIntoUI();
     loadSessions();
+    updateTwoFaUI();
     wire();
   });
 })();
