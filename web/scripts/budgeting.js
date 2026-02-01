@@ -173,9 +173,14 @@ import { api } from "./api.js";
     }
 
     const span = cadence.months || 1;
+    const alignedMonth =
+      span >= 3 ? Math.floor(now.getMonth() / span) * span : now.getMonth();
+    const baseStart = new Date(now.getFullYear(), alignedMonth, 1);
     count = Math.max(1, Math.ceil(12 / span));
+    if (span === 12) count += 1;
     for (let i = 0; i < count; i += 1) {
-      const start = new Date(now.getFullYear(), now.getMonth() - i * span, 1);
+      const start = new Date(baseStart);
+      start.setMonth(start.getMonth() - i * span);
       const end = new Date(start.getFullYear(), start.getMonth() + span, 0, 23, 59, 59, 999);
       const label =
         span === 1
