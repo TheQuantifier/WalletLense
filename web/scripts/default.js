@@ -84,6 +84,7 @@ function loadHeaderAndFooter() {
       document.getElementById("header").innerHTML = html;
 
       setActiveNavLink();
+      initMobileNavSelect();
       initAccountMenu();
       updateHeaderAuthState();
       wireLogoutButton();
@@ -121,6 +122,27 @@ function setActiveNavLink() {
 
     if (linkPage === currentPage) link.classList.add("active");
     else link.classList.remove("active");
+  });
+}
+
+function initMobileNavSelect() {
+  const select = document.getElementById("mobileNavSelect");
+  if (!select) return;
+
+  const rawPage = (window.location.pathname.split("/").pop() || "").toLowerCase();
+  const currentPage = rawPage === "" ? "index.html" : rawPage;
+  const options = Array.from(select.options || []);
+
+  const match = options.find((opt) => {
+    const href = (opt.value || "").toLowerCase();
+    const optPage = href.startsWith("/") ? href.slice(1) : href;
+    return optPage === currentPage;
+  });
+  if (match) select.value = match.value;
+
+  select.addEventListener("change", (e) => {
+    const next = e.target.value;
+    if (next) window.location.href = next;
   });
 }
 

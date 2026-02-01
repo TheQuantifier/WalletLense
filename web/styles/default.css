@@ -149,6 +149,20 @@ header {
   gap: var(--space-3);
 }
 
+.mobile-nav {
+  display: none;
+}
+
+.mobile-nav-select {
+  width: min(100%, 240px);
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  font-weight: 600;
+}
+
 .nav-links a {
   position: relative;
   text-decoration: none;
@@ -387,6 +401,14 @@ footer {
 }
 
 @media (max-width: 900px) {
+  .nav-links {
+    display: none;
+  }
+
+  .mobile-nav {
+    display: block;
+  }
+
   .profile-hero {
     flex-direction: column;
     align-items: flex-start;
