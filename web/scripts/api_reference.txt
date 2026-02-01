@@ -1,10 +1,10 @@
 ============================================================
- FRONTEND API REFERENCE — FinanceApp
+ FRONTEND API REFERENCE — WiseWallet
  All callable functions from web/scripts/api.js
 ============================================================
 
 BASE URL (auto-switched):
-  Production: https://financeapp-5u9g.onrender.com/api
+  Production: https://wisewallet-l1d5.onrender.com/api
   Local:      http://localhost:4000/api
 
 All functions return Promises:
@@ -28,7 +28,7 @@ ARGUMENTS:
   fullName  (string)
 
 RETURNS:
-  { user }
+  { user, token }
 
 EXAMPLE:
   await api.auth.register("john@example.com", "mypassword", "John");
@@ -38,24 +38,41 @@ EXAMPLE:
  auth.login(identifier, password)
 ------------------------------------------------------------
 DESCRIPTION:
-  Logs in a user using *email OR username*.
+  Logs in a user using email OR username.
 
 ARGUMENTS:
   identifier (string)
   password   (string)
 
 RETURNS:
-  { user }
+  { user, token } OR { requires2fa, twoFactorToken }
 
 EXAMPLE:
   await api.auth.login("johnhand", "mypassword");
 
 
 ------------------------------------------------------------
+ auth.verifyTwoFaLogin(code, twoFactorToken)
+------------------------------------------------------------
+DESCRIPTION:
+  Verifies a 2FA login code and completes login.
+
+ARGUMENTS:
+  code          (string)
+  twoFactorToken (string)
+
+RETURNS:
+  { user, token }
+
+EXAMPLE:
+  await api.auth.verifyTwoFaLogin("123456", token);
+
+
+------------------------------------------------------------
  auth.logout()
 ------------------------------------------------------------
 DESCRIPTION:
-  Logs the user out by clearing their secure cookie.
+  Logs the user out by clearing their secure cookie/token.
 
 EXAMPLE:
   await api.auth.logout();
@@ -69,6 +86,56 @@ DESCRIPTION:
 
 EXAMPLE:
   const me = await api.auth.me();
+
+
+------------------------------------------------------------
+ auth.sessions()
+------------------------------------------------------------
+DESCRIPTION:
+  Lists active sessions for the authenticated user.
+
+EXAMPLE:
+  const sessions = await api.auth.sessions();
+
+
+------------------------------------------------------------
+ auth.signOutAll(password)
+------------------------------------------------------------
+DESCRIPTION:
+  Signs out all sessions (requires password).
+
+EXAMPLE:
+  await api.auth.signOutAll("mypassword");
+
+
+------------------------------------------------------------
+ auth.requestTwoFaEnable()
+------------------------------------------------------------
+DESCRIPTION:
+  Sends a verification code to enable 2FA.
+
+EXAMPLE:
+  await api.auth.requestTwoFaEnable();
+
+
+------------------------------------------------------------
+ auth.confirmTwoFaEnable(code)
+------------------------------------------------------------
+DESCRIPTION:
+  Confirms 2FA enablement using the email code.
+
+EXAMPLE:
+  await api.auth.confirmTwoFaEnable("123456");
+
+
+------------------------------------------------------------
+ auth.disableTwoFa(password)
+------------------------------------------------------------
+DESCRIPTION:
+  Disables 2FA (requires password).
+
+EXAMPLE:
+  await api.auth.disableTwoFa("mypassword");
 
 
 ------------------------------------------------------------
@@ -111,7 +178,6 @@ EXAMPLE:
   await api.auth.deleteAccount();
 
 
-
 ============================================================
  2. RECORDS MODULE
 ============================================================
@@ -127,6 +193,16 @@ ARGUMENTS:
 
 EXAMPLE:
   const list = await api.records.getAll();
+
+
+------------------------------------------------------------
+ records.stats()
+------------------------------------------------------------
+DESCRIPTION:
+  Fetches record summary stats for the user.
+
+EXAMPLE:
+  const stats = await api.records.stats();
 
 
 ------------------------------------------------------------
@@ -202,7 +278,6 @@ EXAMPLES:
   await api.records.remove(id);
   await api.records.remove(id, true);
   await api.records.remove(id, false);
-
 
 
 ============================================================
@@ -295,7 +370,6 @@ EXAMPLES:
   await api.receipts.remove(id, false);
 
 
-
 ============================================================
  4. HELPER FUNCTIONS (UI convenience)
 ============================================================
@@ -326,7 +400,6 @@ DESCRIPTION:
     - subAmount / amount / tax
     - payment method
     - parsed items list
-
 
 
 ============================================================
