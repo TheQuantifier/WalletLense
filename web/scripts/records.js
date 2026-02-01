@@ -268,7 +268,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (r.type !== type) return;
         if (r.category) merged.set(normalizeName(r.category), r.category);
       });
-
       Array.from(merged.values())
         .sort((a, b) => a.localeCompare(b))
         .forEach((name) => {
