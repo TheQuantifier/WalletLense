@@ -84,7 +84,7 @@ function loadHeaderAndFooter() {
       document.getElementById("header").innerHTML = html;
 
       setActiveNavLink();
-      initMobileNavSelect();
+      initMobileNavMenu();
       initAccountMenu();
       updateHeaderAuthState();
       wireLogoutButton();
@@ -125,24 +125,32 @@ function setActiveNavLink() {
   });
 }
 
-function initMobileNavSelect() {
-  const select = document.getElementById("mobileNavSelect");
-  if (!select) return;
+function initMobileNavMenu() {
+  const toggle = document.getElementById("mobileNavToggle");
+  const menu = document.getElementById("mobileNavMenu");
+  if (!toggle || !menu) return;
 
-  const rawPage = (window.location.pathname.split("/").pop() || "").toLowerCase();
-  const currentPage = rawPage === "" ? "index.html" : rawPage;
-  const options = Array.from(select.options || []);
-
-  const match = options.find((opt) => {
-    const href = (opt.value || "").toLowerCase();
-    const optPage = href.startsWith("/") ? href.slice(1) : href;
-    return optPage === currentPage;
+  toggle.addEventListener("click", () => {
+    const isOpen = menu.classList.toggle("show");
+    toggle.classList.toggle("is-open", isOpen);
+    toggle.setAttribute("aria-expanded", isOpen);
   });
-  if (match) select.value = match.value;
 
-  select.addEventListener("change", (e) => {
-    const next = e.target.value;
-    if (next) window.location.href = next;
+  document.addEventListener("click", (e) => {
+    if (!toggle.contains(e.target) && !menu.contains(e.target)) {
+      menu.classList.remove("show");
+      toggle.classList.remove("is-open");
+      toggle.setAttribute("aria-expanded", "false");
+    }
+  });
+
+  toggle.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      menu.classList.remove("show");
+      toggle.classList.remove("is-open");
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.blur();
+    }
   });
 }
 

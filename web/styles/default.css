@@ -151,16 +151,99 @@ header {
 
 .mobile-nav {
   display: none;
+  position: relative;
 }
 
-.mobile-nav-select {
-  width: min(100%, 240px);
-  padding: 0.45rem 0.6rem;
+.mobile-nav-toggle {
+  width: 42px;
+  height: 42px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--card-bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.mobile-nav-toggle:hover {
+  background: var(--grey-1);
+}
+
+.mobile-nav-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.hamburger,
+.hamburger::before,
+.hamburger::after {
+  content: "";
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: var(--text);
+  border-radius: 999px;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.hamburger::before,
+.hamburger::after {
+  position: relative;
+}
+
+.hamburger::before {
+  transform: translateY(-6px);
+}
+
+.hamburger::after {
+  transform: translateY(4px);
+}
+
+.mobile-nav-toggle.is-open .hamburger {
+  background: transparent;
+}
+
+.mobile-nav-toggle.is-open .hamburger::before {
+  transform: translateY(0) rotate(45deg);
+}
+
+.mobile-nav-toggle.is-open .hamburger::after {
+  transform: translateY(-2px) rotate(-45deg);
+}
+
+.mobile-nav-menu {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  min-width: 180px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+  list-style: none;
+  padding: 6px 0;
+  margin: 0;
+  display: none;
+  z-index: 999;
+}
+
+.mobile-nav-menu.show {
+  display: block;
+}
+
+.mobile-nav-menu a {
+  display: block;
+  padding: 0.5rem 0.85rem;
+  text-decoration: none;
   color: var(--text);
   font-weight: 600;
+}
+
+.mobile-nav-menu a:hover {
+  background: var(--blue-3);
+  color: var(--primary);
 }
 
 .nav-links a {
