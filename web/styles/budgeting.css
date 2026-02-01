@@ -127,7 +127,9 @@
 .budget-table-actions {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   margin-top: 0.85rem;
+  width: 100%;
 }
 
 .budget-table-actions-right {
