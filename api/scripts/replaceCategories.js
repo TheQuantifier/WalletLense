@@ -31,24 +31,55 @@ export async function replaceCategory(x, y) {
   }
 
   let total = 0;
+  let customTotal = 0;
 
   await query("BEGIN");
   try {
-    if (xIsStr && yIsStr) {
+    const updateCustomLists = async (from, to) => {
+      const expRes = await query(
+        `
+        UPDATE users
+        SET custom_expense_categories =
+          ARRAY(
+            SELECT CASE WHEN c = $1 THEN $2 ELSE c END
+            FROM unnest(custom_expense_categories) AS c
+          )
+        WHERE $1 = ANY(custom_expense_categories)
+        `,
+        [from, to]
+      );
+      const incRes = await query(
+        `
+        UPDATE users
+        SET custom_income_categories =
+          ARRAY(
+            SELECT CASE WHEN c = $1 THEN $2 ELSE c END
+            FROM unnest(custom_income_categories) AS c
+          )
+        WHERE $1 = ANY(custom_income_categories)
+        `,
+        [from, to]
+      );
+      customTotal += (expRes.rowCount || 0) + (incRes.rowCount || 0);
+    };
+
+    const updateRecords = async (from, to) => {
       const res = await query(
         `UPDATE records SET category = $2 WHERE category = $1`,
-        [x, y]
+        [from, to]
       );
       total += res.rowCount || 0;
+    };
+
+    if (xIsStr && yIsStr) {
+      await updateRecords(x, y);
+      await updateCustomLists(x, y);
     } else if (xIsArr && yIsArr) {
       for (let i = 0; i < x.length; i += 1) {
         const from = x[i];
         const to = y[i];
-        const res = await query(
-          `UPDATE records SET category = $2 WHERE category = $1`,
-          [from, to]
-        );
-        total += res.rowCount || 0;
+        await updateRecords(from, to);
+        await updateCustomLists(from, to);
       }
     } else if (xIsArr && yIsStr) {
       const res = await query(
@@ -56,6 +87,9 @@ export async function replaceCategory(x, y) {
         [x, y]
       );
       total += res.rowCount || 0;
+      for (const from of x) {
+        await updateCustomLists(from, y);
+      }
     }
 
     await query("COMMIT");
@@ -64,7 +98,7 @@ export async function replaceCategory(x, y) {
     throw err;
   }
 
-  return { updated: total };
+  return { updatedRecords: total, updatedUsers: customTotal };
 }
 
 async function run() {
@@ -94,7 +128,9 @@ async function run() {
   await connectDb();
   try {
     const result = await replaceCategory(x, y);
-    console.log(`Updated ${result.updated} record(s).`);
+    console.log(
+      `Updated ${result.updatedRecords} record(s) and ${result.updatedUsers} user custom list(s).`
+    );
   } finally {
     await closeDb();
   }
