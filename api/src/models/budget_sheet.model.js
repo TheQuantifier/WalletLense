@@ -20,7 +20,7 @@ export const CATEGORY_COLUMNS = [
 const SELECT_FIELDS = `
   id, user_id, cadence, period,
   housing, utilities, groceries, transportation, dining, health, entertainment,
-  shopping, membership, miscellaneous, travel, education, giving, savings,
+  shopping, membership, miscellaneous, education, giving, savings,
   custom_categories, created_at, updated_at
 `;
 
