@@ -1,0 +1,27 @@
+# Next Steps
+
+- Improve onboarding to first insight in under 2 minutes (demo data, quick scan of accounts).
+- Define and surface north-star metrics (savings rate, net worth trend, cash-flow).
+- Add fast editing flows: bulk recategorize, split transactions, undo.
+- Add explainable insights (spending spikes, MoM changes, goal progress).
+- Accessibility (WCAG AA), offline-tolerant views, locale/currency support.
+- Budgeting modes: envelope, zero-based, and category caps.
+- Goal automation rules (round-ups, allocate X% on paycheck).
+- Cash-flow forecasting (30/60/90 days) with confidence bands.
+- Recurring transaction detection with reminders.
+- Net worth dashboard with assets/liabilities and trend.
+- Data quality: dedupe, reconciliation, import normalization.
+- Categorization model with user overrides and feedback loop.
+- Data integrity checks (balances vs transactions) with confidence indicators.
+- Security: MFA, session management, anomaly detection.
+- Encryption at rest/in transit; secret rotation; least-privilege RBAC.
+- Privacy controls: export, delete account, retention policy.
+- Background jobs with retries and dead-letter queue.
+- Rate limiting, circuit breakers, and graceful degradation.
+- Migration strategy tested on large datasets.
+- Performance targets (P95) for key routes and dashboards.
+- Observability: structured logs with correlation IDs, tracing, metrics.
+- SLOs/alerts for failed imports and auth spikes; audit logs.
+- Compliance: terms/privacy, consent, GDPR/CCPA readiness.
+- Bank-connection provider compliance requirements (if applicable).
+- Competition “wow”: money coach, scenario simulations, summaries, shareable report.
