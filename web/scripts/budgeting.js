@@ -64,18 +64,7 @@ import { api } from "./api.js";
 
   const progressFillColor = (progress) => {
     const clamped = Math.max(0, Math.min(1, progress));
-    let hue = 120;
-    if (clamped <= 0.5) {
-      hue = 120;
-    } else if (clamped <= 0.75) {
-      const t = (clamped - 0.5) / 0.25;
-      hue = 120 - t * 60;
-    } else if (clamped <= 0.9) {
-      const t = (clamped - 0.75) / 0.15;
-      hue = 60 - t * 30;
-    } else {
-      hue = 0;
-    }
+    const hue = 120 - clamped * 90;
     return `hsl(${hue} 85% 45%)`;
   };
 
