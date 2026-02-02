@@ -50,6 +50,7 @@ const env = {
     ? path.resolve(process.env.OCR_WORKER_SCRIPT)
     : path.resolve(__dirname, "..", "..", "worker", "ocr_demo.py"),
   pythonBin: process.env.PYTHON_BIN || null,
+  keepReceiptFiles: boolFromEnv(process.env.RECEIPT_KEEP_FILES, true),
 
   // AI Parser
   aiProvider: (process.env.AI_PROVIDER || "gemini").toLowerCase(),

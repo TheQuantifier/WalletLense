@@ -44,6 +44,9 @@ export function runOcrBuffer(buffer) {
 
       try {
         const parsed = JSON.parse(stdout);
+        if (parsed?.error) {
+          return reject(new Error(`OCR worker error: ${parsed.error}`));
+        }
         return resolve(parsed);
       } catch {
         return reject(new Error(`Failed to parse OCR output: ${stdout}`));

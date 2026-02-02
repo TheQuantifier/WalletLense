@@ -3,6 +3,7 @@ import asyncHandler from "../middleware/async.js";
 
 import { parseReceiptText } from "../services/aiParser.service.js";
 import { runOcrBuffer } from "../services/ocr.service.js";
+import env from "../config/env.js";
 import { parseDateOnly } from "./records.controller.js";
 
 import { query } from "../config/db.js";
@@ -148,6 +149,17 @@ export const confirmUpload = asyncHandler(async (req, res) => {
     updatedReceipt = await updateReceiptParsedData(req.user.id, receiptId, {
       linkedRecordId: autoRecord.id,
     });
+  }
+
+  // 7) Optional: remove uploaded file after processing (useful for testing)
+  if (!env.keepReceiptFiles) {
+    try {
+      if (receipt.object_key) {
+        await deleteObject({ key: receipt.object_key });
+      }
+    } catch (err) {
+      console.error("Error deleting R2 object after OCR", receipt.id, err);
+    }
   }
 
   res.status(200).json({
