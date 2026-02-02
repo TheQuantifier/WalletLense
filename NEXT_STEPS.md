@@ -1,6 +1,6 @@
 # Next Steps
 
-- Improve onboarding to first insight in under 2 minutes (demo data, quick scan of accounts).
+- Improve onboarding to first insight in under 2 minutes (demo data, quick scan of accounts). JN
 - Define and surface north-star metrics (savings rate, net worth trend, cash-flow).
 - Add fast editing flows: bulk recategorize, split transactions, undo.
 - Add explainable insights (spending spikes, MoM changes, goal progress).
@@ -8,7 +8,7 @@
 - Goal automation rules (round-ups, allocate X% on paycheck).
 - Cash-flow forecasting (30/60/90 days) with confidence bands.
 - Recurring transaction detection with reminders.
-- Data quality: dedupe, reconciliation, import normalization.
+- Data quality: dedupe, reconciliation, import normalization. JN
 - Categorization model with user overrides and feedback loop.
 - Data integrity checks (balances vs transactions) with confidence indicators.
 - Security: session management, anomaly detection.
@@ -26,5 +26,5 @@
 
 Need to do on John's End (Backend API):
 
-- Net worth dashboard with assets/liabilities and trend. // Next step: john needs to create the backend API endpint for this functionality
+✅ Net worth dashboard with assets/liabilities and trend. // Next step: john needs to create the backend API endpint for this functionality
 - Budgeting modes: envelope, zero-based, and category caps.
