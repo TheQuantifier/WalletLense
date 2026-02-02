@@ -448,9 +448,9 @@ input:-webkit-autofill {
    ========================================================= */
 
 body.landing-light {
-  background: url("../images/background.jpg") no-repeat center / cover fixed;
+  background: url("../images/background.jpg?v=20260202") no-repeat center / cover fixed;
 }
 
 :root[data-theme="dark"] body.landing-light {
-  background: url("../images/background.jpg") no-repeat center / cover fixed;
+  background: url("../images/background.jpg?v=20260202") no-repeat center / cover fixed;
 }
