@@ -291,16 +291,6 @@ export const receipts = {
 
     return request(`/receipts/${id}${query}`, { method: "DELETE" });
   },
-};
-
-// ======================================================================
-// BUDGET SHEETS MODULE
-// ======================================================================
-export const budgetSheets = {
-  getAll(params = {}) {
-    const query = new URLSearchParams(params).toString();
-    return request(`/budget-sheets${query ? `?${query}` : ""}`);
-  },
 
   /**
    * Scan-only flow (no object storage, no DB persistence):
@@ -336,6 +326,16 @@ export const budgetSheets = {
     }
 
     return data;
+  },
+};
+
+// ======================================================================
+// BUDGET SHEETS MODULE
+// ======================================================================
+export const budgetSheets = {
+  getAll(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return request(`/budget-sheets${query ? `?${query}` : ""}`);
   },
 
   lookup({ cadence, period }) {
