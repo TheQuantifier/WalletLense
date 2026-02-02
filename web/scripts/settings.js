@@ -151,6 +151,53 @@ import { api } from "./api.js";
   // ===============================
   // LOAD / SAVE SETTINGS
   // ===============================
+  const buildCurrencyLabel = (code) => {
+    const upper = String(code || "").toUpperCase();
+    if (!upper) return "";
+    try {
+      const locale = detectDeviceLocale();
+      const dn = new Intl.DisplayNames([locale], { type: "currency" });
+      const name = dn.of(upper);
+      return name ? `${upper} - ${name}` : upper;
+    } catch {
+      return upper;
+    }
+  };
+
+  const populateCurrencyOptions = (codes) => {
+    if (!els.currency) return;
+    const saved = localStorage.getItem("settings_currency") || "";
+    const current = els.currency.value || saved;
+
+    els.currency.innerHTML = "";
+    codes.forEach((code) => {
+      const opt = document.createElement("option");
+      opt.value = code;
+      opt.textContent = buildCurrencyLabel(code);
+      els.currency.appendChild(opt);
+    });
+
+    if (current && codes.includes(current)) {
+      els.currency.value = current;
+    }
+  };
+
+  const loadCurrencyOptions = async () => {
+    if (!api?.fxRates?.get || !els.currency) return;
+    try {
+      const data = await api.fxRates.get("USD");
+      const rates = data?.rates || {};
+      const base = String(data?.base || "USD").toUpperCase();
+      const codes = Object.keys(rates);
+      if (!codes.length) return;
+      if (!codes.includes(base)) codes.push(base);
+      codes.sort();
+      populateCurrencyOptions(codes);
+    } catch (err) {
+      console.warn("Failed to load currency options:", err);
+    }
+  };
+
   const ensureFirstRunDefaults = () => {
     // If userSettings exists (legacy), migrate minimally
     const legacy = localStorage.getItem("userSettings");
@@ -706,9 +753,10 @@ import { api } from "./api.js";
   // ===============================
   // INIT
   // ===============================
-  document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("DOMContentLoaded", async () => {
     ensureFirstRunDefaults();
     initTheme();
+    await loadCurrencyOptions();
     loadSettingsIntoUI();
     loadSessions();
     updateTwoFaUI();
