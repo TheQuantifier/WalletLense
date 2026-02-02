@@ -370,6 +370,16 @@ export const budgetSheets = {
 };
 
 // ======================================================================
+// FX RATES MODULE (shared daily cache)
+// ======================================================================
+export const fxRates = {
+  get(base = "USD") {
+    const query = new URLSearchParams({ base }).toString();
+    return request(`/fx-rates?${query}`);
+  },
+};
+
+// ======================================================================
 // UI HELPERS (shared by all frontend pages)
 // ======================================================================
 
@@ -416,6 +426,7 @@ export const api = {
   records,
   receipts,
   budgetSheets,
+  fxRates,
   getUploadType,
   getReceiptSummary,
   getPayMethodLabel,

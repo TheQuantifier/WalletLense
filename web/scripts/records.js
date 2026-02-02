@@ -58,12 +58,28 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   // ===============================
-  // FX RATES (STATIC — replace with live API for real-time)
+  // FX RATES (daily shared cache via backend)
   // ===============================
-  const FX_RATES = {
-    USD: { USD: 1, EUR: 0.92, GBP: 0.79, INR: 83.1, CAD: 1.37, AUD: 1.55, JPY: 148 },
-    EUR: { USD: 1.09, EUR: 1, GBP: 0.86, INR: 90.4, CAD: 1.49, AUD: 1.69, JPY: 161 },
-    GBP: { USD: 1.26, EUR: 1.16, GBP: 1, INR: 105.5, CAD: 1.73, AUD: 1.96, JPY: 187 },
+  const DEFAULT_FX_BASE = "USD";
+  const DEFAULT_FX_RATES = {
+    USD: 1,
+    EUR: 0.92,
+    GBP: 0.79,
+    INR: 83.1,
+    CAD: 1.37,
+    AUD: 1.55,
+    JPY: 148,
+  };
+
+  let fxRates = { base: DEFAULT_FX_BASE, rates: { ...DEFAULT_FX_RATES } };
+
+  const normalizeCurrency = (value) => String(value || "").trim().toUpperCase();
+
+  const setFxRates = (payload) => {
+    const base = normalizeCurrency(payload?.base || DEFAULT_FX_BASE);
+    const rates = payload?.rates;
+    if (!rates || typeof rates !== "object") return;
+    fxRates = { base, rates: { ...rates, [base]: 1 } };
   };
 
   // ===============================
@@ -128,13 +144,29 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const convertCurrency = (amount, fromCurrency, toCurrency) => {
-    if (fromCurrency === toCurrency) return amount;
-    if (FX_RATES[fromCurrency] && FX_RATES[fromCurrency][toCurrency]) {
-      return amount * FX_RATES[fromCurrency][toCurrency];
+    const from = normalizeCurrency(fromCurrency);
+    const to = normalizeCurrency(toCurrency);
+    if (!from || !to || from === to) return amount;
+
+    const base = fxRates.base || DEFAULT_FX_BASE;
+    const rates = fxRates.rates || {};
+
+    if (from === base) {
+      const rateTo = Number(rates[to]);
+      return Number.isFinite(rateTo) ? amount * rateTo : amount;
     }
-    console.warn("Missing FX rate:", fromCurrency, "→", toCurrency);
-    return amount;
-  };
+
+    const rateFrom = Number(rates[from]);
+    if (!Number.isFinite(rateFrom) || rateFrom === 0) return amount;
+
+    if (to === base) {
+      return amount / rateFrom;
+    }
+
+    const rateTo = Number(rates[to]);
+    if (!Number.isFinite(rateTo)) return amount;
+    return (amount / rateFrom) * rateTo;
+  }; 
 
   const toDateOnly = (value) => {
     if (!value) return "";
@@ -726,6 +758,16 @@ document.addEventListener("DOMContentLoaded", () => {
   
   const debouncedRenderAll = debounce(renderAll, 200);
 
+  const loadFxRates = async () => {
+    try {
+      const data = await api.fxRates.get(DEFAULT_FX_BASE);
+      setFxRates(data);
+      debouncedRenderAll();
+    } catch (err) {
+      console.warn("Failed to load FX rates:", err);
+    }
+  };
+
   // ===============================
   // FORM MODALS
   // ===============================
@@ -1021,6 +1063,9 @@ document.addEventListener("DOMContentLoaded", () => {
   (async () => {
     await loadUserCustomCategories();
     populateBudgetCategorySelects();
+    await loadFxRates();
     loadRecords();
   })();
 });
+
+

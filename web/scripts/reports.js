@@ -67,19 +67,52 @@ import { api } from "./api.js";
     localStorage.getItem("auto_currency") ||
     "USD";
 
-  // Minimal FX rates (same approach as records.js). Replace with live FX in production.
-  const FX_RATES = {
-    USD: { USD: 1, EUR: 0.92, GBP: 0.79, INR: 83.1, CAD: 1.37, AUD: 1.55, JPY: 148 },
-    EUR: { USD: 1.09, EUR: 1, GBP: 0.86, INR: 90.4, CAD: 1.49, AUD: 1.69, JPY: 161 },
-    GBP: { USD: 1.26, EUR: 1.16, GBP: 1, INR: 105.5, CAD: 1.73, AUD: 1.96, JPY: 187 },
+    // Minimal FX rates fallback (daily shared cache via backend)
+  const DEFAULT_FX_BASE = "USD";
+  const DEFAULT_FX_RATES = {
+    USD: 1,
+    EUR: 0.92,
+    GBP: 0.79,
+    INR: 83.1,
+    CAD: 1.37,
+    AUD: 1.55,
+    JPY: 148,
+  };
+
+  let fxRates = { base: DEFAULT_FX_BASE, rates: { ...DEFAULT_FX_RATES } };
+
+  const normalizeCurrency = (value) => String(value || "").trim().toUpperCase();
+
+  const setFxRates = (payload) => {
+    const base = normalizeCurrency(payload?.base || DEFAULT_FX_BASE);
+    const rates = payload?.rates;
+    if (!rates || typeof rates !== "object") return;
+    fxRates = { base, rates: { ...rates, [base]: 1 } };
   };
 
   const convertCurrency = (amount, fromCurrency, toCurrency) => {
-    if (!fromCurrency || !toCurrency || fromCurrency === toCurrency) return amount;
-    if (FX_RATES[fromCurrency] && FX_RATES[fromCurrency][toCurrency]) {
-      return amount * FX_RATES[fromCurrency][toCurrency];
+    const from = normalizeCurrency(fromCurrency);
+    const to = normalizeCurrency(toCurrency);
+    if (!from || !to || from === to) return amount;
+
+    const base = fxRates.base || DEFAULT_FX_BASE;
+    const rates = fxRates.rates || {};
+
+    if (from === base) {
+      const rateTo = Number(rates[to]);
+      return Number.isFinite(rateTo) ? amount * rateTo : amount;
     }
-    return amount;
+
+    const rateFrom = Number(rates[from]);
+    if (!Number.isFinite(rateFrom) || rateFrom === 0) return amount;
+
+    if (to === base) {
+      return amount / rateFrom;
+    }
+
+    const rateTo = Number(rates[to]);
+    if (!Number.isFinite(rateTo)) return amount;
+    return (amount / rateFrom) * rateTo;
   };
 
   const fmtMoney = (value, originalCurrency = "USD") => {
@@ -352,6 +385,16 @@ import { api } from "./api.js";
 
   const debouncedCompute = debounce(computeAndRender, 150);
 
+  const loadFxRates = async () => {
+    try {
+      const data = await api.fxRates.get(DEFAULT_FX_BASE);
+      setFxRates(data);
+      debouncedCompute();
+    } catch (err) {
+      console.warn("Failed to load FX rates:", err);
+    }
+  };
+
   const load = async () => {
     try {
       showStatus("Loading reports…");
@@ -385,5 +428,10 @@ import { api } from "./api.js";
   obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
   // Initial
-  document.addEventListener("DOMContentLoaded", load);
+  document.addEventListener("DOMContentLoaded", () => {
+    loadFxRates();
+    load();
+  });
 })();
+
+
