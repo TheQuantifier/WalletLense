@@ -27,4 +27,99 @@
 Need to do on John's End (Backend API):
 
 ✅ Net worth dashboard with assets/liabilities and trend. // Next step: john needs to create the backend API endpint for this functionality
+
 - Budgeting modes: envelope, zero-based, and category caps.
+
+John's TODO
+
+- Recent Activity implemetaion, combined info latest uploads and login information
+- implement contact support email fields
+- change password should requires 2FA
+
+Atharva's TODO
+
+- need to change message for manual delete records
+- implement gradient color system for budgeting page kpi cards
+- be able to filter the records page pie charts
+- change the email on the about page
+- change titles for both co founder and co founder
+- remove copy profile link button
+- hide link accounts and achievements or "coming soon"
+- remove your email text box in help page, replace with subject box
+- update FAQ section
+- records page edit box to be visible better
+- have a default time zone
+- default dash board view to all-time
+- change "cadence" to be a better word
+- sign out and delete account should be swapped
+- check footer section and make necessary changes
+- make sure all the heading text size is the same
+
+Testing Phase
+
+Home Page
+
+- Able to register/log in
+- Add/edit/delete manual records
+
+Upload Page
+
+- Upload a document
+- scan only
+- save and scan
+- able to edit scanned document
+- download a previous document
+- delete reciept only
+- delete reciept and record
+
+Records
+
+- Add/edit/delete manual records for income and expenses
+- custom category when adding record for other
+- search by filter
+- export to csv
+- when deleting, chose between reciept only or reciept and record
+
+about page
+
+- read to make sure no grammar errors
+
+profile page
+
+- able to change personal data
+- able to change avatar
+
+Budgeting Page
+
+- change cadence
+- change period
+- add unused to savings or reallocate to a specific category
+- Create/retrieve/save a budget
+- export to csv
+- Delete Account
+
+Reports Page
+
+- change date range
+- be able to identify total expense total income
+
+help page
+
+- send a message/email
+- get answers to frequently asked questions
+
+settings page
+
+- switch to dark mode
+- languages, "coming soon"
+- able to change time zones
+- able to change dashboard view
+- save settings
+- enable/disable 2-factor authentication
+- change password
+- delete account
+- sign out of all deviced
+
+footer
+
+- be able to click and understand where each page goes
