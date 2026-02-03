@@ -390,6 +390,18 @@ export const activity = {
 };
 
 // ======================================================================
+// SUPPORT MODULE
+// ======================================================================
+export const support = {
+  contact({ subject, message, name, email } = {}) {
+    return request("/support/contact", {
+      method: "POST",
+      body: JSON.stringify({ subject, message, name, email }),
+    });
+  },
+};
+
+// ======================================================================
 // UI HELPERS (shared by all frontend pages)
 // ======================================================================
 
@@ -438,6 +450,7 @@ export const api = {
   budgetSheets,
   fxRates,
   activity,
+  support,
   getUploadType,
   getReceiptSummary,
   getPayMethodLabel,
