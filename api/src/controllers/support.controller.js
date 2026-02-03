@@ -16,7 +16,11 @@ export const contactSupport = asyncHandler(async (req, res) => {
   const subject = normalizeString(req.body?.subject);
   const message = normalizeString(req.body?.message);
   const name = normalizeString(req.body?.name);
-  const email = normalizeString(req.body?.email);
+  const email = normalizeString(req.user?.email);
+
+  if (!email) {
+    return res.status(401).json({ message: "You must be logged in to contact support." });
+  }
 
   if (!subject || !message) {
     return res
@@ -56,10 +60,16 @@ export const contactSupport = asyncHandler(async (req, res) => {
     message,
   ].join("\n");
 
+  const defaultFrom = process.env.EMAIL_FROM || "no-reply@wisewallet.local";
+  const safeFromName = (name || email || "Customer").replace(/"/g, "'");
+  const from = email ? `"${safeFromName}" <${defaultFrom}>` : defaultFrom;
+
   await sendEmail({
     to: SUPPORT_EMAIL,
     subject: `[Support] ${subject}`,
     text: body,
+    replyTo: email || undefined,
+    from,
   });
 
   res.json({ ok: true });
