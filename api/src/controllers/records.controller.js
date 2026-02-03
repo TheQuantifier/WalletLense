@@ -11,6 +11,7 @@ import {
 } from "../models/record.model.js";
 
 import { query } from "../config/db.js";
+import { logActivity } from "../services/activity.service.js";
 
 // ==========================================================
 // Helper: Parse YYYY-MM-DD into a stable UTC-noon Date
@@ -90,6 +91,14 @@ export const create = asyncHandler(async (req, res) => {
     linkedReceiptId: null,
   });
 
+  await logActivity({
+    userId: req.user.id,
+    action: "record_create",
+    entityType: "record",
+    entityId: record.id,
+    metadata: { type },
+    req,
+  });
   res.status(201).json(record);
 });
 
@@ -136,6 +145,14 @@ export const update = asyncHandler(async (req, res) => {
 
   const updated = await updateRecord(req.user.id, req.params.id, changes);
 
+  await logActivity({
+    userId: req.user.id,
+    action: "record_update",
+    entityType: "record",
+    entityId: updated?.id || req.params.id,
+    metadata: { fields: Object.keys(changes) },
+    req,
+  });
   res.json({ message: "Record updated", record: updated });
 });
 
@@ -177,6 +194,14 @@ export const remove = asyncHandler(async (req, res) => {
   // Finally, delete the record itself
   await deleteRecord(req.user.id, req.params.id);
 
+  await logActivity({
+    userId: req.user.id,
+    action: "record_delete",
+    entityType: "record",
+    entityId: req.params.id,
+    metadata: { deletedReceipt: deleteReceiptFlag },
+    req,
+  });
   res.json({
     message: "Record deleted",
     deletedReceipt: deleteReceiptFlag,

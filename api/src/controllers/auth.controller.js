@@ -33,6 +33,7 @@ import {
   clearTrustedDevices,
 } from "../models/twofa.model.js";
 import { sendEmail } from "../services/email.service.js";
+import { logActivity } from "../services/activity.service.js";
 
 // If you have an R2 service, we’ll use it to delete objects on account deletion.
 // If your service file name differs, adjust the import path accordingly.
@@ -191,6 +192,14 @@ export const login = asyncHandler(async (req, res) => {
           setDeviceCookie(res, deviceId);
 
           const safeUser = await findUserById(user.id);
+          await logActivity({
+            userId: user.id,
+            action: "login",
+            entityType: "session",
+            entityId: session.id,
+            metadata: { method: "password", twoFactor: "trusted_device" },
+            req,
+          });
           return res.json({ user: safeUser, token });
         }
       }
@@ -228,6 +237,14 @@ export const login = asyncHandler(async (req, res) => {
 
   // Return safe user shape (no password_hash)
   const safeUser = await findUserById(user.id);
+  await logActivity({
+    userId: user.id,
+    action: "login",
+    entityType: "session",
+    entityId: session.id,
+    metadata: { method: "password", twoFactor: false },
+    req,
+  });
   res.json({ user: safeUser, token });
 });
 
@@ -239,6 +256,13 @@ export const logout = asyncHandler(async (req, res) => {
     await revokeSessionById(req.sessionId);
   }
   clearTokenCookie(res);
+  await logActivity({
+    userId: req.user.id,
+    action: "logout",
+    entityType: "session",
+    entityId: req.sessionId || null,
+    req,
+  });
   res.json({ message: "Logged out" });
 });
 
@@ -324,6 +348,14 @@ export const updateMe = asyncHandler(async (req, res) => {
   }
 
   const updated = await updateUserById(userId, updates);
+  await logActivity({
+    userId,
+    action: "profile_update",
+    entityType: "user",
+    entityId: userId,
+    metadata: { fields: Object.keys(updates) },
+    req,
+  });
   res.json({ user: updated });
 });
 
@@ -360,6 +392,13 @@ export const changePassword = asyncHandler(async (req, res) => {
 
   const safeUser = await findUserById(userId);
 
+  await logActivity({
+    userId,
+    action: "password_change",
+    entityType: "user",
+    entityId: userId,
+    req,
+  });
   res.json({
     message: "Password updated successfully",
     user: safeUser,
@@ -491,6 +530,14 @@ export const verifyTwoFaLogin = asyncHandler(async (req, res) => {
   setDeviceCookie(res, deviceId);
 
   const safeUser = await findUserById(payload.id);
+  await logActivity({
+    userId: payload.id,
+    action: "login",
+    entityType: "session",
+    entityId: session.id,
+    metadata: { method: "2fa" },
+    req,
+  });
   res.json({ user: safeUser, token });
 });
 
@@ -536,6 +583,12 @@ export const logoutAll = asyncHandler(async (req, res) => {
   await revokeAllSessionsForUser(userId);
   clearTokenCookie(res);
 
+  await logActivity({
+    userId,
+    action: "logout_all",
+    entityType: "session",
+    req,
+  });
   res.json({ message: "All sessions have been signed out" });
 });
 
@@ -567,5 +620,12 @@ export const deleteMe = asyncHandler(async (req, res) => {
   // 3) Clear auth cookie
   clearTokenCookie(res);
 
+  await logActivity({
+    userId,
+    action: "account_delete",
+    entityType: "user",
+    entityId: userId,
+    req,
+  });
   res.json({ message: "Account and all associated data have been deleted" });
 });

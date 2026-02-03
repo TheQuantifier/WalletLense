@@ -8,6 +8,7 @@ import {
   findBudgetSheetByCadencePeriod,
   listBudgetSheets,
 } from "../models/budget_sheet.model.js";
+import { logActivity } from "../services/activity.service.js";
 
 const CADENCES = new Set([
   "weekly",
@@ -106,6 +107,14 @@ export const create = asyncHandler(async (req, res) => {
     customCategories: normalizedCustom,
   });
 
+  await logActivity({
+    userId: req.user.id,
+    action: "budget_sheet_create",
+    entityType: "budget_sheet",
+    entityId: sheet.id,
+    metadata: { cadence, period },
+    req,
+  });
   res.status(201).json(sheet);
 });
 
@@ -131,5 +140,13 @@ export const update = asyncHandler(async (req, res) => {
   });
 
   if (!sheet) return res.status(404).json({ message: "Budget sheet not found" });
+  await logActivity({
+    userId: req.user.id,
+    action: "budget_sheet_update",
+    entityType: "budget_sheet",
+    entityId: sheet.id,
+    metadata: { cadence, period },
+    req,
+  });
   res.json(sheet);
 });

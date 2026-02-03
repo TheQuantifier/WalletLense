@@ -7,6 +7,7 @@ import env from "../config/env.js";
 import { parseDateOnly } from "./records.controller.js";
 
 import { query } from "../config/db.js";
+import { logActivity } from "../services/activity.service.js";
 
 import {
   createReceiptPending,
@@ -83,6 +84,14 @@ export const presignUpload = asyncHandler(async (req, res) => {
     expiresIn: 60,
   });
 
+  await logActivity({
+    userId: req.user.id,
+    action: "receipt_upload_start",
+    entityType: "receipt",
+    entityId: receipt.id,
+    metadata: { filename, contentType, sizeBytes: Number(sizeBytes || 0) },
+    req,
+  });
   res.json({
     id: receipt.id,
     objectKey: receipt.object_key,
@@ -184,6 +193,14 @@ export const confirmUpload = asyncHandler(async (req, res) => {
     }
   }
 
+  await logActivity({
+    userId: req.user.id,
+    action: "receipt_upload_confirm",
+    entityType: "receipt",
+    entityId: receiptId,
+    metadata: { autoRecordId: autoRecord?.id || null },
+    req,
+  });
   res.status(200).json({
     receipt: updatedReceipt,
     autoRecord,
@@ -274,6 +291,14 @@ export const scanOnly = asyncHandler(async (req, res) => {
     });
   }
 
+  await logActivity({
+    userId: req.user.id,
+    action: "receipt_scan",
+    entityType: "receipt",
+    entityId: receipt.id,
+    metadata: { fileSaved: false },
+    req,
+  });
   res.status(200).json({
     ocrText,
     parsed: parsed || {},
@@ -347,6 +372,13 @@ export const updateOcrText = asyncHandler(async (req, res) => {
     }
   }
 
+  await logActivity({
+    userId: req.user.id,
+    action: "receipt_ocr_edit",
+    entityType: "receipt",
+    entityId: receiptId,
+    req,
+  });
   res.json({ receipt: updated, autoRecord, parsed: parsed || {} });
 });
 
@@ -418,6 +450,15 @@ export const remove = asyncHandler(async (req, res) => {
       );
     }
   }
+
+  await logActivity({
+    userId: req.user.id,
+    action: "receipt_delete",
+    entityType: "receipt",
+    entityId: req.params.id,
+    metadata: { deletedRecord: deleteRecordFlag },
+    req,
+  });
 
   res.json({
     message: "Receipt deleted",
