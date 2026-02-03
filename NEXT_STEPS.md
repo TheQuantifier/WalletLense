@@ -32,13 +32,7 @@ Need to do on John's End (Backend API):
 
 John's TODO
 
-- Recent Activity implemetaion, combined info latest uploads and login information
-- implement contact support email fields
 - change password should requires 2FA
-
-Atharva's TODO
-
-- check footer section and make necessary changes (news and updates, careers, community, tax tips and guides, privacy policy, terms of use)
 
 Testing Phase
 
