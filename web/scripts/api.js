@@ -380,6 +380,16 @@ export const fxRates = {
 };
 
 // ======================================================================
+// ACTIVITY MODULE
+// ======================================================================
+export const activity = {
+  getRecent(limit = 20) {
+    const query = new URLSearchParams({ limit }).toString();
+    return request(`/activity?${query}`);
+  },
+};
+
+// ======================================================================
 // UI HELPERS (shared by all frontend pages)
 // ======================================================================
 
@@ -427,6 +437,7 @@ export const api = {
   receipts,
   budgetSheets,
   fxRates,
+  activity,
   getUploadType,
   getReceiptSummary,
   getPayMethodLabel,

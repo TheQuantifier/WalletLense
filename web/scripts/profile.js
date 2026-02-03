@@ -64,6 +64,8 @@ const stats = {
   uploads: $("stat_uploads"),
 };
 
+const activityBody = $("activityBody");
+
 // Linked accounts + identity placeholders
 const linkedAccountsList = $("linkedAccountsList");
 const identityEls = {
@@ -345,9 +347,77 @@ async function loadUserProfile() {
     if (linkedAccountsList) {
       renderLinkedAccounts();
     }
+
+    await loadRecentActivity();
   } catch (err) {
     showStatus("Please log in to view your profile.", "error");
     window.location.href = "login.html";
+  }
+}
+
+const ACTION_LABELS = {
+  login: "Logged in",
+  logout: "Logged out",
+  logout_all: "Signed out all sessions",
+  profile_update: "Updated profile",
+  password_change: "Changed password",
+  account_delete: "Deleted account",
+  record_create: "Created record",
+  record_update: "Updated record",
+  record_delete: "Deleted record",
+  receipt_upload_start: "Started receipt upload",
+  receipt_upload_confirm: "Uploaded receipt",
+  receipt_scan: "Scanned receipt",
+  receipt_ocr_edit: "Edited OCR text",
+  receipt_delete: "Deleted receipt",
+  budget_sheet_create: "Created budget",
+  budget_sheet_update: "Updated budget",
+};
+
+const formatActivityDate = (value) => {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString();
+};
+
+async function loadRecentActivity() {
+  if (!activityBody) return;
+  activityBody.innerHTML = `<tr><td colspan="4" class="subtle">Loading…</td></tr>`;
+
+  try {
+    const rows = await api.activity.getRecent(20);
+    if (!rows?.length) {
+      activityBody.innerHTML = `<tr><td colspan="4" class="subtle">No activity yet</td></tr>`;
+      return;
+    }
+
+    activityBody.innerHTML = "";
+    rows.forEach((row) => {
+      const tr = document.createElement("tr");
+
+      const tdDate = document.createElement("td");
+      tdDate.textContent = formatActivityDate(row.created_at);
+
+      const tdAction = document.createElement("td");
+      tdAction.textContent = ACTION_LABELS[row.action] || row.action || "Activity";
+
+      const tdIp = document.createElement("td");
+      tdIp.textContent = row.ip_address || "—";
+
+      const tdResult = document.createElement("td");
+      tdResult.className = "num";
+      tdResult.textContent = row.entity_type || "—";
+
+      tr.appendChild(tdDate);
+      tr.appendChild(tdAction);
+      tr.appendChild(tdIp);
+      tr.appendChild(tdResult);
+      activityBody.appendChild(tr);
+    });
+  } catch (err) {
+    console.warn("Failed to load activity:", err);
+    activityBody.innerHTML = `<tr><td colspan="4" class="subtle">Failed to load activity</td></tr>`;
   }
 }
 
