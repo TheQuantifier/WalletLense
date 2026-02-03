@@ -100,7 +100,10 @@ function loadHeaderAndFooter() {
     })
     .then((html) => {
       const footerEl = document.getElementById("footer");
-      if (footerEl) footerEl.innerHTML = html;
+      if (footerEl) {
+        footerEl.innerHTML = html;
+        setActiveFooterLink();
+      }
     })
     .catch((err) => console.error("Footer load failed:", err));
 }
@@ -118,6 +121,20 @@ function setActiveNavLink() {
   navLinks.forEach((link) => {
     const href = (link.getAttribute("href") || "").toLowerCase();
     // Support both relative ("records.html") and root-relative ("/records.html") hrefs
+    const linkPage = href.startsWith("/") ? href.slice(1) : href;
+
+    if (linkPage === currentPage) link.classList.add("active");
+    else link.classList.remove("active");
+  });
+}
+
+function setActiveFooterLink() {
+  const rawPage = (window.location.pathname.split("/").pop() || "").toLowerCase();
+  const currentPage = rawPage === "" ? "index.html" : rawPage;
+  const footerLinks = document.querySelectorAll("#footer a[href]");
+
+  footerLinks.forEach((link) => {
+    const href = (link.getAttribute("href") || "").toLowerCase();
     const linkPage = href.startsWith("/") ? href.slice(1) : href;
 
     if (linkPage === currentPage) link.classList.add("active");
