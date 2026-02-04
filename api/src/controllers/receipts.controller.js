@@ -170,7 +170,7 @@ export const confirmUpload = asyncHandler(async (req, res) => {
     autoRecord = await createRecord(req.user.id, {
       type: "expense",
       amount: Number(parsed.amount),
-      category: "Uncategorized",
+      category: parsed?.category || "Other",
       date: recordDate,
       note: parsed?.source || "Receipt",
       linkedReceiptId: receiptId,
@@ -280,7 +280,7 @@ export const scanOnly = asyncHandler(async (req, res) => {
     autoRecord = await createRecord(req.user.id, {
       type: "expense",
       amount: Number(parsed.amount),
-      category: "Uncategorized",
+      category: parsed?.category || "Other",
       date: recordDate,
       note: parsed?.source || "Receipt",
       linkedReceiptId: receipt.id,
@@ -356,12 +356,13 @@ export const updateOcrText = asyncHandler(async (req, res) => {
         amount: Number(parsed.amount),
         date: recordDate,
         note: parsed?.source || "Receipt",
+        category: parsed?.category || "Other",
       });
     } else {
       autoRecord = await createRecord(req.user.id, {
         type: "expense",
         amount: Number(parsed.amount),
-        category: "Uncategorized",
+        category: parsed?.category || "Other",
         date: recordDate,
         note: parsed?.source || "Receipt",
         linkedReceiptId: receiptId,
