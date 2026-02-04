@@ -68,6 +68,7 @@ applySavedTheme();
 
 document.addEventListener("DOMContentLoaded", () => {
   loadHeaderAndFooter();
+  initLiveNavigation();
 });
 
 /**
@@ -89,6 +90,7 @@ function loadHeaderAndFooter() {
       updateHeaderAuthState();
       wireLogoutButton();
       wireDashboardViewSelector(); // NEW: Wire dashboard view selector
+      updateMobileNavActiveState();
     })
     .catch((err) => console.error("Header load failed:", err));
 
@@ -147,13 +149,12 @@ function initMobileNavMenu() {
   const menu = document.getElementById("mobileNavMenu");
   if (!toggle || !menu) return;
 
-  const rawPage = (window.location.pathname.split("/").pop() || "").toLowerCase();
-  const currentPage = rawPage === "" ? "index.html" : rawPage;
-  menu.querySelectorAll(".mobile-nav-link").forEach((btn) => {
-    const href = (btn.getAttribute("data-href") || "").toLowerCase();
-    const btnPage = href.startsWith("/") ? href.slice(1) : href.replace(/^\.\//, "");
-    btn.classList.toggle("active", btnPage === currentPage);
-  });
+  if (toggle.dataset.bound === "true") {
+    updateMobileNavActiveState();
+    return;
+  }
+
+  updateMobileNavActiveState();
 
   toggle.addEventListener("click", () => {
     const isOpen = menu.classList.toggle("show");
@@ -169,6 +170,11 @@ function initMobileNavMenu() {
     menu.classList.remove("show");
     toggle.classList.remove("is-open");
     toggle.setAttribute("aria-expanded", "false");
+    if (LIVE_NAV_ENABLED) {
+      const url = new URL(href, window.location.href).href;
+      navigateLive(url, { pushState: true });
+      return;
+    }
     window.location.assign(href);
   });
 
@@ -188,8 +194,21 @@ function initMobileNavMenu() {
       toggle.blur();
     }
   });
+
+  toggle.dataset.bound = "true";
 }
 
+function updateMobileNavActiveState() {
+  const menu = document.getElementById("mobileNavMenu");
+  if (!menu) return;
+  const rawPage = (window.location.pathname.split("/").pop() || "").toLowerCase();
+  const currentPage = rawPage === "" ? "index.html" : rawPage;
+  menu.querySelectorAll(".mobile-nav-link").forEach((btn) => {
+    const href = (btn.getAttribute("data-href") || "").toLowerCase();
+    const btnPage = href.startsWith("/") ? href.slice(1) : href.replace(/^\.\//, "");
+    btn.classList.toggle("active", btnPage === currentPage);
+  });
+}
 
 /* ===============================================
   ACCOUNT MENU DROPDOWN
@@ -199,6 +218,7 @@ function initAccountMenu() {
   const icon = document.getElementById("account-icon");
   const menu = document.getElementById("account-menu");
   if (!icon || !menu) return;
+  if (icon.dataset.bound === "true") return;
 
   icon.addEventListener("click", () => {
     const isOpen = menu.classList.toggle("show");
@@ -221,6 +241,8 @@ function initAccountMenu() {
       icon.blur();
     }
   });
+
+  icon.dataset.bound = "true";
 }
 
 
@@ -300,6 +322,7 @@ window.addEventListener("avatar:updated", (event) => {
   =============================================== */
 
 function wireLogoutButton() {
+  if (document.body.dataset.logoutBound === "true") return;
   document.addEventListener("click", async (e) => {
     const btn = e.target.closest("#logoutBtn");
     if (!btn) return;
@@ -312,6 +335,8 @@ function wireLogoutButton() {
       alert("Could not log out.");
     }
   });
+
+  document.body.dataset.logoutBound = "true";
 }
 
 
@@ -322,6 +347,7 @@ function wireLogoutButton() {
 function wireDashboardViewSelector() {
   const selector = document.getElementById("dashboardViewSelect");
   if (!selector) return;
+  if (selector.dataset.bound === "true") return;
 
   // Load saved setting
   const savedSettings = JSON.parse(localStorage.getItem("userSettings")) || {};
@@ -337,5 +363,212 @@ function wireDashboardViewSelector() {
     document.dispatchEvent(new CustomEvent("dashboardViewChanged", {
       detail: { newView }
     }));
+  });
+
+  selector.dataset.bound = "true";
+}
+
+
+/* ===============================================
+  LIVE NAVIGATION (NO HEADER/FOOTER FLICKER)
+  =============================================== */
+
+const LIVE_NAV_ENABLED = true;
+const LIVE_PAGE_CONTAINER_ID = "page-content";
+let liveNavInFlight = null;
+
+function initLiveNavigation() {
+  if (!LIVE_NAV_ENABLED) return;
+  const headerEl = document.getElementById("header");
+  const footerEl = document.getElementById("footer");
+  if (!headerEl || !footerEl) return;
+
+  ensureLivePageContainer();
+  markInitialPageStyles();
+
+  document.addEventListener("click", handleLiveNavClick);
+  window.addEventListener("popstate", () => {
+    navigateLive(window.location.href, { pushState: false });
+  });
+}
+
+function ensureLivePageContainer() {
+  if (document.getElementById(LIVE_PAGE_CONTAINER_ID)) return;
+  const headerEl = document.getElementById("header");
+  const footerEl = document.getElementById("footer");
+  if (!headerEl || !footerEl) return;
+
+  const container = document.createElement("div");
+  container.id = LIVE_PAGE_CONTAINER_ID;
+
+  const bodyNodes = Array.from(document.body.childNodes);
+  bodyNodes.forEach((node) => {
+    if (node === headerEl || node === footerEl) return;
+    if (node.nodeType === Node.ELEMENT_NODE && node.tagName === "SCRIPT") return;
+    container.appendChild(node);
+  });
+
+  footerEl.parentNode.insertBefore(container, footerEl);
+}
+
+function handleLiveNavClick(event) {
+  const link = event.target.closest("a");
+  if (!link) return;
+  if (event.defaultPrevented) return;
+  if (link.target && link.target !== "_self") return;
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  if (link.hasAttribute("download")) return;
+
+  const href = link.getAttribute("href");
+  if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) {
+    return;
+  }
+
+  const url = new URL(link.href, window.location.href);
+  if (url.origin !== window.location.origin) return;
+  if (!url.pathname.endsWith(".html")) return;
+  const currentUrl = new URL(window.location.href);
+  if (url.pathname === currentUrl.pathname && url.search === currentUrl.search && url.hash) {
+    return;
+  }
+
+  event.preventDefault();
+  navigateLive(url.href, { pushState: true });
+}
+
+async function navigateLive(targetUrl, { pushState }) {
+  if (liveNavInFlight) liveNavInFlight.abort();
+  const controller = new AbortController();
+  liveNavInFlight = controller;
+
+  try {
+    const response = await fetch(targetUrl, { signal: controller.signal });
+    if (!response.ok) throw new Error("Page fetch failed");
+    const html = await response.text();
+    const parsed = new DOMParser().parseFromString(html, "text/html");
+
+    const headerEl = parsed.getElementById("header");
+    const footerEl = parsed.getElementById("footer");
+    if (!headerEl || !footerEl) {
+      window.location.assign(targetUrl);
+      return;
+    }
+
+    const newContent = extractLiveContent(parsed);
+    if (!newContent) {
+      window.location.assign(targetUrl);
+      return;
+    }
+
+    const container = document.getElementById(LIVE_PAGE_CONTAINER_ID);
+    if (!container) {
+      window.location.assign(targetUrl);
+      return;
+    }
+
+    container.innerHTML = "";
+    container.appendChild(newContent);
+
+    syncPageStyles(parsed);
+    syncPageScripts(parsed);
+    updateDocumentMetadata(parsed);
+
+    if (pushState) {
+      window.history.pushState({}, "", targetUrl);
+    }
+
+    setActiveNavLink();
+    setActiveFooterLink();
+    updateMobileNavActiveState();
+
+    const targetHash = new URL(targetUrl).hash;
+    if (targetHash) {
+      const targetEl = document.querySelector(targetHash);
+      if (targetEl) {
+        targetEl.scrollIntoView({ block: "start" });
+      }
+    } else {
+      window.scrollTo(0, 0);
+    }
+  } catch (err) {
+    if (err?.name === "AbortError") return;
+    console.error("Live navigation failed:", err);
+    window.location.assign(targetUrl);
+  } finally {
+    liveNavInFlight = null;
+  }
+}
+
+function extractLiveContent(parsedDoc) {
+  const headerEl = parsedDoc.getElementById("header");
+  const footerEl = parsedDoc.getElementById("footer");
+  if (!headerEl || !footerEl) return null;
+
+  const fragment = document.createDocumentFragment();
+  Array.from(parsedDoc.body.childNodes).forEach((node) => {
+    if (node === headerEl || node === footerEl) return;
+    if (node.nodeType === Node.ELEMENT_NODE && node.tagName === "SCRIPT") return;
+    fragment.appendChild(document.importNode(node, true));
+  });
+  return fragment;
+}
+
+function updateDocumentMetadata(parsedDoc) {
+  if (parsedDoc.title) {
+    document.title = parsedDoc.title;
+  }
+
+  const newDescription = parsedDoc.querySelector('meta[name="description"]');
+  if (newDescription) {
+    let currentDescription = document.querySelector('meta[name="description"]');
+    if (!currentDescription) {
+      currentDescription = document.createElement("meta");
+      currentDescription.setAttribute("name", "description");
+      document.head.appendChild(currentDescription);
+    }
+    currentDescription.setAttribute("content", newDescription.getAttribute("content") || "");
+  }
+}
+
+function markInitialPageStyles() {
+  document.querySelectorAll('link[rel="stylesheet"]').forEach((link) => {
+    const href = link.getAttribute("href") || "";
+    if (!href.endsWith("styles/default.css")) {
+      link.dataset.pageStyle = "true";
+    }
+  });
+}
+
+function syncPageStyles(parsedDoc) {
+  document.querySelectorAll('link[rel="stylesheet"][data-page-style="true"]').forEach((link) => {
+    link.remove();
+  });
+
+  parsedDoc.querySelectorAll('link[rel="stylesheet"]').forEach((link) => {
+    const href = link.getAttribute("href") || "";
+    if (href.endsWith("styles/default.css")) return;
+    const newLink = document.createElement("link");
+    newLink.rel = "stylesheet";
+    newLink.href = href;
+    newLink.dataset.pageStyle = "true";
+    document.head.appendChild(newLink);
+  });
+}
+
+function syncPageScripts(parsedDoc) {
+  document.querySelectorAll('script[data-page-script="true"]').forEach((script) => {
+    script.remove();
+  });
+
+  parsedDoc.querySelectorAll("script[src]").forEach((script) => {
+    const src = script.getAttribute("src") || "";
+    if (src.endsWith("scripts/default.js")) return;
+    const newScript = document.createElement("script");
+    newScript.src = src;
+    const scriptType = script.getAttribute("type");
+    if (scriptType) newScript.type = scriptType;
+    newScript.defer = script.hasAttribute("defer");
+    newScript.dataset.pageScript = "true";
+    document.body.appendChild(newScript);
   });
 }
