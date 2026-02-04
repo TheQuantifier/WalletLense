@@ -2,9 +2,6 @@
 import { api } from "./api.js";
 
 (() => {
-  const STORAGE_KEY = "budgeting_categories";
-  const CADENCE_STORAGE_KEY = "budgeting_cadence";
-  const PERIOD_STORAGE_PREFIX = "budgeting_period_";
   const CURRENCY_FALLBACK = "USD";
   let userCustomCategories = { expense: [] };
 
@@ -277,27 +274,20 @@ import { api } from "./api.js";
   const buildBudgetLabel = (cadenceId, periodKey) =>
     `${getCadenceLabel(cadenceId)} - ${getPeriodLabel(cadenceId, periodKey)}`;
 
-  const getSavedBudgetsFromStorage = () => {
-    const entries = [];
-    const prefix = `${STORAGE_KEY}_`;
-    for (let i = 0; i < localStorage.length; i += 1) {
-      const key = localStorage.key(i);
-      if (!key || !key.startsWith(prefix)) continue;
-      const remainder = key.slice(prefix.length);
-      const underscoreIndex = remainder.indexOf("_");
-      let cadence = "";
-      let periodKey = "";
-      if (underscoreIndex < 0) {
-        cadence = "monthly";
-        periodKey = remainder;
-      } else {
-        cadence = remainder.slice(0, underscoreIndex);
-        periodKey = remainder.slice(underscoreIndex + 1);
-      }
-      if (!CADENCE_LOOKUP.has(cadence) || !periodKey) continue;
-      entries.push({ cadence, periodKey });
+  const getBudgetEntriesFromDb = async () => {
+    try {
+      const sheets = await api.budgetSheets.getAll({ limit: 500 });
+      if (!Array.isArray(sheets)) return [];
+      return sheets
+        .map((sheet) => ({
+          cadence: sheet?.cadence,
+          periodKey: sheet?.period,
+        }))
+        .filter((entry) => CADENCE_LOOKUP.has(entry.cadence) && entry.periodKey);
+    } catch (err) {
+      showStatus("Could not load saved budgets.", "error");
+      return [];
     }
-    return entries;
   };
 
   const orderBudgetEntries = (entries) => {
@@ -362,7 +352,9 @@ import { api } from "./api.js";
       return true;
     });
 
-    return [...baseNames, ...eligibleCustom];
+    return [...baseNames, ...eligibleCustom].sort((a, b) =>
+      a.localeCompare(b, undefined, { sensitivity: "base" })
+    );
   };
 
   const buildBudgetPayload = (categories) => {
@@ -403,34 +395,9 @@ import { api } from "./api.js";
     const merged = [
       ...baseCategories,
       ...custom.filter((c) => c.name && isCustomCategory(c.name)),
-    ];
+    ].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
 
     state.categories = merged.map((c) => ({ ...c }));
-    saveCategories(
-      state.categories.map(({ name, budget }) => ({ name, budget })),
-      state.cadence,
-      state.periodKey
-    );
-  };
-
-  const purgeCategoryFromAllMonths = (name) => {
-    const key = normalizeName(name);
-    const keys = Object.keys(localStorage);
-    keys.forEach((k) => {
-      if (!k.startsWith(`${STORAGE_KEY}_`)) return;
-      const raw = localStorage.getItem(k);
-      if (!raw) return;
-      try {
-        const parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed)) return;
-        const filtered = parsed.filter(
-          (c) => normalizeName(c?.name) !== key
-        );
-        localStorage.setItem(k, JSON.stringify(filtered));
-      } catch {
-        // ignore bad payloads
-      }
-    });
   };
 
   const isCustomCategory = (name) => {
@@ -466,16 +433,12 @@ import { api } from "./api.js";
       console.warn("Failed to delete custom category:", err);
     }
 
-    purgeCategoryFromAllMonths(name);
-
     state.categories = state.categories.filter(
       (c) => normalizeName(c.name) !== key
     );
-    saveCategories(
-      state.categories.map(({ name, budget }) => ({ name, budget })),
-      state.cadence,
-      state.periodKey
-    );
+    state.isDirty = true;
+    const saveBtn = $("#btnSaveBudget");
+    if (saveBtn) saveBtn.disabled = false;
 
     state.spentMap = buildSpentMap(state.records || [], state.categories);
     state.categories = state.categories.map((c) => ({
@@ -525,48 +488,6 @@ import { api } from "./api.js";
     el.classList.add("is-hidden");
     el.classList.remove("is-error", "is-ok");
   };
-
-  function loadCategories(cadence, periodKey) {
-    let raw = localStorage.getItem(`${STORAGE_KEY}_${cadence}_${periodKey}`);
-    if (!raw && cadence === "monthly") {
-      const legacyRaw = localStorage.getItem(`${STORAGE_KEY}_${periodKey}`);
-      if (legacyRaw) {
-        raw = legacyRaw;
-        localStorage.setItem(`${STORAGE_KEY}_${cadence}_${periodKey}`, legacyRaw);
-        localStorage.removeItem(`${STORAGE_KEY}_${periodKey}`);
-      }
-    }
-    const names = getBudgetCategoryNames();
-    const defaults = names.map((name) => ({ name, budget: null }));
-
-    if (!raw) return defaults.map((c) => ({ ...c }));
-
-    try {
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return defaults.map((c) => ({ ...c }));
-
-      const byName = new Map(parsed.map((c) => [normalizeName(c.name), c]));
-
-      return defaults.map((c) => {
-        const stored = byName.get(normalizeName(c.name));
-        if (!stored) return c;
-        if (stored.budget === null || stored.budget === undefined || stored.budget === "") {
-          return { ...c, budget: null };
-        }
-        const value = Number(stored.budget);
-        return { ...c, budget: Number.isFinite(value) ? value : null };
-      });
-    } catch {
-      return defaults.map((c) => ({ ...c }));
-    }
-  }
-
-  function saveCategories(categories, cadence, periodKey) {
-    localStorage.setItem(
-      `${STORAGE_KEY}_${cadence}_${periodKey}`,
-      JSON.stringify(categories)
-    );
-  }
 
   function buildSpentMap(records, categories) {
     const map = new Map(categories.map((c) => [normalizeName(c.name), 0]));
@@ -765,11 +686,6 @@ import { api } from "./api.js";
     const budgetSelect = $("#budgetSelector");
     const cadenceSelect = $("#budgetCadenceSelect");
     const periodSelect = $("#budgetMonthSelect");
-    const getSavedCadence = () => {
-      const saved = localStorage.getItem(CADENCE_STORAGE_KEY);
-      return CADENCE_LOOKUP.has(saved) ? saved : "monthly";
-    };
-
     let periodOptions = [];
     let budgetEntries = [];
 
@@ -806,33 +722,33 @@ import { api } from "./api.js";
       if (selectedKey) budgetSelect.value = selectedKey;
     };
 
-    const ensureBudgetEntry = (cadenceId, periodKey) => {
-      if (!cadenceId || !periodKey) return;
-      const exists = budgetEntries.some(
-        (entry) => entry.cadence === cadenceId && entry.periodKey === periodKey
-      );
-      if (!exists) budgetEntries.push({ cadence: cadenceId, periodKey });
-    };
-
-    let allowEmptyBudgets = false;
-
     const syncBudgetSelector = (cadenceId, periodKey) => {
-      if (allowEmptyBudgets && budgetEntries.length === 0) {
+      const ordered = orderBudgetEntries(budgetEntries);
+      if (!ordered.length) {
         renderBudgetSelector([], null);
         return;
       }
-      ensureBudgetEntry(cadenceId, periodKey);
-      const ordered = orderBudgetEntries(budgetEntries);
-      renderBudgetSelector(ordered, makeBudgetKey(cadenceId, periodKey));
+      const selected =
+        ordered.find((entry) => entry.cadence === cadenceId && entry.periodKey === periodKey) ||
+        ordered[0];
+      renderBudgetSelector(ordered, makeBudgetKey(selected.cadence, selected.periodKey));
     };
 
-    const initialCadence = getSavedCadence();
-    const savedKey = localStorage.getItem(`${PERIOD_STORAGE_PREFIX}${initialCadence}`);
-    if (cadenceSelect) cadenceSelect.value = initialCadence;
-    const initialPeriod = setPeriodOptions(initialCadence, savedKey);
-    populatePeriodSelect(periodSelect, initialCadence, initialPeriod.key);
+    let initialCadence = "monthly";
+    let initialPeriod = setPeriodOptions(initialCadence);
 
-    budgetEntries = getSavedBudgetsFromStorage();
+    budgetEntries = await getBudgetEntriesFromDb();
+    if (budgetEntries.length > 0) {
+      const match = budgetEntries.find(
+        (entry) => entry.cadence === initialCadence && entry.periodKey === initialPeriod.key
+      );
+      const selected = match || orderBudgetEntries(budgetEntries)[0];
+      initialCadence = selected.cadence;
+      initialPeriod = setPeriodOptions(initialCadence, selected.periodKey);
+    }
+
+    if (cadenceSelect) cadenceSelect.value = initialCadence;
+    populatePeriodSelect(periodSelect, initialCadence, initialPeriod.key);
     syncBudgetSelector(initialCadence, initialPeriod.key);
 
     let state = {
@@ -911,6 +827,7 @@ import { api } from "./api.js";
         state.isDirty = false;
         if (saveBtn) saveBtn.disabled = true;
         if (!silent) showSaveStatus("Budget saved.", "ok");
+        await refreshBudgetEntries();
       } catch (err) {
         if (!silent) showSaveStatus("Failed to save budget.", "error");
         console.warn("Failed to save budget sheet:", err);
@@ -944,14 +861,16 @@ import { api } from "./api.js";
       state.periodLabel = selected.label;
       state.periodStart = selected.start;
       state.periodEnd = selected.end;
-      localStorage.setItem(`${PERIOD_STORAGE_PREFIX}${state.cadence}`, selected.key);
 
       const periodEl = $("#budgetPeriod");
       if (periodEl) {
         periodEl.textContent = `${getCadenceLabel(state.cadence)} · ${selected.label}`;
       }
 
-      state.categories = loadCategories(state.cadence, selected.key);
+      state.categories = getBudgetCategoryNames().map((name) => ({
+        name,
+        budget: null,
+      }));
       state.isDirty = false;
       const saveBtn = $("#btnSaveBudget");
       if (saveBtn) saveBtn.disabled = true;
@@ -963,14 +882,17 @@ import { api } from "./api.js";
     await renderForPeriod(state.periodKey);
 
     const changeBudgetSelection = async (cadenceId, periodKey) => {
-      allowEmptyBudgets = false;
       state.cadence = CADENCE_LOOKUP.has(cadenceId) ? cadenceId : "monthly";
-      localStorage.setItem(CADENCE_STORAGE_KEY, state.cadence);
       const selected = setPeriodOptions(state.cadence, periodKey);
       await renderForPeriod(selected.key);
       if (cadenceSelect) cadenceSelect.value = state.cadence;
       populatePeriodSelect(periodSelect, state.cadence, state.periodKey);
       hideStatus();
+    };
+
+    const refreshBudgetEntries = async () => {
+      budgetEntries = await getBudgetEntriesFromDb();
+      syncBudgetSelector(state.cadence, state.periodKey);
     };
 
     budgetSelect?.addEventListener("change", async (e) => {
@@ -991,11 +913,6 @@ import { api } from "./api.js";
         const next = Number(target.value || 0);
         state.categories[idx].budget = Math.max(0, Number.isFinite(next) ? next : 0);
       }
-      saveCategories(
-        state.categories.map(({ name, budget }) => ({ name, budget })),
-        state.cadence,
-        state.periodKey
-      );
       state.isDirty = true;
       const saveBtn = $("#btnSaveBudget");
       if (saveBtn) saveBtn.disabled = false;
@@ -1042,11 +959,6 @@ import { api } from "./api.js";
 
     $("#btnResetBudgets")?.addEventListener("click", () => {
       state.categories = getBudgetCategoryNames().map((name) => ({ name, budget: null }));
-      saveCategories(
-        state.categories.map(({ name, budget }) => ({ name, budget })),
-        state.cadence,
-        state.periodKey
-      );
       state.isDirty = true;
       const saveBtn = $("#btnSaveBudget");
       if (saveBtn) saveBtn.disabled = false;
@@ -1085,11 +997,6 @@ import { api } from "./api.js";
       }
 
       state.categories = updated;
-      saveCategories(
-        state.categories.map(({ name, budget }) => ({ name, budget })),
-        state.cadence,
-        state.periodKey
-      );
       state.isDirty = true;
       const saveBtn = $("#btnSaveBudget");
       if (saveBtn) saveBtn.disabled = false;
@@ -1130,11 +1037,6 @@ import { api } from "./api.js";
       }
 
       state.categories = updated;
-      saveCategories(
-        state.categories.map(({ name, budget }) => ({ name, budget })),
-        state.cadence,
-        state.periodKey
-      );
       state.isDirty = true;
       const saveBtn = $("#btnSaveBudget");
       if (saveBtn) saveBtn.disabled = false;
@@ -1228,6 +1130,7 @@ import { api } from "./api.js";
       const cadenceId = addBudgetCadenceSelect?.value || "monthly";
       const periodKey = addBudgetPeriodSelect?.value;
       await changeBudgetSelection(cadenceId, periodKey);
+      await saveBudgetSheet({ silent: true });
       closeAddBudgetModal();
     });
 
@@ -1285,14 +1188,7 @@ import { api } from "./api.js";
 
       const deleteCadence = state.cadence;
       const deletePeriod = state.periodKey;
-      localStorage.removeItem(`${STORAGE_KEY}_${deleteCadence}_${deletePeriod}`);
-      if (deleteCadence === "monthly") {
-        localStorage.removeItem(`${STORAGE_KEY}_${deletePeriod}`);
-      }
-
-      budgetEntries = budgetEntries.filter(
-        (entry) => !(entry.cadence === deleteCadence && entry.periodKey === deletePeriod)
-      );
+      await refreshBudgetEntries();
 
       closeDeleteBudgetModal();
 
@@ -1304,7 +1200,6 @@ import { api } from "./api.js";
         return;
       }
 
-      allowEmptyBudgets = true;
       renderBudgetSelector([], null);
       state.sheetId = null;
       state.categories = getBudgetCategoryNames().map((name) => ({ name, budget: null }));
@@ -1385,20 +1280,15 @@ import { api } from "./api.js";
       const names = getBudgetCategoryNames();
       const exists = state.categories.some((c) => normalizeName(c.name) === key);
       if (!exists && names.includes(name)) {
-      state.categories = [
-        ...state.categories,
-        { name, budget: null, spent: 0 },
-      ];
-    }
+        state.categories = [
+          ...state.categories,
+          { name, budget: null, spent: 0 },
+        ];
+      }
 
-    saveCategories(
-      state.categories.map(({ name: n, budget }) => ({ name: n, budget })),
-      state.cadence,
-      state.periodKey
-    );
-    state.isDirty = true;
-    const saveBtn = $("#btnSaveBudget");
-    if (saveBtn) saveBtn.disabled = false;
+      state.isDirty = true;
+      const saveBtn = $("#btnSaveBudget");
+      if (saveBtn) saveBtn.disabled = false;
       state.spentMap = buildSpentMap(
         records.filter((r) => {
           if (!r.date) return false;
