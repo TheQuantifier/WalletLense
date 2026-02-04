@@ -149,6 +149,20 @@
   white-space: nowrap;
 }
 
+.recent .txn-table th:nth-child(1),
+.recent .txn-table th:nth-child(4),
+.recent .txn-table th:nth-child(5) {
+  text-align: left;
+}
+
+.recent .txn-table td:nth-child(2) {
+  text-align: center;
+}
+
+.recent .txn-table td:nth-child(5) {
+  text-align: left;
+}
+
 /* Icon button: keep focus ring on the button (accessible), not on the image */
 .icon-btn {
   border: none;

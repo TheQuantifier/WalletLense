@@ -320,6 +320,10 @@
   width: 130px; /* Category */
 }
 
+.txn-table th:nth-child(2) {
+  text-align: left;
+}
+
 .txn-table th.num,
 .txn-table td.num {
   width: 110px; 
