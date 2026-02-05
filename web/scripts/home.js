@@ -200,12 +200,14 @@ import { api } from "./api.js";
       }
     });
 
-    merged.forEach((name) => {
+    merged
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
+      .forEach((name) => {
       const opt = document.createElement("option");
       opt.value = name;
       opt.textContent = name;
       select.appendChild(opt);
-    });
+      });
 
     renderCustomCategoryList(type);
   };

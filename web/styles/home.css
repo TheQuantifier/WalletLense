@@ -354,6 +354,18 @@
   width: 100%;
 }
 
+.custom-category-list:empty {
+  margin-top: 0;
+}
+
+.form-row--with-list {
+  flex-wrap: wrap;
+}
+
+.form-row--with-list .custom-category-list {
+  flex-basis: 100%;
+}
+
 .custom-category-item {
   display: flex;
   align-items: center;
