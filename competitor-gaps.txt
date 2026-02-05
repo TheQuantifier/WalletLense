@@ -1,0 +1,32 @@
+Gaps to differentiate (not clearly advertised by competing OCR+budgeting+advice apps)
+
+1. Explainable advice with clear "why" plus concrete next steps.
+2. Item-level OCR with verified totals plus confidence scores and correction flow.
+3. Budgets that auto-adapt to bills and subscriptions with renewal-based forecasting.
+4. Deeper scenario planning (e.g., "if rent rises 5%, what happens?").
+5. Privacy-first / data-minimal positioning, including on-device processing where possible.
+6. Searchable receipt vault with exportable audit trails.
+7. Multi-currency budgets and FX-aware reporting.
+8. Shared budgets with roles, permissions, and approvals.
+
+
+Here’s a clean competitor map for WiseWallet based on your feature set (budgeting + expense tracking + receipt OCR + reports). I split it into direct and adjacent competitors so you can position clearly.
+
+## Direct Competitors (Personal Finance / Budgeting + Tracking)
+
+YNAB (You Need A Budget) — well-known budgeting app. (apps.apple.com)
+EveryDollar — zero‑based budgeting app by Ramsey Solutions. (everydollar.help.ramseysolutions.com)
+Monarch Money — budgeting + planning features. (monarchmoney.com)
+Rocket Money — budgeting + subscription tracking/cancellation. (rocketmoney.com)
+Quicken Simplifi — personal finance tracking and reports. (quicken.com)
+PocketGuard — all‑in‑one money management and budgeting. (pocketguard.com)
+Goodbudget — envelope‑style budgeting app. (goodbudget.com)
+Copilot Money — modern personal finance app (US, web + Apple platforms). (help.copilot.money)
+Empower — net‑worth dashboard + account aggregation. (empower.com)
+
+##Adjacent Competitors (Receipt OCR / Expense Capture)
+
+Expensify — receipt scanning (SmartScan) + expense workflows. (use.expensify.com)
+Shoeboxed — receipt scanning + expense reporting. (shoeboxed.com)
+Zoho Expense — receipt scanning + expense management. (zoho.com)
+If you tell me your exact target user (consumer vs freelancer vs SMB, and US‑only vs global), I’ll trim this into a tighter competitive set and map each one to their strongest differentiator.
