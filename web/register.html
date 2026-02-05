@@ -24,6 +24,7 @@
   <!-- Styles -->
   <link rel="stylesheet" href="styles/default.css" />
   <link rel="stylesheet" href="styles/auth.css" />
+  <link rel="stylesheet" href="styles/legal.css" />
 
   <script>
     const savedTheme = localStorage.getItem("theme") || "light";
@@ -114,7 +115,7 @@
           <label style="display:flex; gap:0.5rem; align-items:flex-start; margin-top: 0.25rem;">
             <input type="checkbox" id="agree" name="agree" required style="margin-top:0.2rem;" />
             <span class="subtle">
-              I agree to the <a href="terms.html">Terms</a> and <a href="privacy.html">Privacy Policy</a>.
+              I agree to the <a href="terms.html" class="legal-link" data-legal="terms">Terms</a> and <a href="privacy.html" class="legal-link" data-legal="privacy">Privacy Policy</a>.
             </span>
           </label>
 
@@ -162,12 +163,25 @@
     <div class="nf-footer-inner">
       <p>&copy; <span id="year"></span> WiseWallet. All rights reserved.</p>
       <nav class="nf-legal" aria-label="Footer">
-        <a href="privacy.html">Privacy</a><span class="sep">•</span>
-        <a href="terms.html">Terms</a><span class="sep">•</span>
+        <a href="privacy.html" class="legal-link" data-legal="privacy">Privacy</a><span class="sep">•</span>
+        <a href="terms.html" class="legal-link" data-legal="terms">Terms</a><span class="sep">•</span>
         <a href="contact.html">Contact</a>
       </nav>
     </div>
   </footer>
+
+  <div id="legalModal" class="nf-modal hidden" role="dialog" aria-modal="true" aria-labelledby="legalModalTitle">
+    <div class="nf-modal-backdrop" data-legal-close="true"></div>
+    <div class="nf-modal-content" role="document">
+      <div class="nf-modal-header">
+        <h2 id="legalModalTitle">Legal</h2>
+        <button type="button" class="nf-modal-close" data-legal-close="true" aria-label="Close legal modal">Close</button>
+      </div>
+      <div class="nf-modal-body" id="legalModalBody">
+        <p class="subtle">Loadingâ€¦</p>
+      </div>
+    </div>
+  </div>
 
   <!-- JS -->
   <script type="module" src="scripts/register.js"></script>

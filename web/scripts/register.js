@@ -8,6 +8,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("registerBtn");
   const passwordInput = document.getElementById("password");
   const confirmInput = document.getElementById("confirmPassword");
+  const legalModal = document.getElementById("legalModal");
+  const legalModalTitle = document.getElementById("legalModalTitle");
+  const legalModalBody = document.getElementById("legalModalBody");
+  const legalCache = new Map();
 
   const setPasswordStyle = (input, isValid) => {
     if (!input) return;
@@ -59,6 +63,66 @@ document.addEventListener("DOMContentLoaded", () => {
     msg.classList.add("is-hidden");
     msg.style.color = "";
   };
+
+  const setLegalModalOpen = (open) => {
+    if (!legalModal) return;
+    legalModal.classList.toggle("hidden", !open);
+    document.body.style.overflow = open ? "hidden" : "";
+  };
+
+  const loadLegalContent = async (kind) => {
+    const config = {
+      terms: { title: "Terms of Use", url: "terms.html" },
+      privacy: { title: "Privacy Policy", url: "privacy.html" },
+    }[kind];
+
+    if (!config || !legalModalBody || !legalModalTitle) return;
+
+    legalModalTitle.textContent = config.title;
+    legalModalBody.innerHTML = `<p class="subtle">Loadingâ€¦</p>`;
+
+    if (legalCache.has(kind)) {
+      legalModalBody.innerHTML = legalCache.get(kind);
+      return;
+    }
+
+    try {
+      const res = await fetch(config.url, { cache: "force-cache" });
+      if (!res.ok) throw new Error("Failed to load legal content");
+      const html = await res.text();
+      const parsed = new DOMParser().parseFromString(html, "text/html");
+      const main =
+        parsed.querySelector("main.main--legal") || parsed.querySelector("main");
+      const content = main ? main.innerHTML : "<p>Content unavailable.</p>";
+      legalCache.set(kind, content);
+      legalModalBody.innerHTML = content;
+    } catch (err) {
+      console.error("Legal modal load failed:", err);
+      legalModalBody.innerHTML = "<p>Could not load content. Please try again.</p>";
+    }
+  };
+
+  document.querySelectorAll(".legal-link").forEach((link) => {
+    link.addEventListener("click", (e) => {
+      const kind = link.dataset.legal;
+      if (!kind || !legalModal) return;
+      e.preventDefault();
+      setLegalModalOpen(true);
+      loadLegalContent(kind);
+    });
+  });
+
+  legalModal?.addEventListener("click", (e) => {
+    if (e.target?.matches("[data-legal-close]")) {
+      setLegalModalOpen(false);
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && legalModal && !legalModal.classList.contains("hidden")) {
+      setLegalModalOpen(false);
+    }
+  });
 
   if (!form) {
     console.error("❌ registerForm not found on page.");

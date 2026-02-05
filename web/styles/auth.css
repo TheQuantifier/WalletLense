@@ -250,6 +250,90 @@ body.landing-light {
 }
 
 /* =========================================================
+   LEGAL MODAL
+   ========================================================= */
+
+.nf-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.55);
+  z-index: 1200;
+  padding: 1.5rem;
+}
+
+.nf-modal.hidden {
+  display: none;
+}
+
+.nf-modal-backdrop {
+  position: absolute;
+  inset: 0;
+}
+
+.nf-modal-content {
+  position: relative;
+  z-index: 1;
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  width: min(900px, 100%);
+  max-height: min(80vh, 720px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+  border: 1px solid var(--border);
+}
+
+.nf-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.nf-modal-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.nf-modal-close {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nf-modal-close:hover {
+  background: var(--grey-1);
+}
+
+.nf-modal-body {
+  padding: 1.25rem;
+  overflow: auto;
+  text-align: left;
+}
+
+.nf-modal-body .main,
+.nf-modal-body .main--legal {
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+  background: transparent;
+  border-radius: 0;
+}
+
+:root[data-theme="dark"] .nf-modal {
+  background: rgba(2, 6, 23, 0.72);
+}
+
+/* =========================================================
    AUTH CONTAINER (REGISTER)
    ========================================================= */
 
