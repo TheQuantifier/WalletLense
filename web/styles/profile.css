@@ -16,6 +16,12 @@
   --profile-grid-cols: 464px 1fr;
 }
 
+.profile-status-inline {
+  margin: 0;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.9rem;
+}
+
 /* ===== PROFILE SUMMARY ===== */
 .profile-card .actions {
   display: flex;
@@ -437,6 +443,65 @@ textarea { resize: vertical; }
 .activity h2 {
   font-size: 1.1rem;
   margin-bottom: 0.6rem;
+}
+
+.activity-table {
+  width: 100%;
+  table-layout: auto;
+}
+
+.activity-table th,
+.activity-table td {
+  vertical-align: middle;
+  width: auto;
+}
+
+.activity-table th.date-col,
+.activity-table td.date-col {
+  text-align: center;
+  width: 21ch;
+  max-width: 21ch;
+}
+
+.activity-table th.activity-col,
+.activity-table td.activity-col {
+  text-align: left;
+  width: 30ch;
+  max-width: 30ch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activity-table th.ip-col,
+.activity-table td.ip-col {
+  text-align: left;
+  width: 12ch;
+  max-width: 12ch;
+  white-space: nowrap;
+}
+
+.activity-table th.result-col,
+.activity-table td.result-col {
+  text-align: right;
+  padding-right: 0.75rem;
+  width: 30ch;
+  max-width: 30ch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activity-table th:not(.result-col),
+.activity-table td:not(.result-col) {
+  padding-right: 1rem;
+}
+
+.activity-date {
+  display: inline-block;
+  width: 100%;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ===== RESPONSIVE ===== */

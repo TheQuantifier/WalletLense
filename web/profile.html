@@ -95,6 +95,7 @@
         <p class="subtle">View and update your personal info</p>
       </div>
       <div class="actions" role="group">
+        <p id="profileStatus" class="status-banner subtle is-hidden profile-status-inline" aria-live="polite"></p>
         <button id="editProfileBtn" class="btn btn--primary" type="button">
           Edit Profile
         </button>
@@ -150,8 +151,6 @@
             <button type="button" id="changeAvatarBtn" class="btn">Change Avatar</button>
           </div>
         </form>
-
-        <p id="profileStatus" class="status-banner subtle is-hidden" aria-live="polite"></p>
 
         <div class="actions">
           <input id="avatarInput" type="file" accept="image/*" hidden />
@@ -295,13 +294,13 @@
       <section class="card activity">
         <h2>Recent Activity</h2>
         <div class="table-wrap">
-          <table class="txn-table">
+          <table class="txn-table activity-table">
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Activity</th>
-                <th>IP</th>
-                <th class="num">Result</th>
+                <th class="date-col"><span class="activity-date">Date</span></th>
+                <th class="activity-col">Activity</th>
+                <th class="ip-col">IP</th>
+                <th class="result-col">Result</th>
               </tr>
             </thead>
             <tbody id="activityBody">

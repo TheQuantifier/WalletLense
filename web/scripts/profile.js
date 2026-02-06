@@ -465,16 +465,22 @@ async function loadRecentActivity() {
       const tr = document.createElement("tr");
 
       const tdDate = document.createElement("td");
-      tdDate.textContent = formatActivityDate(row.created_at);
+      const dateBadge = document.createElement("span");
+      dateBadge.className = "activity-date";
+      dateBadge.textContent = formatActivityDate(row.created_at);
+      tdDate.className = "date-col";
+      tdDate.appendChild(dateBadge);
 
       const tdAction = document.createElement("td");
+      tdAction.className = "activity-col";
       tdAction.textContent = ACTION_LABELS[row.action] || row.action || "Activity";
 
       const tdIp = document.createElement("td");
+      tdIp.className = "ip-col";
       tdIp.textContent = row.ip_address || "\u2014";
 
       const tdResult = document.createElement("td");
-      tdResult.className = "num";
+      tdResult.className = "result-col";
       tdResult.textContent = row.entity_type || "\u2014";
 
       tr.appendChild(tdDate);
