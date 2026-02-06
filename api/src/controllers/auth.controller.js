@@ -285,7 +285,6 @@ export const updateMe = asyncHandler(async (req, res) => {
     "email",
     "fullName",
     "location",
-    "role",
     "phoneNumber",
     "bio",
     "avatarUrl",

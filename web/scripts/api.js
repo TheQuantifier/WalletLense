@@ -400,6 +400,69 @@ export const activity = {
 };
 
 // ======================================================================
+// APP SETTINGS MODULE (PUBLIC)
+// ======================================================================
+export const appSettings = {
+  getPublic() {
+    return request("/app-settings/public");
+  },
+};
+
+// ======================================================================
+// ADMIN MODULE
+// ======================================================================
+export const admin = {
+  listUsers(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return request(`/admin/users${query ? `?${query}` : ""}`);
+  },
+
+  getUser(id) {
+    return request(`/admin/users/${id}`);
+  },
+
+  updateUser(id, updates) {
+    return request(`/admin/users/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    });
+  },
+
+  listRecords(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return request(`/admin/records${query ? `?${query}` : ""}`);
+  },
+
+  getRecord(id) {
+    return request(`/admin/records/${id}`);
+  },
+
+  updateRecord(id, updates) {
+    return request(`/admin/records/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    });
+  },
+
+  deleteRecord(id, deleteReceipt) {
+    const query =
+      deleteReceipt === undefined ? "" : `?deleteReceipt=${deleteReceipt}`;
+    return request(`/admin/records/${id}${query}`, { method: "DELETE" });
+  },
+
+  getSettings() {
+    return request("/admin/settings");
+  },
+
+  updateSettings(updates) {
+    return request("/admin/settings", {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    });
+  },
+};
+
+// ======================================================================
 // SUPPORT MODULE
 // ======================================================================
 export const support = {
@@ -460,6 +523,8 @@ export const api = {
   budgetSheets,
   fxRates,
   activity,
+  appSettings,
+  admin,
   support,
   getUploadType,
   getReceiptSummary,

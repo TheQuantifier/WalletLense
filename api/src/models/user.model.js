@@ -181,3 +181,37 @@ export async function deleteUserById(id) {
   );
   return rows[0] || null;
 }
+
+export async function listUsers({ limit = 50, offset = 0, queryText = "" } = {}) {
+  const params = [];
+  const where = [];
+  let i = 1;
+
+  if (queryText) {
+    where.push(`(
+      username ILIKE $${i}
+      OR email ILIKE $${i}
+      OR full_name ILIKE $${i}
+    )`);
+    params.push(`%${queryText}%`);
+    i += 1;
+  }
+
+  params.push(limit);
+  params.push(offset);
+
+  const { rows } = await query(
+    `
+    SELECT
+      id, username, email, full_name, location, role, phone_number, bio, avatar_url,
+      custom_expense_categories, custom_income_categories,
+      created_at, updated_at
+    FROM users
+    ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+    ORDER BY created_at DESC
+    LIMIT $${i++} OFFSET $${i++}
+    `,
+    params
+  );
+  return rows;
+}

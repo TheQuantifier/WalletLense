@@ -89,6 +89,7 @@ function loadHeaderAndFooter() {
     initMobileNavMenu();
     initAccountMenu();
     updateHeaderAuthState();
+    updateAppName();
     wireLogoutButton();
     wireDashboardViewSelector();
     updateMobileNavActiveState();
@@ -117,6 +118,7 @@ function loadHeaderAndFooter() {
       initMobileNavMenu();
       initAccountMenu();
       updateHeaderAuthState();
+      updateAppName();
       wireLogoutButton();
       wireDashboardViewSelector(); // NEW: Wire dashboard view selector
       updateMobileNavActiveState();
@@ -370,6 +372,7 @@ async function updateHeaderAuthState() {
     const avatarUrl = user.avatarUrl || user.avatar_url || "";
     applyAccountAvatar(avatarUrl, user.fullName || user.username);
     sessionStorage.setItem("cachedUser", JSON.stringify(user));
+    setAdminVisibility(user?.role === "admin");
 
   } catch {
     // Not authenticated
@@ -380,6 +383,32 @@ async function updateHeaderAuthState() {
       .forEach((el) => el.classList.remove("hidden"));
 
     applyAccountAvatar("", "");
+    setAdminVisibility(false);
+  }
+}
+
+function setAdminVisibility(isAdmin) {
+  document.querySelectorAll(".admin-only").forEach((el) => {
+    el.classList.toggle("is-hidden", !isAdmin);
+  });
+}
+
+async function updateAppName() {
+  const nameEl = document.getElementById("appName");
+  if (!nameEl) return;
+
+  const cached = sessionStorage.getItem("appName");
+  if (cached) {
+    nameEl.textContent = cached;
+  }
+
+  try {
+    const data = await api.appSettings.getPublic();
+    const nextName = data?.appName || "WiseWallet";
+    nameEl.textContent = nextName;
+    sessionStorage.setItem("appName", nextName);
+  } catch {
+    // ignore public settings failure
   }
 }
 
