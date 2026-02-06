@@ -152,6 +152,7 @@ export async function countRecordsByUser(userId) {
 
 export async function listRecordsAdmin({
   userId,
+  queryText,
   type,
   limit = 200,
   offset = 0,
@@ -170,13 +171,28 @@ export async function listRecordsAdmin({
     params.push(type);
   }
 
+  if (queryText) {
+    const like = `%${queryText.toLowerCase()}%`;
+    where.push(
+      `(lower(users.full_name) LIKE $${i} OR lower(users.username) LIKE $${i} OR lower(users.email) LIKE $${i})`
+    );
+    params.push(like);
+    i += 1;
+  }
+
   params.push(limit);
   params.push(offset);
 
   const { rows } = await query(
     `
-    SELECT *
+    SELECT
+      records.*,
+      users.full_name,
+      users.username,
+      users.email,
+      COALESCE(users.full_name, users.username, users.email) AS user_name
     FROM records
+    JOIN users ON users.id = records.user_id
     ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
     ORDER BY date DESC, created_at DESC
     LIMIT $${i++} OFFSET $${i++}

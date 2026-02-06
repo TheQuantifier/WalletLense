@@ -14,13 +14,25 @@ export const getAdmin = asyncHandler(async (_req, res) => {
 });
 
 export const updateAdmin = asyncHandler(async (req, res) => {
-  const { appName } = req.body;
-  if (!appName || !String(appName).trim()) {
-    return res.status(400).json({ message: "appName is required" });
+  const { appName, receiptKeepFiles } = req.body;
+  const hasAppName = appName !== undefined;
+  const hasReceiptKeepFiles = receiptKeepFiles !== undefined;
+
+  if (!hasAppName && !hasReceiptKeepFiles) {
+    return res.status(400).json({ message: "At least one setting is required" });
+  }
+
+  if (hasAppName && !String(appName).trim()) {
+    return res.status(400).json({ message: "appName must be a non-empty string" });
+  }
+
+  if (hasReceiptKeepFiles && typeof receiptKeepFiles !== "boolean") {
+    return res.status(400).json({ message: "receiptKeepFiles must be a boolean" });
   }
 
   const updated = await updateAppSettings({
-    appName: String(appName).trim(),
+    appName: hasAppName ? String(appName).trim() : null,
+    receiptKeepFiles: hasReceiptKeepFiles ? receiptKeepFiles : null,
     updatedBy: req.user.id,
   });
 
@@ -29,7 +41,10 @@ export const updateAdmin = asyncHandler(async (req, res) => {
     action: "app_settings_update",
     entityType: "app_settings",
     entityId: updated?.id || null,
-    metadata: { appName: updated?.app_name },
+    metadata: {
+      appName: updated?.app_name,
+      receiptKeepFiles: updated?.receipt_keep_files,
+    },
     req,
   });
 

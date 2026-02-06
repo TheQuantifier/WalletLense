@@ -15,6 +15,7 @@ const els = {
 
   settingsForm: document.getElementById("settingsForm"),
   appNameInput: document.getElementById("appNameInput"),
+  receiptKeepFilesInput: document.getElementById("receiptKeepFilesInput"),
   settingsStatus: document.getElementById("settingsStatus"),
 
   userModal: document.getElementById("adminUserModal"),
@@ -179,7 +180,7 @@ function renderRecords() {
       (record) => `
         <tr>
           <td>${formatDate(record.date)}</td>
-          <td>${record.user_id}</td>
+          <td>${record.user_name || record.full_name || record.username || record.email || record.user_id}</td>
           <td>${record.type}</td>
           <td>${record.category || "—"}</td>
           <td class="num">${Number(record.amount || 0).toFixed(2)}</td>
@@ -196,10 +197,10 @@ function renderRecords() {
 async function loadRecords() {
   setStatus(els.recordsStatus, "Loading records...");
   try {
-    const userId = els.recordsUserId?.value?.trim() || "";
+    const userQuery = els.recordsUserId?.value?.trim() || "";
     const type = els.recordsType?.value || "";
     const params = { limit: 100, offset: 0 };
-    if (userId) params.userId = userId;
+    if (userQuery) params.q = userQuery;
     if (type) params.type = type;
 
     const { records } = await api.admin.listRecords(params);
@@ -271,6 +272,10 @@ async function loadSettings() {
     if (els.appNameInput) {
       els.appNameInput.value = settings?.app_name || settings?.appName || "WiseWallet";
     }
+    if (els.receiptKeepFilesInput) {
+      const keep = settings?.receipt_keep_files;
+      els.receiptKeepFilesInput.checked = typeof keep === "boolean" ? keep : true;
+    }
   } catch (err) {
     console.error(err);
     setStatus(els.settingsStatus, err.message || "Failed to load settings.", "error");
@@ -287,7 +292,10 @@ async function saveSettings(event) {
 
   setStatus(els.settingsStatus, "Saving settings...");
   try {
-    await api.admin.updateSettings({ appName });
+    await api.admin.updateSettings({
+      appName,
+      receiptKeepFiles: Boolean(els.receiptKeepFilesInput?.checked),
+    });
     setStatus(els.settingsStatus, "Settings updated.", "ok");
   } catch (err) {
     console.error(err);
@@ -359,3 +367,4 @@ async function init() {
 }
 
 init();
+

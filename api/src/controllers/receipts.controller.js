@@ -5,6 +5,7 @@ import { parseReceiptText } from "../services/aiParser.service.js";
 import { runOcrBuffer } from "../services/ocr.service.js";
 import env from "../config/env.js";
 import { parseDateOnly } from "./records.controller.js";
+import { getAppSettings } from "../models/appSettings.model.js";
 
 import { query } from "../config/db.js";
 import { logActivity } from "../services/activity.service.js";
@@ -39,7 +40,8 @@ export const presignUpload = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "filename and contentType are required" });
   }
 
-  if (!env.keepReceiptFiles) {
+  const keepReceiptFiles = await getReceiptKeepFiles();
+  if (!keepReceiptFiles) {
     return res.status(403).json({ message: "Saving receipt files is currently disabled" });
   }
 
@@ -183,7 +185,8 @@ export const confirmUpload = asyncHandler(async (req, res) => {
   }
 
   // 7) Optional: remove uploaded file after processing (useful for testing)
-  if (!env.keepReceiptFiles) {
+  const keepReceiptFiles = await getReceiptKeepFiles();
+  if (!keepReceiptFiles) {
     try {
       if (receipt.object_key) {
         await deleteObject({ key: receipt.object_key });
@@ -480,4 +483,16 @@ function cryptoRandomIdFallback() {
   } catch {
     return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   }
+}
+
+async function getReceiptKeepFiles() {
+  try {
+    const settings = await getAppSettings();
+    if (typeof settings?.receipt_keep_files === "boolean") {
+      return settings.receipt_keep_files;
+    }
+  } catch (err) {
+    console.error("Failed to load app settings for receipt files", err);
+  }
+  return env.keepReceiptFiles;
 }

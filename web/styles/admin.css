@@ -81,6 +81,25 @@
   resize: vertical;
 }
 
+.admin-form .checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-weight: 500;
+}
+
+.admin-form .checkbox-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}
+
+.admin-form .checkbox-row .subtle {
+  display: inline-block;
+  margin-left: 0.35rem;
+  font-weight: 400;
+}
+
 .admin-table {
   width: 100%;
   border-collapse: collapse;

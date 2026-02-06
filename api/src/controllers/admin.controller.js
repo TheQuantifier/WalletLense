@@ -105,9 +105,10 @@ export const listRecordsAdminController = asyncHandler(async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 200, 500);
   const offset = Math.max(Number(req.query.offset) || 0, 0);
   const userId = req.query.userId ? String(req.query.userId) : undefined;
+  const queryText = req.query.q ? String(req.query.q).trim() : undefined;
   const type = req.query.type ? String(req.query.type) : undefined;
 
-  const records = await listRecordsAdmin({ userId, type, limit, offset });
+  const records = await listRecordsAdmin({ userId, queryText, type, limit, offset });
   res.json({ records });
 });
 

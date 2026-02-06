@@ -90,7 +90,7 @@
             <p class="subtle">View and edit records across all users.</p>
           </div>
           <div class="admin-actions">
-            <input id="recordsUserId" type="text" placeholder="Filter by user ID" />
+            <input id="recordsUserId" type="text" placeholder="Filter by name or email" />
             <select id="recordsType">
               <option value="">All types</option>
               <option value="expense">Expense</option>
@@ -107,7 +107,7 @@
             <thead>
               <tr>
                 <th>Date</th>
-                <th>User ID</th>
+                <th>User Name</th>
                 <th>Type</th>
                 <th>Category</th>
                 <th class="num">Amount</th>
@@ -133,6 +133,16 @@
           <label>
             <span>App Name</span>
             <input id="appNameInput" type="text" placeholder="WiseWallet" />
+          </label>
+          <label>
+            <span>Receipt Storage</span>
+            <div class="checkbox-row">
+              <input id="receiptKeepFilesInput" type="checkbox" />
+              <span>
+                Keep receipt files in storage.
+                <span class="subtle">Disabling will block new uploads and delete files after parsing.</span>
+              </span>
+            </div>
           </label>
           <div class="admin-actions">
             <button class="btn btn--primary" type="submit">Save Settings</button>
