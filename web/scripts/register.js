@@ -22,6 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const contactStatus = document.getElementById("contactStatus");
   const contactSubmitBtn = document.getElementById("contactSubmitBtn");
   const contactSubject = document.getElementById("contactSubject");
+  const contactEmail = document.getElementById("contactEmail");
   const contactMessage = document.getElementById("contactMessage");
   const contactOpeners = document.querySelectorAll("[data-contact-open='true']");
   const legalCache = new Map();
@@ -287,10 +288,11 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
 
     const subject = contactSubject?.value?.trim() || "";
+    const email = contactEmail?.value?.trim() || "";
     const message = contactMessage?.value?.trim() || "";
 
-    if (!subject || !message) {
-      setContactStatus("Please add both a subject and a message.", "error");
+    if (!subject || !email || !message) {
+      setContactStatus("Please add subject, email, and message.", "error");
       return;
     }
 
@@ -301,16 +303,13 @@ document.addEventListener("DOMContentLoaded", () => {
     setContactStatus("Sending your message...");
 
     try {
-      await api.support.contact({ subject, message });
+      await api.support.contactPublic({ subject, message, name: "Guest User", email });
       setContactStatus("Thanks! Your message has been sent to support.", "ok");
       contactForm.reset();
     } catch (err) {
       const fallback = "Unable to send message right now.";
       const raw = err?.message || fallback;
-      const friendly = /logged in|unauthorized|401/i.test(raw)
-        ? "Please log in first to send a support message."
-        : raw;
-      setContactStatus(friendly, "error");
+      setContactStatus(raw, "error");
     } finally {
       if (contactSubmitBtn) {
         contactSubmitBtn.disabled = false;

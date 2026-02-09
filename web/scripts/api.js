@@ -16,18 +16,30 @@ const API_BASE =
 // AUTH TOKEN STORAGE (fallback for blocked cookies)
 // --------------------------------------
 const AUTH_TOKEN_KEY = "auth_token";
+const AUTH_TOKEN_TS_KEY = "auth_token_ts";
+const AUTH_TOKEN_TTL_MS = 30 * 60 * 1000;
 
 function getAuthToken() {
-  return localStorage.getItem(AUTH_TOKEN_KEY) || "";
+  const token = sessionStorage.getItem(AUTH_TOKEN_KEY) || "";
+  const tsRaw = sessionStorage.getItem(AUTH_TOKEN_TS_KEY) || "";
+  const ts = Number(tsRaw);
+  if (!token || !Number.isFinite(ts)) return "";
+  if (Date.now() - ts > AUTH_TOKEN_TTL_MS) {
+    clearAuthToken();
+    return "";
+  }
+  return token;
 }
 
 function setAuthToken(token) {
   if (!token) return;
-  localStorage.setItem(AUTH_TOKEN_KEY, token);
+  sessionStorage.setItem(AUTH_TOKEN_KEY, token);
+  sessionStorage.setItem(AUTH_TOKEN_TS_KEY, String(Date.now()));
 }
 
 function clearAuthToken() {
-  localStorage.removeItem(AUTH_TOKEN_KEY);
+  sessionStorage.removeItem(AUTH_TOKEN_KEY);
+  sessionStorage.removeItem(AUTH_TOKEN_TS_KEY);
 }
 
 // --------------------------------------
@@ -287,11 +299,35 @@ export const receipts = {
       throw new Error(`Upload to object storage failed (${putRes.status})`);
     }
 
-    // 3) Confirm so server can OCR + AI parse + save metadata + auto-record
-    return request(`/receipts/${presign.id}/confirm`, {
+    // 3) Confirm upload; server enqueues async processing job
+    await request(`/receipts/${presign.id}/confirm`, {
       method: "POST",
       body: JSON.stringify({}),
     });
+
+    // 4) Poll receipt status until processing is complete
+    const timeoutMs = 120000;
+    const pollMs = 1500;
+    const startedAt = Date.now();
+    while (Date.now() - startedAt < timeoutMs) {
+      // eslint-disable-next-line no-await-in-loop
+      const receipt = await request(`/receipts/${presign.id}`);
+      const status = receipt?.processing_status || receipt?.processingStatus || "";
+      if (status === "processed") {
+        return { receipt, autoRecord: null };
+      }
+      if (status === "failed") {
+        throw new Error(
+          receipt?.processing_error ||
+            receipt?.processingError ||
+            "Receipt processing failed."
+        );
+      }
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((resolve) => setTimeout(resolve, pollMs));
+    }
+
+    throw new Error("Receipt processing is taking longer than expected. Please refresh shortly.");
   },
 
   getAll() {
@@ -390,6 +426,10 @@ export const budgetSheets = {
   lookup({ cadence, period }) {
     const query = new URLSearchParams({ cadence, period }).toString();
     return request(`/budget-sheets/lookup?${query}`);
+  },
+  summary({ cadence, period }) {
+    const query = new URLSearchParams({ cadence, period }).toString();
+    return request(`/budget-sheets/summary?${query}`);
   },
 
   getOne(id) {
@@ -508,6 +548,12 @@ export const support = {
     return request("/support/contact", {
       method: "POST",
       body: JSON.stringify({ subject, message, name, email }),
+    });
+  },
+  contactPublic({ subject, message, name, email, website } = {}) {
+    return request("/support/public", {
+      method: "POST",
+      body: JSON.stringify({ subject, message, name, email, website }),
     });
   },
 };

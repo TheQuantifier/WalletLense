@@ -3,6 +3,7 @@ import http from "http";
 import app from "./app.js";
 import env from "./config/env.js";
 import { connectDb, closeDb } from "./config/db.js";
+import { startReceiptJobWorker, stopReceiptJobWorker } from "./jobs/receiptJobWorker.js";
 
 const server = http.createServer(app);
 
@@ -12,6 +13,7 @@ const start = async () => {
 
     server.listen(env.port, () => {
       console.log(`🚀 API server listening on port ${env.port}`);
+      startReceiptJobWorker();
     });
   } catch (err) {
     console.error("❌ Failed to start server:", err);
@@ -48,6 +50,7 @@ process.on("uncaughtException", async (err) => {
 // Optional: graceful shutdown (Ctrl+C / Render stop)
 process.on("SIGINT", async () => {
   console.log("🛑 SIGINT received. Shutting down...");
+  stopReceiptJobWorker();
   server.close(async () => {
     await closeDb();
     process.exit(0);
@@ -56,6 +59,7 @@ process.on("SIGINT", async () => {
 
 process.on("SIGTERM", async () => {
   console.log("🛑 SIGTERM received. Shutting down...");
+  stopReceiptJobWorker();
   server.close(async () => {
     await closeDb();
     process.exit(0);
