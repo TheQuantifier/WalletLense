@@ -9,7 +9,7 @@ import fxRatesRoutes from "./fx_rates.routes.js";
 import activityRoutes from "./activity.routes.js";
 import supportRoutes from "./support.routes.js";
 import adminRoutes from "./admin.routes.js";
-import appSettingsRoutes from "./appSettings.routes.js";
+import appSettingsRoutes from "./app_settings.routes.js";
 
 const router = express.Router();
 

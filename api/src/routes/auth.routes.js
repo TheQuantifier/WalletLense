@@ -3,7 +3,7 @@ import express from "express";
 
 import * as controller from "../controllers/auth.controller.js";
 import auth from "../middleware/auth.js";
-import { createRateLimiter } from "../middleware/rateLimit.js";
+import { createRateLimiter } from "../middleware/rate_limit.js";
 
 const router = express.Router();
 const registerLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 8 });

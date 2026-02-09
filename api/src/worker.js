@@ -1,7 +1,7 @@
 import { connectDb, closeDb } from "./config/db.js";
 import env from "./config/env.js";
-import { runMigrations } from "./db/runMigrations.js";
-import { startReceiptJobWorker, stopReceiptJobWorker } from "./jobs/receiptJobWorker.js";
+import { runMigrations } from "./db/run_migrations.js";
+import { startReceiptJobWorker, stopReceiptJobWorker } from "./jobs/receipt_job_worker.js";
 
 const start = async () => {
   try {

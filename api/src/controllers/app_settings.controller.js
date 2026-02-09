@@ -1,6 +1,6 @@
-// src/controllers/appSettings.controller.js
+// src/controllers/app_settings.controller.js
 import asyncHandler from "../middleware/async.js";
-import { getAppSettings, updateAppSettings } from "../models/appSettings.model.js";
+import { getAppSettings, updateAppSettings } from "../models/app_settings.model.js";
 import { logActivity } from "../services/activity.service.js";
 
 export const getPublic = asyncHandler(async (_req, res) => {

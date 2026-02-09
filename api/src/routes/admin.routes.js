@@ -2,7 +2,7 @@
 import express from "express";
 
 import auth from "../middleware/auth.js";
-import requireAdmin from "../middleware/requireAdmin.js";
+import requireAdmin from "../middleware/require_admin.js";
 import {
   listUsersAdmin,
   getUserAdmin,
@@ -15,7 +15,7 @@ import {
 import {
   getAdmin as getAppSettingsAdmin,
   updateAdmin as updateAppSettingsAdmin,
-} from "../controllers/appSettings.controller.js";
+} from "../controllers/app_settings.controller.js";
 
 const router = express.Router();
 

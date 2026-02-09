@@ -1,4 +1,4 @@
-// src/models/appSettings.model.js
+// src/models/app_settings.model.js
 import { query } from "../config/db.js";
 
 export async function getAppSettings() {

@@ -1,6 +1,6 @@
-// src/routes/appSettings.routes.js
+// src/routes/app_settings.routes.js
 import express from "express";
-import { getPublic } from "../controllers/appSettings.controller.js";
+import { getPublic } from "../controllers/app_settings.controller.js";
 
 const router = express.Router();
 

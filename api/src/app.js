@@ -7,7 +7,7 @@ import morgan from "morgan";
 import env from "./config/env.js";
 import apiRouter from "./routes/index.js";
 import { errorHandler } from "./middleware/error.js";
-import securityHeaders from "./middleware/securityHeaders.js";
+import securityHeaders from "./middleware/security_headers.js";
 
 const app = express();
 

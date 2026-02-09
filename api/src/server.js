@@ -3,8 +3,8 @@ import http from "http";
 import app from "./app.js";
 import env from "./config/env.js";
 import { connectDb, closeDb } from "./config/db.js";
-import { startReceiptJobWorker, stopReceiptJobWorker } from "./jobs/receiptJobWorker.js";
-import { runMigrations } from "./db/runMigrations.js";
+import { startReceiptJobWorker, stopReceiptJobWorker } from "./jobs/receipt_job_worker.js";
+import { runMigrations } from "./db/run_migrations.js";
 
 const server = http.createServer(app);
 

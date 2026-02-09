@@ -1,8 +1,8 @@
 import env from "../config/env.js";
-import { getAppSettings } from "../models/appSettings.model.js";
+import { getAppSettings } from "../models/app_settings.model.js";
 import { getReceiptById, updateReceiptParsedData } from "../models/receipt.model.js";
 import { createRecord, updateRecord } from "../models/record.model.js";
-import { parseReceiptText } from "./aiParser.service.js";
+import { parseReceiptText } from "./ai_parser.service.js";
 import { runOcrBuffer } from "./ocr.service.js";
 import { presignGet, headObject, deleteObject } from "./r2.service.js";
 

@@ -1,4 +1,4 @@
-// src/middleware/rateLimit.js
+// src/middleware/rate_limit.js
 // Lightweight in-memory rate limiter for auth endpoints.
 
 function getClientIp(req) {

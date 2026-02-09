@@ -1,11 +1,11 @@
 // src/controllers/receipts.controller.js
 import asyncHandler from "../middleware/async.js";
 
-import { parseReceiptText } from "../services/aiParser.service.js";
+import { parseReceiptText } from "../services/ai_parser.service.js";
 import { runOcrBuffer } from "../services/ocr.service.js";
 import env from "../config/env.js";
 import { parseDateOnly } from "./records.controller.js";
-import { getAppSettings } from "../models/appSettings.model.js";
+import { getAppSettings } from "../models/app_settings.model.js";
 
 import { query } from "../config/db.js";
 import { logActivity } from "../services/activity.service.js";
