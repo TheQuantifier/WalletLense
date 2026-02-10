@@ -201,7 +201,8 @@ const closeLinkModal = () => {
 };
 
 // AVATAR ELEMENTS
-const changeAvatarBtn = $("changeAvatarBtn");
+const avatarTriggerButtons = document.querySelectorAll("[data-avatar-trigger]");
+const topChangeAvatarBtn = $("changeAvatarBtnTop");
 const avatarInput = $("avatarInput");
 const avatarBlock = document.querySelector(".avatar-block .avatar");
 const avatarModal = $("avatarModal");
@@ -247,8 +248,7 @@ const showForm = () => {
   if (editBtn) editBtn.classList.add("is-hidden");
   if (cancelBtn) cancelBtn.classList.remove("is-hidden");
   if (saveBtn) saveBtn.classList.remove("is-hidden");
-  const avatarBtn = $("changeAvatarBtn");
-  if (avatarBtn) avatarBtn.classList.remove("is-hidden");
+  if (topChangeAvatarBtn) topChangeAvatarBtn.classList.remove("is-hidden");
 };
 
 const hideForm = () => {
@@ -260,8 +260,7 @@ const hideForm = () => {
   if (editBtn) editBtn.classList.remove("is-hidden");
   if (cancelBtn) cancelBtn.classList.add("is-hidden");
   if (saveBtn) saveBtn.classList.add("is-hidden");
-  const avatarBtn = $("changeAvatarBtn");
-  if (avatarBtn) avatarBtn.classList.add("is-hidden");
+  if (topChangeAvatarBtn) topChangeAvatarBtn.classList.add("is-hidden");
 };
 
 const showStatus = (msg, kind = "ok") => {
@@ -308,8 +307,8 @@ const applyAvatarPreview = (avatarUrl, fallbackName = "") => {
   avatarBlock.textContent = getInitials(fallbackName);
 };
 
-const applyHeaderAvatar = (avatarUrl) => {
-  window.dispatchEvent(new CustomEvent("avatar:updated", { detail: { avatarUrl } }));
+const applyHeaderAvatar = (avatarUrl, fallbackName = "") => {
+  window.dispatchEvent(new CustomEvent("avatar:updated", { detail: { avatarUrl, fallbackName } }));
 };
 
 const loadIdentity = () => {
@@ -410,7 +409,7 @@ async function loadUserProfile() {
     currentAvatarUrl = avatarUrl || "";
     pendingAvatarUrl = currentAvatarUrl;
     applyAvatarPreview(currentAvatarUrl, displayName);
-    applyHeaderAvatar(currentAvatarUrl);
+    applyHeaderAvatar(currentAvatarUrl, displayName);
 
     if (linkedAccountsList) {
       renderLinkedAccounts();
@@ -570,7 +569,9 @@ const closeAvatarModal = () => {
   avatarModal?.classList.add("hidden");
 };
 
-changeAvatarBtn?.addEventListener("click", openAvatarModal);
+avatarTriggerButtons.forEach((btn) => {
+  btn.addEventListener("click", openAvatarModal);
+});
 closeAvatarModalBtn?.addEventListener("click", closeAvatarModal);
 cancelAvatarBtn?.addEventListener("click", closeAvatarModal);
 avatarModal?.addEventListener("click", (e) => {
@@ -595,7 +596,7 @@ saveAvatarBtn?.addEventListener("click", async () => {
     await api.auth.updateProfile({ avatarUrl: pendingAvatarUrl });
     currentAvatarUrl = pendingAvatarUrl;
     applyAvatarPreview(currentAvatarUrl, currentDisplayName);
-    applyHeaderAvatar(currentAvatarUrl);
+    applyHeaderAvatar(currentAvatarUrl, currentDisplayName);
     closeAvatarModal();
     showStatus("Avatar updated.");
     clearStatusSoon(2500);

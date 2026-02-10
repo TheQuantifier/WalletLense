@@ -503,7 +503,21 @@ window.addEventListener("appName:updated", (event) => {
 
 window.addEventListener("avatar:updated", (event) => {
   const newUrl = event?.detail?.avatarUrl || "";
-  applyAccountAvatar(newUrl, "");
+  const fallbackName = event?.detail?.fallbackName || "";
+  let nextFallback = fallbackName;
+  if (!nextFallback) {
+    const cachedUserRaw = sessionStorage.getItem("cachedUser");
+    if (cachedUserRaw) {
+      try {
+        const cachedUser = JSON.parse(cachedUserRaw);
+        nextFallback = cachedUser.fullName || cachedUser.username || "";
+      } catch {
+        sessionStorage.removeItem("cachedUser");
+      }
+    }
+  }
+
+  applyAccountAvatar(newUrl, nextFallback);
   const cachedUserRaw = sessionStorage.getItem("cachedUser");
   if (cachedUserRaw) {
     try {
