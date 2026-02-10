@@ -307,7 +307,8 @@ function initAccountMenu() {
 
 function getInitials(name) {
   if (!name) return "?";
-  const parts = name.trim().split(" ");
+  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
   if (parts.length === 1) return parts[0][0].toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
@@ -360,9 +361,12 @@ async function updateHeaderAuthState() {
         const cachedUser = JSON.parse(cachedUserRaw);
         const nameEl = document.getElementById("headerUserName");
         if (nameEl) {
-          nameEl.textContent = cachedUser.fullName || cachedUser.username || "Account";
+          nameEl.textContent = cachedUser.fullName || cachedUser.full_name || cachedUser.username || "Account";
         }
-        applyAccountAvatar(cachedUser.avatarUrl || cachedUser.avatar_url || "", cachedUser.fullName || cachedUser.username);
+        applyAccountAvatar(
+          cachedUser.avatarUrl || cachedUser.avatar_url || "",
+          cachedUser.fullName || cachedUser.full_name || cachedUser.username || ""
+        );
       } catch {
         sessionStorage.removeItem("cachedUser");
       }
@@ -381,11 +385,11 @@ async function updateHeaderAuthState() {
     // --- Username in dropdown ---
     const nameEl = document.getElementById("headerUserName");
     if (nameEl) {
-      nameEl.textContent = user.fullName || user.username || "Account";
+      nameEl.textContent = user.fullName || user.full_name || user.username || "Account";
     }
 
     const avatarUrl = user.avatarUrl || user.avatar_url || "";
-    applyAccountAvatar(avatarUrl, user.fullName || user.username);
+    applyAccountAvatar(avatarUrl, user.fullName || user.full_name || user.username || "");
     sessionStorage.setItem("cachedUser", JSON.stringify(user));
     setAdminVisibility(user?.role === "admin");
 
@@ -510,7 +514,7 @@ window.addEventListener("avatar:updated", (event) => {
     if (cachedUserRaw) {
       try {
         const cachedUser = JSON.parse(cachedUserRaw);
-        nextFallback = cachedUser.fullName || cachedUser.username || "";
+        nextFallback = cachedUser.fullName || cachedUser.full_name || cachedUser.username || "";
       } catch {
         sessionStorage.removeItem("cachedUser");
       }

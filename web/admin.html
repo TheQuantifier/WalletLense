@@ -30,16 +30,6 @@
 
 <body>
   <div id="header"></div>
-  <script>
-    (function () {
-      const cached = sessionStorage.getItem("cachedHeaderHtml");
-      if (!cached) return;
-      const el = document.getElementById("header");
-      if (el && !el.hasChildNodes()) {
-        el.innerHTML = cached;
-      }
-    })();
-  </script>
 
   <main class="main admin-main">
     <section class="admin-hero">
