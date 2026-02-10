@@ -102,8 +102,50 @@ function getRequestIp(req) {
   return req.ip || "";
 }
 
-function isGoogleAuthConfigured() {
-  return Boolean(env.googleClientId && env.googleClientSecret && env.googleRedirectUri);
+function isLoopbackHost(hostname) {
+  const normalized = String(hostname || "").toLowerCase().trim();
+  return (
+    normalized === "localhost" ||
+    normalized === "127.0.0.1" ||
+    normalized === "::1" ||
+    normalized === "[::1]"
+  );
+}
+
+function getRequestOrigin(req) {
+  if (!req) return "";
+  const forwardedProto = String(req.headers?.["x-forwarded-proto"] || "")
+    .split(",")[0]
+    .trim();
+  const forwardedHost = String(req.headers?.["x-forwarded-host"] || "")
+    .split(",")[0]
+    .trim();
+  const protocol = forwardedProto || req.protocol || "http";
+  const host = forwardedHost || req.get("host") || "";
+  if (!host) return "";
+  return `${protocol}://${host}`;
+}
+
+function getGoogleRedirectUri(req) {
+  const configured = String(env.googleRedirectUri || "").trim();
+  if (configured) {
+    try {
+      const parsed = new URL(configured);
+      if (!isLoopbackHost(parsed.hostname)) {
+        return parsed.toString();
+      }
+    } catch {
+      // fall through to request-derived URI
+    }
+  }
+
+  const requestOrigin = getRequestOrigin(req);
+  if (!requestOrigin) return configured;
+  return new URL("/api/auth/google/callback", requestOrigin).toString();
+}
+
+function isGoogleAuthConfigured(req) {
+  return Boolean(env.googleClientId && env.googleClientSecret && getGoogleRedirectUri(req));
 }
 
 function getDefaultFrontendAuthUrl(mode = "login") {
@@ -112,14 +154,26 @@ function getDefaultFrontendAuthUrl(mode = "login") {
   return new URL(`/${page}`, fallbackOrigin).toString();
 }
 
-function sanitizeReturnTo(raw, mode = "login") {
+function sanitizeReturnTo(raw, mode = "login", req, enforceAllowedOrigins = true) {
   const fallback = getDefaultFrontendAuthUrl(mode);
   if (!raw) return fallback;
   try {
     const parsed = new URL(String(raw));
     if (!["http:", "https:"].includes(parsed.protocol)) return fallback;
-    const allowedOrigins = new Set(env.clientOrigins || []);
-    if (allowedOrigins.size > 0 && !allowedOrigins.has(parsed.origin)) return fallback;
+    if (enforceAllowedOrigins) {
+      const allowedOrigins = new Set(env.clientOrigins || []);
+      const originHeader = String(req?.headers?.origin || "").trim();
+      const refererHeader = String(req?.headers?.referer || "").trim();
+      if (originHeader) allowedOrigins.add(originHeader);
+      if (refererHeader) {
+        try {
+          allowedOrigins.add(new URL(refererHeader).origin);
+        } catch {
+          // ignore invalid referer
+        }
+      }
+      if (allowedOrigins.size > 0 && !allowedOrigins.has(parsed.origin)) return fallback;
+    }
     return parsed.toString();
   } catch {
     return fallback;
@@ -205,7 +259,7 @@ async function createUniqueUsername(base) {
   }
 }
 
-async function exchangeGoogleCodeForProfile(code) {
+async function exchangeGoogleCodeForProfile(code, redirectUri) {
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -213,7 +267,7 @@ async function exchangeGoogleCodeForProfile(code) {
       code: String(code || ""),
       client_id: env.googleClientId,
       client_secret: env.googleClientSecret,
-      redirect_uri: env.googleRedirectUri,
+      redirect_uri: redirectUri,
       grant_type: "authorization_code",
     }),
   });
@@ -272,18 +326,19 @@ async function resolveGoogleUser({ googleId, email, fullName, mode = "login" }) 
 ===================================================== */
 export const googleConfig = asyncHandler(async (_req, res) => {
   res.json({
-    enabled: isGoogleAuthConfigured(),
+    enabled: isGoogleAuthConfigured(_req),
     clientId: env.googleClientId || "",
   });
 });
 
 export const googleStart = asyncHandler(async (req, res) => {
-  if (!isGoogleAuthConfigured()) {
+  const googleRedirectUri = getGoogleRedirectUri(req);
+  if (!isGoogleAuthConfigured(req)) {
     return res.status(503).json({ message: "Google login is not configured" });
   }
 
   const mode = req.query?.mode === "register" ? "register" : "login";
-  const returnTo = sanitizeReturnTo(req.query?.returnTo, mode);
+  const returnTo = sanitizeReturnTo(req.query?.returnTo, mode, req, true);
   const nonce = crypto.randomUUID();
   const state = Buffer.from(JSON.stringify({ nonce, mode, returnTo }), "utf8").toString("base64url");
 
@@ -291,7 +346,7 @@ export const googleStart = asyncHandler(async (req, res) => {
 
   const authUrl = appendUrlParams("https://accounts.google.com/o/oauth2/v2/auth", {
     client_id: env.googleClientId,
-    redirect_uri: env.googleRedirectUri,
+    redirect_uri: googleRedirectUri,
     response_type: "code",
     scope: "openid email profile",
     access_type: "online",
@@ -315,10 +370,11 @@ export const googleCallback = asyncHandler(async (req, res) => {
   }
 
   const mode = decodedState.mode === "register" ? "register" : "login";
-  const returnTo = sanitizeReturnTo(decodedState.returnTo, mode);
+  const returnTo = sanitizeReturnTo(decodedState.returnTo, mode, req, false);
   const failRedirect = (message) => res.redirect(appendUrlParams(returnTo, { auth_error: message }));
+  const googleRedirectUri = getGoogleRedirectUri(req);
 
-  if (!isGoogleAuthConfigured()) {
+  if (!isGoogleAuthConfigured(req)) {
     return failRedirect("Google login is not configured");
   }
 
@@ -338,7 +394,7 @@ export const googleCallback = asyncHandler(async (req, res) => {
   }
 
   try {
-    const profile = await exchangeGoogleCodeForProfile(req.query.code);
+    const profile = await exchangeGoogleCodeForProfile(req.query.code, googleRedirectUri);
     const user = await resolveGoogleUser({
       googleId: profile.googleId,
       email: profile.email,
@@ -363,7 +419,13 @@ export const googleCallback = asyncHandler(async (req, res) => {
       req,
     });
 
-    return res.redirect(appendUrlParams(returnTo, { auth_success: "1", auth_mode: mode }));
+    return res.redirect(
+      appendUrlParams(returnTo, {
+        auth_success: "1",
+        auth_mode: mode,
+        auth_token: token,
+      })
+    );
   } catch (err) {
     console.error("Google auth callback failed:", err);
     return failRedirect(err?.message || "Google authentication failed");
