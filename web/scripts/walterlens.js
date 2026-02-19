@@ -434,13 +434,78 @@ const PUBLIC_DOC_SOURCES = [
   { page: "help.html", topic: "help" },
 ];
 
-const extractVisibleText = (html) => {
+const PUBLIC_APP_NAME = "WalletLens";
+let conversationAppName = PUBLIC_APP_NAME;
+
+const PUBLIC_CONTENT_ROOT_SELECTORS = [
+  "main",
+  ".legal-content",
+  ".legal-placeholder",
+  ".nf-about-inner",
+  ".nf-hero-content",
+  "article",
+];
+
+const cleanPublicText = (value) =>
+  String(value || "")
+    .replace(/<\s*appname\s*>/gi, PUBLIC_APP_NAME)
+    .replace(/\s+/g, " ")
+    .trim();
+
+const parseMentionedAppName = (question) => {
+  const raw = String(question || "");
+  const match = raw.match(/\b(walletwise|walletlens)\b/i);
+  if (!match) return "";
+  const token = match[1].toLowerCase();
+  if (token === "walletwise") return "WalletWise";
+  return "WalletLens";
+};
+
+const detectMentionedAppName = (question) => {
+  const parsed = parseMentionedAppName(question);
+  return parsed || conversationAppName || PUBLIC_APP_NAME;
+};
+
+const isLikelyUiText = (value) => {
+  const text = cleanPublicText(value);
+  if (!text) return true;
+  if (text.length < 20 && /^[\w\s.'’-]+$/.test(text)) return true;
+  if (/^(click here|submit|send|cancel|close|login|register|privacy|terms)$/i.test(text)) return true;
+  return false;
+};
+
+const extractPublicDocumentText = (html) => {
   try {
     const parser = new DOMParser();
     const doc = parser.parseFromString(String(html || ""), "text/html");
     doc.querySelectorAll("script, style, noscript").forEach((el) => el.remove());
-    const bodyText = doc.body?.innerText || "";
-    return bodyText.replace(/\s+/g, " ").trim();
+
+    const roots = PUBLIC_CONTENT_ROOT_SELECTORS
+      .map((selector) => Array.from(doc.querySelectorAll(selector)))
+      .flat();
+    const sourceRoots = roots.length ? roots : [doc.body];
+
+    const seen = new Set();
+    const lines = [];
+    sourceRoots.forEach((root) => {
+      if (!root) return;
+      const nodes = root.querySelectorAll("h1, h2, h3, p, li");
+      nodes.forEach((node) => {
+        if (
+          node.closest(
+            "header, footer, nav, form, button, label, .auth-links, .nf-legal, .walterlens-widget"
+          )
+        ) {
+          return;
+        }
+        const text = cleanPublicText(node.textContent || "");
+        if (!text || isLikelyUiText(text) || seen.has(text)) return;
+        seen.add(text);
+        lines.push(/[.!?]$/.test(text) ? text : `${text}.`);
+      });
+    });
+
+    return lines.join(" ");
   } catch {
     return "";
   }
@@ -477,7 +542,39 @@ const getQuestionTokens = (question) => {
   return tokenize(question).filter((t) => t.length > 2 && !stop.has(t));
 };
 
-const rankSentences = (question, docs) => {
+const detectPublicTopic = (question) => {
+  const key = normalizeText(question);
+  if (/\b(login|log in|sign in|signin|access account)\b/.test(key)) {
+    return "login";
+  }
+  if (
+    /\b(register|registration|sign up|signup|new account)\b/.test(key) ||
+    /\b(create|make|open)\s+(?:an?\s+)?account\b/.test(key)
+  ) {
+    return "account";
+  }
+  if (/\b(privacy|data|collect|share|tracking|cookies|personal information)\b/.test(key)) {
+    return "privacy";
+  }
+  if (/\b(terms|legal|tos|agreement|liability|disclaimer)\b/.test(key)) {
+    return "terms";
+  }
+  if (/\b(help|support|contact|how do i|how to|troubleshoot|issue)\b/.test(key)) {
+    return "help";
+  }
+  if (
+    /\b(what is|what does|this app|app for|walletlens|walletwise|feature|features|about|scan|receipt|ocr|upload)\b/.test(
+      key
+    )
+  ) {
+    return "about";
+  }
+  return "general";
+};
+
+const isPublicInfoQuestion = (question) => detectPublicTopic(question) !== "general";
+
+const rankSentences = (question, docs, preferredTopic = "general") => {
   const qTokens = getQuestionTokens(question);
   const scored = [];
   (docs || []).forEach((doc) => {
@@ -490,10 +587,87 @@ const rankSentences = (question, docs) => {
       });
       if (doc.topic === "privacy" && qTokens.includes("privacy")) score += 1;
       if (doc.topic === "terms" && (qTokens.includes("terms") || qTokens.includes("legal"))) score += 1;
+      if (preferredTopic !== "general" && doc.topic === preferredTopic) score += 2;
+      if (preferredTopic === "about" && /\b(walletlens|track|receipt|expense|finance|record)\b/i.test(sentence)) {
+        score += 1;
+      }
       if (score > 0) scored.push({ sentence, score, topic: doc.topic, page: doc.page });
     });
   });
   return scored.sort((a, b) => b.score - a.score);
+};
+
+const hasAny = (text, regex) => regex.test(String(text || "").toLowerCase());
+
+const composePublicTopicResponse = (question, topic, docs) => {
+  const corpus = (docs || []).map((d) => d.text || "").join(" ").toLowerCase();
+  const q = normalizeText(question);
+  const appName = detectMentionedAppName(question);
+
+  if (topic === "login") {
+    return `To log in to ${appName}, open the Login page, enter your email/username and password, then submit. If you use Google sign-in, choose the Google option on that page.`;
+  }
+
+  if (topic === "account") {
+    return `To create an account in ${appName}, open the Register page, enter your name/email/password, accept the terms, and submit. You can also use Google registration if you prefer.`;
+  }
+
+  if (topic === "about") {
+    const mentionsReceipts = hasAny(corpus, /\breceipt|ocr|scan|upload\b/);
+    const mentionsInsights = hasAny(corpus, /\binsight|trend|report|dashboard|analytics\b/);
+    const mentionsRecords = hasAny(corpus, /\brecord|expense|income|track|budget\b/);
+    const asksReceipts = /\b(scan|receipt|ocr|upload)\b/.test(q);
+    const parts = [`${appName} is a personal finance app focused on organizing everyday money activity.`];
+    if (asksReceipts) {
+      return mentionsReceipts
+        ? `Yes, ${appName} supports receipt scanning/upload workflows with extraction capabilities.`
+        : `${appName} supports finance tracking workflows, and receipt features are described in the public product pages.`;
+    }
+    if (mentionsRecords) parts.push("It helps you track records and keep spending/income structured.");
+    if (mentionsReceipts) parts.push("It also supports receipt capture and extraction workflows.");
+    if (mentionsInsights) parts.push("You can review summaries and trends to understand where your money is going.");
+    return parts.slice(0, 2).join(" ");
+  }
+
+  if (topic === "privacy") {
+    const mentionsProviders = hasAny(corpus, /\bservice provider|third-party|hosting|cloud|storage|email|ocr|ai\b/);
+    const mentionsControls = hasAny(corpus, /\bchoice|control|rights|delete|access|opt\b/);
+    const mentionsCollection = hasAny(corpus, /\bcollect|information|data|account|usage\b/);
+    const parts = [`The Privacy Policy explains what data ${appName} handles and why it is needed to run the product.`];
+    if (mentionsCollection) parts.push("That generally includes account and usage-related information required for core features.");
+    if (mentionsProviders) parts.push("It may rely on vetted infrastructure providers to operate services like storage, email, or processing.");
+    if (mentionsControls) parts.push("The policy also outlines user choices and controls over personal information.");
+    return parts.slice(0, 3).join(" ");
+  }
+
+  if (topic === "terms") {
+    const parts = [
+      `The Terms of Service for ${appName} cover account responsibilities, acceptable use, and service limitations.`,
+      "They also describe ownership/licensing boundaries and important liability/disclaimer language.",
+      "For exact legal wording, review the full Terms page directly.",
+    ];
+    return parts.join(" ");
+  }
+
+  if (topic === "help") {
+    const parts = [
+      "The Help content is intended to guide setup, common workflows, and troubleshooting.",
+      "If your question is account-specific, using the in-app support/contact path is the fastest route.",
+    ];
+    return parts.join(" ");
+  }
+
+  if (/\bwhat is|what does|this app|app for|walletlens\b/.test(q)) {
+    return `${appName} is built to help manage personal finances by organizing records, receipts, and spending insights in one place.`;
+  }
+  if (/\bprivacy|data\b/.test(q)) {
+    return `At a high level, ${appName} privacy information explains data use for product functionality, security, and user controls.`;
+  }
+  if (/\bterms|legal\b/.test(q)) {
+    return `${appName} terms describe usage rules and legal boundaries for the service.`;
+  }
+
+  return `I can summarize ${appName} public pages in plain language, including About, Privacy, Terms, and Help.`;
 };
 
 const loadPublicDocs = async () => {
@@ -506,7 +680,7 @@ const loadPublicDocs = async () => {
         const res = await fetch(page);
         if (!res.ok) return { page, topic, text: "" };
         const html = await res.text();
-        return { page, topic, text: extractVisibleText(html) };
+        return { page, topic, text: extractPublicDocumentText(html) };
       } catch {
         return { page, topic, text: "" };
       }
@@ -518,24 +692,35 @@ const loadPublicDocs = async () => {
 
 const buildPublicFallback = (question) => {
   const key = normalizeText(question);
+  const appName = detectMentionedAppName(question);
+  if (/\b(login|log in|sign in|signin)\b/.test(key)) {
+    return `To log in to ${appName}, use the Login page with your email/username and password, or the Google sign-in option if enabled.`;
+  }
+  if (/\b(scan|receipt|ocr|upload)\b/.test(key)) {
+    return `Yes, ${appName} supports receipt upload/scanning workflows. You can upload receipts and use extraction features described on the public pages.`;
+  }
   if (key.includes("privacy") || key.includes("data")) {
-    return "WalletLens privacy details are on the Privacy page. In short: it explains what information is collected, how it is used, and your available controls.";
+    return `${appName} privacy details are on the Privacy page. In short: it explains what information is collected, how it is used, and your available controls.`;
   }
   if (key.includes("terms") || key.includes("legal")) {
-    return "WalletLens Terms of Service describe account responsibilities, acceptable use, and important legal disclaimers.";
+    return `${appName} Terms of Service describe account responsibilities, acceptable use, and important legal disclaimers.`;
   }
   if (key.includes("what") || key.includes("about") || key.includes("app")) {
-    return "WalletLens helps track finances by organizing records, receipts, and spending insights. See the About page for a full overview.";
+    return `${appName} helps track finances by organizing records, receipts, and spending insights. See the About page for a full overview.`;
   }
-  return "I can answer questions about WalletLens public pages like About, Privacy, Terms, Help, login, and registration.";
+  return `I can answer questions about ${appName} public pages like About, Privacy, Terms, Help, login, and registration.`;
 };
 
 const answerPublicQuestion = async (question) => {
+  const parsedName = parseMentionedAppName(question);
+  if (parsedName) conversationAppName = parsedName;
   const docs = await loadPublicDocs();
-  const ranked = rankSentences(question, docs);
+  const topic = detectPublicTopic(question);
+  const filteredDocs = topic === "general" ? docs : docs.filter((d) => d.topic === topic);
+  const topicalDocs = filteredDocs.length ? filteredDocs : docs;
+  const ranked = rankSentences(question, topicalDocs, topic);
   if (!ranked.length) return buildPublicFallback(question);
-  const top = ranked.slice(0, 3).map((r) => r.sentence);
-  return top.join(" ");
+  return composePublicTopicResponse(question, topic, topicalDocs);
 };
 
 let recordsCache = { ts: 0, data: [] };
@@ -1393,6 +1578,11 @@ export function initWalterLens() {
     try {
       const key = normalizeKey(raw);
       if (isPublicMode) {
+        if (isPublicInfoQuestion(raw)) {
+          const publicReply = await answerPublicQuestion(raw);
+          addMessage("assistant", publicReply);
+          return;
+        }
         if (isPrivateDataQuestion(raw)) {
           addMessage(
             "assistant",
@@ -1400,8 +1590,7 @@ export function initWalterLens() {
           );
           return;
         }
-        const publicReply = await answerPublicQuestion(raw);
-        addMessage("assistant", publicReply);
+        addMessage("assistant", buildPublicFallback(raw));
         return;
       }
 
@@ -1485,34 +1674,6 @@ export function initWalterLens() {
       return;
     }
 
-      if (isLegalQuery(key)) {
-        addMessage(
-          "assistant",
-          "I can’t help with legal or tax advice. I can help with spending insights or records."
-        );
-        return;
-      }
-
-      const createSeed = parseRecordCreateSeed(raw);
-      if (createSeed) {
-        startCreateFlow({ ...createSeed, rawText: raw });
-        return;
-      }
-
-      const earlyCreate = parseRecordCreate(raw);
-      if (earlyCreate && earlyCreate.amount !== undefined) {
-        const category =
-          pickCategory(earlyCreate.category, earlyCreate.type) ||
-          findCategoryInText(raw, earlyCreate.type);
-        if (category) {
-          startCreateFlow({
-            ...earlyCreate,
-            category,
-          });
-          return;
-        }
-      }
-
       let llmResult = null;
       try {
         const records = await loadAllRecords();
@@ -1571,6 +1732,41 @@ export function initWalterLens() {
 
       if (llmResult?.intent && llmResult.intent !== "unknown" && llmResult.intent !== "refusal") {
         return;
+      }
+
+      // Fallback path: deterministic logic when AI is unavailable/uncertain.
+      if (isPublicInfoQuestion(raw)) {
+        const publicReply = await answerPublicQuestion(raw);
+        addMessage("assistant", publicReply);
+        return;
+      }
+
+      if (isLegalQuery(key)) {
+        addMessage(
+          "assistant",
+          "I can’t help with legal or tax advice. I can help with spending insights or records."
+        );
+        return;
+      }
+
+      const createSeed = parseRecordCreateSeed(raw);
+      if (createSeed) {
+        startCreateFlow({ ...createSeed, rawText: raw });
+        return;
+      }
+
+      const earlyCreate = parseRecordCreate(raw);
+      if (earlyCreate && earlyCreate.amount !== undefined) {
+        const category =
+          pickCategory(earlyCreate.category, earlyCreate.type) ||
+          findCategoryInText(raw, earlyCreate.type);
+        if (category) {
+          startCreateFlow({
+            ...earlyCreate,
+            category,
+          });
+          return;
+        }
       }
 
       const intent = detectIntent(raw);
