@@ -16,57 +16,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" type="image/png" href="images/favicon.png">
   <title>&lt;AppName&gt; - Redirecting</title>
-  <style>
-    .redirect-page {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 1rem;
-    }
-
-    .redirect-content {
-      max-width: 760px;
-    }
-
-    .redirect-text {
-      font-size: 1.25rem;
-      line-height: 1.7;
-    }
-
-    .redirect-count {
-      font-weight: 700;
-      font-size: 1.4rem;
-    }
-  </style>
 
   <script>
-    const redirectDelayMs = 3500;
-    const redirectSeconds = Math.ceil(redirectDelayMs / 1000);
-    let remainingSeconds = redirectSeconds;
-
-    function updateCounter() {
-      const counterEl = document.getElementById("redirectCounter");
-      if (!counterEl) return;
-      counterEl.textContent = String(remainingSeconds);
-    }
-
-    window.addEventListener("DOMContentLoaded", () => {
-      updateCounter();
-
-      const intervalId = setInterval(() => {
-        if (remainingSeconds > 0) {
-          remainingSeconds -= 1;
-          updateCounter();
-        }
-      }, 1000);
-
-      setTimeout(() => {
-        clearInterval(intervalId);
-        window.location.replace("register.html");
-      }, redirectDelayMs);
-    });
+    window.location.replace("register.html");
   </script>
 
   <script>
@@ -75,12 +27,6 @@
   </script>
 </head>
 <body>
-  <div class="redirect-page">
-    <div class="redirect-content">
-      <p class="redirect-text">This app is in production and in testing. Please keep that in mind when entering data.</p>
-      <p class="redirect-text">Redirecting in <span id="redirectCounter" class="redirect-count">4</span> seconds... If nothing happens, <a href="register.html">click here</a>.</p>
-    </div>
-  </div>
   <script src="scripts/default.js" type="module" defer></script>
 </body>
 </html>
