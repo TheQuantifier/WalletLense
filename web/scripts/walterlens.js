@@ -15,14 +15,23 @@ const SUGGESTION_PROMPTS = [
   "Show expenses last 30 days",
   "Add record",
   "Add expense 12.50 coffee today",
-  "Edit record 12 amount 45",
+  "Edit record 2d4221f0-120f-4f48-92de-b34f9a8fce4d amount 45",
+];
+
+const PUBLIC_SUGGESTION_PROMPTS = [
+  "What is WalletLens for?",
+  "Give me a privacy policy overview",
+  "What pages can I use without logging in?",
+  "How does WalletLens handle my data?",
+  "Summarize terms of service",
+  "How do I create an account?",
 ];
 
 const FALLBACK_MESSAGES = [
   "I can help with spending insights, listing records, or edits. Try asking about your top category.",
   "Not sure I got that. Ask about spending, savings, or say 'show records last 30 days'.",
   "I can assist with insights or record changes. Try: 'Add expense 12.50 coffee today'.",
-  "Want insights or edits? Ask about spending, or say 'edit record 12 amount 45'.",
+  "Want insights or edits? Ask about spending, or say 'edit record <id> amount 45'.",
   "Try a prompt like 'where can I save money?' or 'show expenses this month'.",
 ];
 
@@ -77,6 +86,20 @@ const LEGAL_KEYWORDS = [
   "contract",
   "compliance",
 ];
+
+const PUBLIC_PAGES = new Set([
+  "index.html",
+  "login.html",
+  "register.html",
+  "privacy.html",
+  "terms.html",
+  "about.html",
+  "careers.html",
+  "help.html",
+  "",
+]);
+
+const RECORD_ID_PATTERN = "([a-f0-9-]{8,}|\\d+)";
 
 const PAGE_SIZE = 500;
 const CACHE_TTL_MS = 60 * 1000;
@@ -243,7 +266,13 @@ const parseMonthNameDate = (text) => {
   const month = MONTHS.get(monthKey);
   const day = Number(match[2]);
   if (!month || !day || day < 1 || day > 31) return null;
-  const year = new Date().getFullYear();
+  const now = new Date();
+  let year = now.getFullYear();
+  const candidate = new Date(year, month - 1, day);
+  // Prefer the most recent occurrence for month/day mentions.
+  if (candidate.getTime() > now.getTime() + 24 * 60 * 60 * 1000) {
+    year -= 1;
+  }
   const m = String(month).padStart(2, "0");
   const d = String(day).padStart(2, "0");
   return `${year}-${m}-${d}`;
@@ -396,6 +425,119 @@ const detectRange = (text) => {
   return null;
 };
 
+let publicDocsCache = { ts: 0, docs: [] };
+
+const PUBLIC_DOC_SOURCES = [
+  { page: "about.html", topic: "about" },
+  { page: "privacy.html", topic: "privacy" },
+  { page: "terms.html", topic: "terms" },
+  { page: "help.html", topic: "help" },
+];
+
+const extractVisibleText = (html) => {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(String(html || ""), "text/html");
+    doc.querySelectorAll("script, style, noscript").forEach((el) => el.remove());
+    const bodyText = doc.body?.innerText || "";
+    return bodyText.replace(/\s+/g, " ").trim();
+  } catch {
+    return "";
+  }
+};
+
+const splitSentences = (text) =>
+  String(text || "")
+    .split(/[.!?]\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length >= 35);
+
+const getQuestionTokens = (question) => {
+  const stop = new Set([
+    "the",
+    "a",
+    "an",
+    "and",
+    "or",
+    "for",
+    "to",
+    "of",
+    "in",
+    "on",
+    "is",
+    "are",
+    "can",
+    "you",
+    "i",
+    "me",
+    "my",
+    "what",
+    "how",
+  ]);
+  return tokenize(question).filter((t) => t.length > 2 && !stop.has(t));
+};
+
+const rankSentences = (question, docs) => {
+  const qTokens = getQuestionTokens(question);
+  const scored = [];
+  (docs || []).forEach((doc) => {
+    const sentences = splitSentences(doc.text);
+    sentences.forEach((sentence) => {
+      const sTokens = new Set(tokenize(sentence));
+      let score = 0;
+      qTokens.forEach((t) => {
+        if (sTokens.has(t)) score += 1;
+      });
+      if (doc.topic === "privacy" && qTokens.includes("privacy")) score += 1;
+      if (doc.topic === "terms" && (qTokens.includes("terms") || qTokens.includes("legal"))) score += 1;
+      if (score > 0) scored.push({ sentence, score, topic: doc.topic, page: doc.page });
+    });
+  });
+  return scored.sort((a, b) => b.score - a.score);
+};
+
+const loadPublicDocs = async () => {
+  if (Date.now() - publicDocsCache.ts < CATEGORY_TTL_MS && publicDocsCache.docs.length) {
+    return publicDocsCache.docs;
+  }
+  const docs = await Promise.all(
+    PUBLIC_DOC_SOURCES.map(async ({ page, topic }) => {
+      try {
+        const res = await fetch(page);
+        if (!res.ok) return { page, topic, text: "" };
+        const html = await res.text();
+        return { page, topic, text: extractVisibleText(html) };
+      } catch {
+        return { page, topic, text: "" };
+      }
+    })
+  );
+  publicDocsCache = { ts: Date.now(), docs };
+  return docs;
+};
+
+const buildPublicFallback = (question) => {
+  const key = normalizeText(question);
+  if (key.includes("privacy") || key.includes("data")) {
+    return "WalletLens privacy details are on the Privacy page. In short: it explains what information is collected, how it is used, and your available controls.";
+  }
+  if (key.includes("terms") || key.includes("legal")) {
+    return "WalletLens Terms of Service describe account responsibilities, acceptable use, and important legal disclaimers.";
+  }
+  if (key.includes("what") || key.includes("about") || key.includes("app")) {
+    return "WalletLens helps track finances by organizing records, receipts, and spending insights. See the About page for a full overview.";
+  }
+  return "I can answer questions about WalletLens public pages like About, Privacy, Terms, Help, login, and registration.";
+};
+
+const answerPublicQuestion = async (question) => {
+  const docs = await loadPublicDocs();
+  const ranked = rankSentences(question, docs);
+  if (!ranked.length) return buildPublicFallback(question);
+  const top = ranked.slice(0, 3).map((r) => r.sentence);
+  return top.join(" ");
+};
+
 let recordsCache = { ts: 0, data: [] };
 const loadAllRecords = async () => {
   if (Date.now() - recordsCache.ts < CACHE_TTL_MS && recordsCache.data.length) {
@@ -440,14 +582,15 @@ const hasMultipleCurrencies = (records) => {
   return set.size > 1;
 };
 
-  const formatRecordLine = (record) => {
+const formatRecordLine = (record) => {
   const d = parseISODate(record?.date);
   const dateLabel = d ? formatDateOnly(d) : "Unknown date";
   const currency = record?.currency || "USD";
   const amountLabel = fmtMoney(record?.amount || 0, currency);
   const typeLabel = record?.type === "income" ? "Income" : "Expense";
   const category = record?.category || "Uncategorized";
-  return `${dateLabel} · ${typeLabel} · ${category} · ${amountLabel}`;
+  const idLabel = record?.id ? `id:${record.id}` : "id:unknown";
+  return `${idLabel} · ${dateLabel} · ${typeLabel} · ${category} · ${amountLabel}`;
 };
 
 const formatRecordDisplay = (record) => {
@@ -500,7 +643,7 @@ const extractCategoryHint = (text) => {
 
 const parseRecordFilter = (text, categories) => {
   const key = normalizeText(text);
-  const typeMatch = key.match(/\b(expense|income|expenses|income)\b/);
+  const typeMatch = key.match(/\b(expense|expenses|income)\b/);
   const type =
     typeMatch && typeMatch[1].includes("income") ? "income" : typeMatch ? "expense" : null;
 
@@ -530,7 +673,9 @@ const filterRecords = (records, filter) => {
 };
 
 const parseRecordEdits = (text) => {
-  const idMatch = text.match(/\b(?:edit|update)\s+(?:record|transaction)\s+#?(\d+)\b/i);
+  const idMatch = text.match(
+    new RegExp(`\\b(?:edit|update)\\s+(?:record|transaction)\\s+#?${RECORD_ID_PATTERN}\\b`, "i")
+  );
   if (!idMatch) return null;
   const id = idMatch[1];
 
@@ -636,7 +781,9 @@ const parseRecordCreateSeed = (text) => {
 };
 
 const parseRecordDelete = (text) => {
-  const match = text.match(/\bdelete\s+(?:record|transaction)\s+#?(\d+)\b/i);
+  const match = text.match(
+    new RegExp(`\\bdelete\\s+(?:record|transaction)\\s+#?${RECORD_ID_PATTERN}\\b`, "i")
+  );
   if (!match) return null;
   return { id: match[1] };
 };
@@ -644,7 +791,7 @@ const parseRecordDelete = (text) => {
 const parseRecordLookup = (text, records) => {
   const key = normalizeText(text);
   if (!/\b(edit|update|change)\b/.test(key)) return null;
-  if (/\brecord\s+#?\d+\b/.test(key)) return null;
+  if (new RegExp(`\\brecord\\s+#?${RECORD_ID_PATTERN}\\b`, "i").test(text)) return null;
 
   const categoryHint = extractCategoryHint(text);
   const amountMatch = text.match(/\bamount\s+(?:to\s+)?([0-9]+(?:\.[0-9]+)?)\b/i);
@@ -737,6 +884,15 @@ const buildLlmContext = (records, range) => {
 export function initWalterLens() {
   const existing = document.getElementById("walterlens-widget");
   if (existing) return;
+  const rawPage = (window.location.pathname.split("/").pop() || "").toLowerCase();
+  const currentPage = rawPage === "" ? "index.html" : rawPage;
+  const isPublicMode = PUBLIC_PAGES.has(currentPage);
+  const headerSubtitle = isPublicMode
+    ? "Ask about WalletLens, features, privacy, or terms."
+    : "General insights, not legal or tax advice.";
+  const inputPlaceholder = isPublicMode
+    ? "Ask about WalletLens, privacy, terms, or public pages..."
+    : "Ask about spending, saving, or a record edit...";
 
   const root = document.createElement("div");
   root.id = "walterlens-widget";
@@ -751,7 +907,7 @@ export function initWalterLens() {
           <span class="walterlens-title__logo">WL</span>
           <div>
             <h3>WalterLens</h3>
-            <p>General insights, not legal or tax advice.</p>
+            <p>${headerSubtitle}</p>
           </div>
         </div>
         <button class="walterlens-close" type="button" aria-label="Close WalterLens">×</button>
@@ -759,7 +915,7 @@ export function initWalterLens() {
       <div class="walterlens-suggestions" aria-label="Suggested prompts"></div>
       <div class="walterlens-messages" aria-live="polite"></div>
       <div class="walterlens-input">
-        <input type="text" placeholder="Ask about spending, saving, or a record edit..." />
+        <input type="text" placeholder="${inputPlaceholder}" />
         <button type="button" class="walterlens-send">Send</button>
       </div>
     </section>
@@ -783,6 +939,7 @@ export function initWalterLens() {
 
   let isHandlingMessage = false;
   let responseBuffer = [];
+  let messageQueue = Promise.resolve();
 
   const addMessage = (role, text) => {
     if (role === "assistant" && isHandlingMessage) {
@@ -810,13 +967,14 @@ export function initWalterLens() {
   const renderSuggestions = () => {
     if (!suggestions) return;
     suggestions.innerHTML = "";
-    SUGGESTION_PROMPTS.forEach((prompt) => {
+    const prompts = isPublicMode ? PUBLIC_SUGGESTION_PROMPTS : SUGGESTION_PROMPTS;
+    prompts.forEach((prompt) => {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "walterlens-suggestion";
       btn.textContent = prompt;
       btn.addEventListener("click", () => {
-        handleMessage(prompt);
+        enqueueMessage(prompt);
       });
       suggestions.appendChild(btn);
     });
@@ -831,7 +989,12 @@ export function initWalterLens() {
       input.focus();
       renderSuggestions();
       if (!hasWelcomed) {
-        addMessage("assistant", pickWelcome());
+        addMessage(
+          "assistant",
+          isPublicMode
+            ? "Hi! I can explain WalletLens and summarize public pages like About, Privacy, and Terms."
+            : pickWelcome()
+        );
         hasWelcomed = true;
       }
     }
@@ -855,17 +1018,14 @@ export function initWalterLens() {
         await api.records.update(action.id, action.updates);
         recordsCache = { ts: 0, data: [] };
         addMessage("assistant", "Done. The record was updated.");
-        window.location.reload();
       } else if (action.kind === "delete") {
         await api.records.remove(action.id);
         recordsCache = { ts: 0, data: [] };
         addMessage("assistant", "Done. The record was deleted.");
-        window.location.reload();
       } else if (action.kind === "create") {
         await api.records.create(action.payload);
         recordsCache = { ts: 0, data: [] };
         addMessage("assistant", "Done. The record was created.");
-        window.location.reload();
       }
     } catch (err) {
       addMessage("assistant", `I couldn't complete that. ${err?.message || "Try again."}`);
@@ -1099,6 +1259,7 @@ export function initWalterLens() {
   };
 
   const handleInsights = async (text) => {
+    const key = normalizeText(text);
     let records = [];
     try {
       records = await loadAllRecords();
@@ -1117,7 +1278,7 @@ export function initWalterLens() {
       : scoped;
     const categorySummary = category ? summarizeSpending(scopedByCategory) : null;
 
-    if (text.includes("save") || text.includes("reduce") || text.includes("cut")) {
+    if (key.includes("save") || key.includes("reduce") || key.includes("cut")) {
       const discretionary = topCats.filter((c) => !isProtectedCategory(c.name));
       if (!discretionary.length) {
         addMessage(
@@ -1134,7 +1295,7 @@ export function initWalterLens() {
       return;
     }
 
-    if (text.includes("spending") || text.includes("top") || text.includes("where")) {
+    if (key.includes("spending") || key.includes("top") || key.includes("where")) {
       const summary = categorySummary || { topCats };
       const label = category ? `in ${category}` : "overall";
       if (!summary.topCats?.length) {
@@ -1210,6 +1371,17 @@ export function initWalterLens() {
     }
   };
 
+  const isPrivateDataQuestion = (text) => {
+    const key = normalizeText(text);
+    const mutatingRecordCommand =
+      /\b(add|create|delete|remove|update|edit|change|list|show)\b/.test(key) &&
+      /\b(record|transaction)\b/.test(key);
+    const personalFinanceQuery =
+      /\b(my|me|mine)\b/.test(key) &&
+      /\b(spending|income|expense|record|transaction|budget)\b/.test(key);
+    return mutatingRecordCommand || personalFinanceQuery;
+  };
+
   const handleMessage = async (text) => {
     const raw = text.trim();
     if (!raw) return;
@@ -1219,6 +1391,20 @@ export function initWalterLens() {
     responseBuffer = [];
 
     try {
+      const key = normalizeKey(raw);
+      if (isPublicMode) {
+        if (isPrivateDataQuestion(raw)) {
+          addMessage(
+            "assistant",
+            "I can explain WalletLens on public pages, but account-specific records and insights require login."
+          );
+          return;
+        }
+        const publicReply = await answerPublicQuestion(raw);
+        addMessage("assistant", publicReply);
+        return;
+      }
+
       try {
         await loadCategories();
       } catch {
@@ -1228,8 +1414,6 @@ export function initWalterLens() {
         );
         return;
       }
-
-      const key = normalizeKey(raw);
       if (pendingAction) {
         if (["yes", "y", "confirm", "ok", "okay", "do it"].includes(key)) {
           await executePending();
@@ -1473,15 +1657,25 @@ export function initWalterLens() {
     }
   };
 
+  const enqueueMessage = (text) => {
+    const raw = String(text || "").trim();
+    if (!raw) return;
+    messageQueue = messageQueue
+      .then(() => handleMessage(raw))
+      .catch((err) => {
+        console.error("WalterLens queue error:", err);
+      });
+  };
+
   fab.addEventListener("click", () => togglePanel());
   closeBtn.addEventListener("click", () => togglePanel(false));
   sendBtn.addEventListener("click", () => {
-    handleMessage(input.value);
+    enqueueMessage(input.value);
     input.value = "";
   });
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
-      handleMessage(input.value);
+      enqueueMessage(input.value);
       input.value = "";
     }
   });
