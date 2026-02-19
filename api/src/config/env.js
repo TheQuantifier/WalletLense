@@ -62,6 +62,8 @@ const env = {
   aiProvider: (process.env.AI_PROVIDER || "gemini").toLowerCase(),
   aiApiKey: required("AI_API_KEY"),
   aiModel: process.env.AI_MODEL || "models/gemma-3-4b-it",
+  aiChatModel: process.env.AI_CHAT_MODEL || "",
+  aiReceiptModel: process.env.AI_RECEIPT_MODEL || "",
   aiMaxChars: Number(process.env.AI_MAX_CHARS || 5000),
 
   // Object Storage

@@ -89,6 +89,8 @@ RECEIPT_KEEP_FILES=true
 AI_PROVIDER=gemini
 AI_API_KEY=your_google_ai_key
 AI_MODEL=models/gemma-3-4b-it
+AI_CHAT_MODEL=models/gemini-2.5-flash
+AI_RECEIPT_MODEL=models/gemini-2.5-flash
 AI_MAX_CHARS=5000
 
 OBJECT_STORE_PROVIDER=r2

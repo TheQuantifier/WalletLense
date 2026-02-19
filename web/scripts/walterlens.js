@@ -1050,6 +1050,24 @@ const extractCategoryFromText = (text, categories) => {
 const buildLlmContext = (records, range) => {
   const scoped = filterByRange(records, range);
   const { totalExp, totalInc, topCats } = summarizeSpending(scoped);
+  const candidateRecords = scoped
+    .slice()
+    .sort((a, b) => new Date(b?.date || 0) - new Date(a?.date || 0))
+    .slice(0, 25)
+    .map((r) => {
+      const parsedDate = parseISODate(r?.date);
+      const safeDate =
+        parsedDate && !Number.isNaN(parsedDate.getTime()) ? formatDateOnly(parsedDate) : "";
+      return {
+        id: String(r?.id || ""),
+        type: String(r?.type || ""),
+        amount: Number(r?.amount || 0),
+        category: String(r?.category || ""),
+        date: safeDate,
+        note: String(r?.note || ""),
+      };
+    });
+
   const rangeLabel = range?.label || "all time";
   const totals = {
     expenses: totalExp,
@@ -1063,6 +1081,7 @@ const buildLlmContext = (records, range) => {
     currencyNote: hasMultipleCurrencies(scoped)
       ? "Totals include multiple currencies without conversion."
       : "",
+    candidateRecords,
   };
 };
 
