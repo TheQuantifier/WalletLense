@@ -862,8 +862,8 @@ textarea:focus-visible {
 }
 
 .walterlens-fab {
-  width: 58px;
-  height: 58px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   border: none;
   background: transparent;
@@ -887,8 +887,8 @@ textarea:focus-visible {
 }
 
 .walterlens-fab__logo {
-  width: 58px;
-  height: 58px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   object-fit: cover;
   display: block;
