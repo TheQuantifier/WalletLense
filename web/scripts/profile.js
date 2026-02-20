@@ -104,15 +104,16 @@ try {
   // ignore legacy cleanup errors
 }
 const BANK_OPTIONS = [
-  { id: "chase", name: "Chase", desc: "Checking, Savings, Credit Card" },
   { id: "bofa", name: "Bank of America", desc: "Checking, Savings, Credit Card" },
-  { id: "wells", name: "Wells Fargo", desc: "Checking, Savings, Mortgage" },
-  { id: "citi", name: "Citi", desc: "Checking, Savings, Credit Card" },
   { id: "capital-one", name: "Capital One", desc: "Checking, Savings, Card" },
-  { id: "us-bank", name: "U.S. Bank", desc: "Checking, Savings, Credit Card" },
+  { id: "chase", name: "Chase", desc: "Checking, Savings, Credit Card" },
+  { id: "citi", name: "Citi", desc: "Checking, Savings, Credit Card" },
+  { id: "discover", name: "Discover", desc: "Credit Card, Savings" },
   { id: "pnc", name: "PNC", desc: "Checking, Savings, Auto Loan" },
   { id: "td", name: "TD Bank", desc: "Checking, Savings, Credit Card" },
-  { id: "discover", name: "Discover", desc: "Credit Card, Savings" },
+  { id: "truist", name: "Truist", desc: "Checking, Savings, Credit Card" },
+  { id: "us-bank", name: "U.S. Bank", desc: "Checking, Savings, Credit Card" },
+  { id: "wells", name: "Wells Fargo", desc: "Checking, Savings, Mortgage" },
 ];
 
 let selectedBankId = "";
@@ -324,7 +325,11 @@ const loadIdentity = () => {
 
   if (identityInput.address) identityInput.address.value = currentIdentity.address || "";
   if (identityInput.employer) identityInput.employer.value = currentIdentity.employer || "";
-  if (identityInput.income) identityInput.income.value = currentIdentity.income || "";
+  if (identityInput.income) {
+    const options = Array.from(identityInput.income.options || []);
+    const match = options.find((opt) => opt.value === currentIdentity.income);
+    identityInput.income.value = match ? currentIdentity.income : "";
+  }
 };
 
 const showIdentityForm = () => {
@@ -673,8 +678,5 @@ linkedAccountsList?.addEventListener("click", (e) => {
   saveLinkedAccounts(accounts);
   renderLinkedAccounts();
 });
-
-
-
 
 

@@ -145,7 +145,17 @@
           <div class="form-grid">
             <label><span class="label">Address</span><input id="input_identityAddress" name="identityAddress" type="text" autocomplete="street-address"></label>
             <label><span class="label">Employer</span><input id="input_identityEmployer" name="identityEmployer" type="text" autocomplete="organization"></label>
-            <label><span class="label">Income Range</span><input id="input_identityIncome" name="identityIncome" type="text" autocomplete="off" placeholder="e.g., $50k–$75k"></label>
+            <label>
+              <span class="label">Income Range</span>
+              <select id="input_identityIncome" name="identityIncome">
+                <option value="" disabled selected>Select income range</option>
+                <option value="Under $25k">Under $25k</option>
+                <option value="$25k–$50k">$25k–$50k</option>
+                <option value="$50k–$75k">$50k–$75k</option>
+                <option value="$75k–$100k">$75k–$100k</option>
+                <option value="$100k+">$100k+</option>
+              </select>
+            </label>
           </div>
         </form>
 
@@ -275,7 +285,6 @@
   <script src="scripts/profile.js" type="module"></script>
 </body>
 </html>
-
 
 
 
