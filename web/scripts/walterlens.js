@@ -259,20 +259,29 @@ const MONTHS = new Map([
 
 const parseMonthNameDate = (text) => {
   const match = text.match(
-    /\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|sept|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?\b/i
+    /\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|sept|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?\b/i
   );
   if (!match) return null;
   const monthKey = match[1].toLowerCase();
   const month = MONTHS.get(monthKey);
   const day = Number(match[2]);
+  const explicitYear = match[3] ? Number(match[3]) : null;
   if (!month || !day || day < 1 || day > 31) return null;
   const now = new Date();
-  let year = now.getFullYear();
-  const candidate = new Date(year, month - 1, day);
-  // Prefer the most recent occurrence for month/day mentions.
-  if (candidate.getTime() > now.getTime() + 24 * 60 * 60 * 1000) {
-    year -= 1;
+  let year = explicitYear || now.getFullYear();
+  let candidate = new Date(year, month - 1, day);
+
+  if (candidate.getMonth() + 1 !== month || candidate.getDate() !== day) return null;
+
+  if (!explicitYear) {
+    // Prefer the most recent occurrence for month/day mentions.
+    if (candidate.getTime() > now.getTime() + 24 * 60 * 60 * 1000) {
+      year -= 1;
+      candidate = new Date(year, month - 1, day);
+      if (candidate.getMonth() + 1 !== month || candidate.getDate() !== day) return null;
+    }
   }
+
   const m = String(month).padStart(2, "0");
   const d = String(day).padStart(2, "0");
   return `${year}-${m}-${d}`;
@@ -356,10 +365,31 @@ const parseExplicitRange = (text) => {
   return buildRange(start, end, `from ${match[1]} to ${match[2]}`);
 };
 
+const parseSingleDateMention = (text) => {
+  const direct = text.match(/\b(?:on|for|date)\s+(\d{4}-\d{2}-\d{2}|today|yesterday)\b/i);
+  const bare = text.match(/\b(\d{4}-\d{2}-\d{2}|today|yesterday)\b/i);
+  const token = direct?.[1] || bare?.[1] || "";
+  if (token) {
+    return relativeDateToISO(token) || token;
+  }
+  return parseMonthNameDate(text) || "";
+};
+
 const detectRange = (text) => {
   const key = normalizeText(text);
   const explicit = parseExplicitRange(text);
   if (explicit) return explicit;
+  const singleDate = parseSingleDateMention(text);
+  if (singleDate) {
+    const day = parseISODate(singleDate);
+    if (day && !Number.isNaN(day.getTime())) {
+      const start = new Date(day);
+      const end = new Date(day);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+      return buildRange(start, end, singleDate);
+    }
+  }
 
   const lastDaysMatch = key.match(/\blast\s+(\d+)\s+days?\b/);
   if (lastDaysMatch) {

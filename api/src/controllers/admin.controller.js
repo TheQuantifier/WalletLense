@@ -23,8 +23,8 @@ export const listUsersAdmin = asyncHandler(async (req, res) => {
   const offset = Math.max(Number(req.query.offset) || 0, 0);
   const queryText = String(req.query.q || "").trim();
 
-  const users = await listUsers({ limit, offset, queryText });
-  res.json({ users });
+  const { users, total } = await listUsers({ limit, offset, queryText });
+  res.json({ users, total });
 });
 
 export const listUserOptionsAdmin = asyncHandler(async (_req, res) => {

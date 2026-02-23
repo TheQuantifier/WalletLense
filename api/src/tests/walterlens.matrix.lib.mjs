@@ -108,6 +108,8 @@ const rangeCases = [
   { q: "show expenses last week", expectedLabel: "last week" },
   { q: "show expenses this month", expectedLabel: "this month" },
   { q: "show expenses last month", expectedLabel: "last month" },
+  { q: "how much did I spend on 2026-01-15", expectedLabel: "2026-01-15" },
+  { q: "how much did I spend on Jan 5, 2026", expectedLabel: "2026-01-05" },
   { q: "show expenses this year", expectedLabel: "this year" },
   { q: "show expenses last year", expectedLabel: "last year" },
   { q: "show expenses last 30 days", expectedLabel: "last 30 days" },

@@ -196,6 +196,39 @@
   overflow-x: auto;
 }
 
+.admin-pager {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.admin-pager button {
+  padding: 0.5rem 1.2rem;
+  border-radius: var(--radius);
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  color: #fff;
+  font-weight: 600;
+  transition: filter 0.15s ease, transform 0.05s ease;
+}
+
+.admin-pager button:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+
+.admin-pager button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.admin-pager button:disabled {
+  background: color-mix(in srgb, var(--primary) 35%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+  cursor: not-allowed;
+  color: #fff;
+  opacity: 0.75;
+}
+
 .admin-modal {
   max-width: 520px;
 }

@@ -12,6 +12,9 @@ const els = {
   userSearch: document.getElementById("userSearch"),
   userSearchBtn: document.getElementById("userSearchBtn"),
   userOptions: document.getElementById("adminUserOptions"),
+  usersPrevPage: document.getElementById("usersPrevPage"),
+  usersNextPage: document.getElementById("usersNextPage"),
+  usersPageInfo: document.getElementById("usersPageInfo"),
   userDataSections: document.getElementById("userDataSections"),
 
   recordsTbody: document.getElementById("recordsTbody"),
@@ -54,6 +57,10 @@ const els = {
 const state = {
   selectedUserId: "",
   selectedUser: null,
+  usersQuery: "",
+  usersPage: 1,
+  usersPageSize: 10,
+  usersTotal: 0,
   userOptions: [],
   users: [],
   records: [],
@@ -207,11 +214,31 @@ function toggleSort(table, key) {
   if (table === "records") renderRecords();
 }
 
+function getUsersTotalPages() {
+  const total = Math.max(0, Number(state.usersTotal) || 0);
+  return Math.max(1, Math.ceil(total / state.usersPageSize));
+}
+
+function renderUsersPager() {
+  const totalPages = getUsersTotalPages();
+  if (els.usersPageInfo) {
+    els.usersPageInfo.textContent = `Page ${state.usersPage} of ${totalPages}`;
+  }
+  if (els.usersPrevPage) {
+    els.usersPrevPage.disabled = state.usersPage <= 1;
+  }
+  if (els.usersNextPage) {
+    els.usersNextPage.disabled = state.usersPage >= totalPages || state.usersTotal === 0;
+  }
+}
+
 function renderUsers() {
   if (!els.usersTbody) return;
   const rows = sortRows("users", state.users);
   if (!rows.length) {
-    els.usersTbody.innerHTML = `<tr><td colspan="5" class="subtle">No users found.</td></tr>`;
+    const message = state.usersQuery ? "No users found." : "No users available.";
+    els.usersTbody.innerHTML = `<tr><td colspan="5" class="subtle">${message}</td></tr>`;
+    renderUsersPager();
     return;
   }
 
@@ -231,6 +258,7 @@ function renderUsers() {
       `
     )
     .join("");
+  renderUsersPager();
 }
 
 function renderUserOptions() {
@@ -399,24 +427,41 @@ function findUserFromSearchInput(raw) {
   );
 }
 
-async function loadUsers() {
+async function loadUsers({ resetPage = false, evaluateSelection = true } = {}) {
   const q = els.userSearch?.value?.trim() || "";
-  if (!q) {
-    state.users = [];
-    renderUsers();
-    resetUserScopedData();
-    setStatus(els.usersStatus, "Enter a username, name, or email to search.", "error");
-    return;
+  if (resetPage) {
+    state.usersPage = 1;
   }
+  state.usersQuery = q;
 
-  setStatus(els.usersStatus, "Searching users...");
+  const offset = (state.usersPage - 1) * state.usersPageSize;
+  setStatus(els.usersStatus, q ? "Searching users..." : "Loading users...");
+
   try {
-    const { users } = await api.admin.listUsers({ q, limit: 50, offset: 0 });
+    const { users, total } = await api.admin.listUsers({
+      q,
+      limit: state.usersPageSize,
+      offset,
+    });
     state.users = users || [];
+    state.usersTotal = Number(total || 0);
     renderUsers();
+
     if (!state.users.length) {
-      setStatus(els.usersStatus, "No users found.", "error");
-      resetUserScopedData();
+      setStatus(els.usersStatus, q ? "No users found." : "No users available.", "error");
+      if (evaluateSelection) {
+        resetUserScopedData();
+      }
+      return;
+    }
+
+    if (!q) {
+      setStatus(els.usersStatus, "");
+      return;
+    }
+
+    if (!evaluateSelection) {
+      setStatus(els.usersStatus, `Found ${state.usersTotal} user(s).`);
       return;
     }
 
@@ -424,14 +469,19 @@ async function loadUsers() {
     const targetUser = optionMatch || resolveUserForQuery(state.users, q);
     if (targetUser) {
       await loadUserDataForUser(targetUser);
-      setStatus(els.usersStatus, `Found ${state.users.length} user(s).`);
+      setStatus(els.usersStatus, `Found ${state.usersTotal} user(s).`);
     } else {
       resetUserScopedData();
       setStatus(els.usersStatus, "Multiple users matched. Select one with View Data.");
     }
   } catch (err) {
     console.error(err);
-    resetUserScopedData();
+    state.users = [];
+    state.usersTotal = 0;
+    renderUsers();
+    if (evaluateSelection) {
+      resetUserScopedData();
+    }
     setStatus(els.usersStatus, err.message || "Failed to load users.", "error");
   }
 }
@@ -661,21 +711,21 @@ function bindEvents() {
   });
 
   if (els.userSearchBtn) {
-    els.userSearchBtn.addEventListener("click", loadUsers);
+    els.userSearchBtn.addEventListener("click", () => {
+      loadUsers({ resetPage: true, evaluateSelection: true });
+    });
   }
 
   if (els.userSearch) {
     els.userSearch.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
-        loadUsers();
+        loadUsers({ resetPage: true, evaluateSelection: true });
       }
     });
 
     els.userSearch.addEventListener("change", () => {
-      if (els.userSearch.value.trim()) {
-        loadUsers();
-      }
+      loadUsers({ resetPage: true, evaluateSelection: true });
     });
 
     els.userSearch.addEventListener("click", tryOpenUserDropdown);
@@ -684,6 +734,22 @@ function bindEvents() {
 
   if (els.recordsSearchBtn) {
     els.recordsSearchBtn.addEventListener("click", loadRecords);
+  }
+
+  if (els.usersPrevPage) {
+    els.usersPrevPage.addEventListener("click", () => {
+      if (state.usersPage <= 1) return;
+      state.usersPage -= 1;
+      loadUsers({ resetPage: false, evaluateSelection: false });
+    });
+  }
+
+  if (els.usersNextPage) {
+    els.usersNextPage.addEventListener("click", () => {
+      if (state.usersPage >= getUsersTotalPages()) return;
+      state.usersPage += 1;
+      loadUsers({ resetPage: false, evaluateSelection: false });
+    });
   }
 
   if (els.recordsType) {
@@ -741,13 +807,19 @@ async function init() {
   renderRecords();
   renderReceipts();
   renderBudgetSheets();
+  renderUsersPager();
   setStatus(els.usersStatus, "");
   setStatus(els.recordsStatus, "");
   setStatus(els.receiptsStatus, "");
   setStatus(els.budgetsStatus, "");
   updateRecordsContext();
 
-  await Promise.all([loadStats(), loadUserOptions(), loadSettings()]);
+  await Promise.all([
+    loadStats(),
+    loadUserOptions(),
+    loadSettings(),
+    loadUsers({ resetPage: true, evaluateSelection: false }),
+  ]);
 }
 
 init();

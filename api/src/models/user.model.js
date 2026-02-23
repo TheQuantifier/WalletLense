@@ -248,6 +248,16 @@ export async function listUsers({ limit = 50, offset = 0, queryText = "" } = {})
     i += 1;
   }
 
+  const countParams = [...params];
+  const { rows: countRows } = await query(
+    `
+    SELECT COUNT(*)::int AS total
+    FROM users
+    ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+    `,
+    countParams
+  );
+
   params.push(limit);
   params.push(offset);
 
@@ -265,5 +275,8 @@ export async function listUsers({ limit = 50, offset = 0, queryText = "" } = {})
     `,
     params
   );
-  return rows;
+  return {
+    users: rows,
+    total: Number(countRows?.[0]?.total || 0),
+  };
 }
