@@ -1138,9 +1138,18 @@ const parseRecordLookup = (text, records) => {
 const detectIntent = (text) => {
   const key = normalizeText(text);
   if (/\b(delete|remove)\b/.test(key)) return "delete";
-  if (/\b(add|create|log)\b/.test(key)) return "create";
   if (/\b(edit|update|change)\b/.test(key)) return "edit";
+  if (/\b(add|create|log)\b/.test(key)) return "create";
+  if (
+    /\brecord\s+(?:my|an?|expense|income)\b/.test(key) ||
+    /\brecord\s+\$?\d/.test(key)
+  ) {
+    return "create";
+  }
   if (/\b(what|which)\b/.test(key) && /\b(record|records|transaction|transactions|entries)\b/.test(key)) {
+    return "list";
+  }
+  if (/\b(how many|count|number of)\b/.test(key) && /\b(record|records|transaction|transactions|entries|expense|expenses|income)\b/.test(key)) {
     return "list";
   }
   if (/\b(what|which)\b/.test(key) && /\b(spend|spent|spending|expenses|income|net|balance|budget)\b/.test(key)) {
@@ -1168,12 +1177,6 @@ const isFinancialQuestion = (text) => {
   );
 };
 
-export const __walterlensTest = {
-  detectIntent,
-  isFinancialQuestion,
-  detectRange,
-};
-
 const isLlmFinanceRelevant = (llmResult) => {
   if (!llmResult) return false;
   if (llmResult?.action?.kind) return true;
@@ -1199,6 +1202,16 @@ const isReceiptHistoryQuestion = (text) => {
     return true;
   }
   return /\b(what|which|show|list|my)\b/.test(key) && /\b(receipt|receipts)\b/.test(key);
+};
+
+export const __walterlensTest = {
+  detectIntent,
+  isFinancialQuestion,
+  detectRange,
+  isReceiptCapabilityQuestion,
+  isReceiptHistoryQuestion,
+  isPublicInfoQuestion,
+  isLegalQuery,
 };
 
 const extractCategoryFromText = (text, categories) => {

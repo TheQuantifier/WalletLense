@@ -13,9 +13,17 @@ globalThis.window = {
 };
 
 const { __walterlensTest } = await import(pathToFileURL(walterPath).href);
-const { detectIntent, isFinancialQuestion } = __walterlensTest;
+const {
+  detectIntent,
+  isFinancialQuestion,
+  detectRange,
+  isReceiptCapabilityQuestion,
+  isReceiptHistoryQuestion,
+  isPublicInfoQuestion,
+  isLegalQuery,
+} = __walterlensTest;
 
-const cases = [
+const intentCases = [
   { q: "How much did I spend last week?", scope: "finance", intent: "insight" },
   { q: "How much did I spend on groceries this month?", scope: "finance", intent: "insight" },
   { q: "How much income did I make this month?", scope: "finance", intent: "insight" },
@@ -29,9 +37,9 @@ const cases = [
   { q: "Where am I spending the most?", scope: "finance", intent: "insight" },
   { q: "Top categories this month", scope: "finance", intent: "insight" },
   { q: "What is my average spending this month?", scope: "finance", intent: "insight" },
-  { q: "How many transactions this week?", scope: "finance", intent: "unknown" },
-  { q: "How many expenses this month?", scope: "finance", intent: "unknown" },
-  { q: "Did I overspend this week?", scope: "finance", intent: "unknown" },
+  { q: "How many transactions this week?", scope: "finance", intent: "list" },
+  { q: "How many expenses this month?", scope: "finance", intent: "list" },
+  { q: "Did I overspend this week?", scope: "finance", intent: "insight" },
   { q: "Can I afford this purchase?", scope: "finance", intent: "insight" },
   { q: "Budget summary for last month", scope: "finance", intent: "insight" },
   { q: "Show income this week", scope: "finance", intent: "insight" },
@@ -43,12 +51,17 @@ const cases = [
   { q: "Update transaction 77 category to Dining", scope: "finance", intent: "edit" },
   { q: "Remove transaction 77", scope: "finance", intent: "delete" },
   { q: "Log expense 23.10 lunch", scope: "finance", intent: "create" },
-  { q: "Record my rent payment", scope: "finance", intent: "unknown" },
+  { q: "Record my rent payment", scope: "finance", intent: "create" },
   { q: "How much is left in my budget?", scope: "finance", intent: "insight" },
   { q: "Summarize my spending trends", scope: "finance", intent: "insight" },
-  { q: "can WalletLense scan receipts?", scope: "finance", intent: "unknown" },
   { q: "what receipts have i scanned?", scope: "finance", intent: "unknown" },
   { q: "What records do i have?", scope: "finance", intent: "list" },
+  { q: "count my transactions from last month", scope: "finance", intent: "list" },
+  { q: "number of expenses this year", scope: "finance", intent: "list" },
+  { q: "record an expense for 9.99", scope: "finance", intent: "create" },
+  { q: "record income 1200 paycheck", scope: "finance", intent: "create" },
+  { q: "change category for transaction 5 to Dining", scope: "finance", intent: "edit" },
+  { q: "remove my expense from yesterday", scope: "finance", intent: "delete" },
 
   { q: "What is the capital of NC?", scope: "other", intent: "unknown" },
   { q: "What is an apple?", scope: "other", intent: "unknown" },
@@ -62,10 +75,44 @@ const cases = [
   { q: "What is the weather tomorrow?", scope: "other", intent: "unknown" },
 ];
 
+const behaviorCases = [
+  { q: "Can WalletLens scan receipts?", key: "receiptCapability", expected: true },
+  { q: "can WalletLense scan receipts?", key: "receiptCapability", expected: true },
+  { q: "what receipts have i scanned?", key: "receiptHistory", expected: true },
+  { q: "show my receipts", key: "receiptHistory", expected: true },
+  { q: "What is WalletLens for?", key: "publicInfo", expected: true },
+  { q: "How does WalletLens handle my data?", key: "publicInfo", expected: true },
+  { q: "Can you review my NDA contract?", key: "legal", expected: true },
+  { q: "How should I file taxes?", key: "legal", expected: true },
+  { q: "Add expense 12.50 coffee today", key: "publicInfo", expected: false },
+  { q: "What is 2+2?", key: "publicInfo", expected: false },
+];
+
+const rangeCases = [
+  { q: "show expenses this week", expectedLabel: "this week" },
+  { q: "show expenses last week", expectedLabel: "last week" },
+  { q: "show expenses this month", expectedLabel: "this month" },
+  { q: "show expenses last month", expectedLabel: "last month" },
+  { q: "show expenses this year", expectedLabel: "this year" },
+  { q: "show expenses last year", expectedLabel: "last year" },
+  { q: "show expenses last 30 days", expectedLabel: "last 30 days" },
+  {
+    q: "show expenses between 2026-01-01 and 2026-01-31",
+    expectedLabel: "from 2026-01-01 to 2026-01-31",
+  },
+];
+
+const behaviorByKey = {
+  receiptCapability: isReceiptCapabilityQuestion,
+  receiptHistory: isReceiptHistoryQuestion,
+  publicInfo: isPublicInfoQuestion,
+  legal: isLegalQuery,
+};
+
 let passed = 0;
 const failures = [];
 
-for (const c of cases) {
+for (const c of intentCases) {
   const intent = detectIntent(c.q);
   const finance = isFinancialQuestion(c.q);
   const inScope = intent !== "unknown" || finance;
@@ -73,9 +120,7 @@ for (const c of cases) {
   let ok = true;
   if (c.scope === "finance") {
     ok = inScope;
-    if (ok && c.intent !== "unknown") {
-      ok = intent === c.intent;
-    }
+    if (ok && c.intent !== "unknown") ok = intent === c.intent;
   } else {
     ok = !inScope;
   }
@@ -83,25 +128,37 @@ for (const c of cases) {
   if (ok) {
     passed += 1;
   } else {
-    failures.push({
-      q: c.q,
-      expectedScope: c.scope,
-      expectedIntent: c.intent,
-      gotIntent: intent,
-      gotFinance: finance,
-      inScope,
-    });
+    failures.push(
+      `[intent] "${c.q}" expected scope=${c.scope} intent=${c.intent}, got intent=${intent} finance=${finance} inScope=${inScope}`
+    );
   }
 }
 
-const total = cases.length;
+for (const c of behaviorCases) {
+  const fn = behaviorByKey[c.key];
+  const got = Boolean(fn?.(c.q));
+  if (got === c.expected) {
+    passed += 1;
+  } else {
+    failures.push(`[behavior:${c.key}] "${c.q}" expected=${c.expected} got=${got}`);
+  }
+}
+
+for (const c of rangeCases) {
+  const got = detectRange(c.q);
+  const label = got?.label || "";
+  if (label === c.expectedLabel) {
+    passed += 1;
+  } else {
+    failures.push(`[range] "${c.q}" expected="${c.expectedLabel}" got="${label}"`);
+  }
+}
+
+const total = intentCases.length + behaviorCases.length + rangeCases.length;
 const rate = (passed / total) * 100;
 console.log(`WalterLens matrix: ${passed}/${total} (${rate.toFixed(1)}%)`);
 if (failures.length) {
   console.log("Failures:");
-  failures.forEach((f) => {
-    console.log(`- ${f.q}`);
-    console.log(`  expected scope=${f.expectedScope} intent=${f.expectedIntent}, got intent=${f.gotIntent} finance=${f.gotFinance} inScope=${f.inScope}`);
-  });
+  failures.forEach((line) => console.log(`- ${line}`));
 }
-process.exit(rate >= 95 ? 0 : 1);
+process.exit(rate >= 100 ? 0 : 1);
