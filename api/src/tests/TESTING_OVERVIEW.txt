@@ -1,0 +1,165 @@
+WalletLens Testing Overview
+===========================
+
+This folder contains multiple test styles. They serve different goals.
+
+Definitions
+-----------
+- Unit test:
+  - Tests one function/module behavior in isolation.
+
+- Integration suite:
+  - Tests how multiple components work together in a realistic flow.
+  - In this project, it validates message routing behavior with mocked dependencies.
+
+- Matrix test:
+  - A large table of prompt cases and expected outcomes.
+  - Used to verify classification and routing consistency across many prompt variations.
+
+- Soak test:
+  - Repeats test suites many times to detect flaky/intermittent failures.
+  - If some runs pass and some fail, behavior is considered flaky.
+
+- Flaky test:
+  - A test that is not deterministic (same code, same environment, different results).
+
+- Deterministic fallback:
+  - Local non-LLM logic used when AI output is unavailable/irrelevant, so behavior remains predictable.
+
+- In-scope vs out-of-scope:
+  - In-scope: finance/product questions WalterLens should handle.
+  - Out-of-scope: unrelated prompts (sports, weather, general trivia, etc.).
+
+- Pass threshold:
+  - Required success criteria for a suite.
+  - Matrix is configured to require 100% of cases passing.
+
+1) Unit/Standard Node Test Suite
+--------------------------------
+Command:
+  npm test
+
+Current total:
+  14 tests
+
+Files and coverage:
+  - ai_validation.test.js (4 tests)
+    - Validates WalterLens AI response sanitization and safety handling
+    - Validates receipt extraction sanitization
+    - Validates receipt normalization/inference behavior
+
+  - receipt_job_policy.test.js (3 tests)
+    - Validates retry decision logic for receipt processing jobs
+
+  - receipt_status_transitions.test.js (3 tests)
+    - Validates receipt lifecycle/status transition rules
+
+  - support_validation.test.js (3 tests)
+    - Validates public support payload checks (valid, spam honeypot, bad email)
+
+  - walterlens_integration.test.js (1 umbrella test)
+    - Executes integration checks from walterlens.integration.lib.mjs
+    - The umbrella test contains 6 integration scenarios
+
+
+2) WalterLens Matrix Test
+-------------------------
+Command:
+  npm run test:walterlens-matrix
+
+Current total:
+  77 matrix cases
+
+Case groups:
+  - Intent/scope cases: 56
+    - Checks prompt classification (create/edit/delete/list/insight/unknown)
+    - Checks finance-vs-non-finance in-scope behavior
+
+  - Behavior-routing cases: 13
+    - Checks receipt capability/history detection
+    - Checks public-info question detection
+    - Checks legal/tax query detection
+
+  - Date range parsing cases: 8
+    - Checks ranges like this week/last month/last 30 days/explicit ISO ranges
+
+Pass criteria:
+  - Enforced at 100%
+
+
+3) Integration Suite (Focused Message Routing Checks)
+-----------------------------------------------------
+Primary file:
+  walterlens.integration.lib.mjs
+
+Included via:
+  walterlens_integration.test.js
+
+What it verifies:
+  - Public mode routes public product questions correctly
+  - Public mode blocks private account-data prompts
+  - Receipt history prompts route to receipts API path
+  - Edit prompts resolve records before relying on LLM path
+  - LLM action responses route to action flow
+  - Deterministic local insight fallback works when LLM is irrelevant
+
+
+4) Soak Test (Stability / Flaky Detection)
+------------------------------------------
+Command:
+  npm run test:walterlens-soak
+
+Optional run count:
+  PowerShell:
+    $env:SOAK_RUNS='5'; npm run test:walterlens-soak
+  (Use 5, 20, 100, etc.)
+
+What it does:
+  - Repeats:
+    - matrix suite
+    - integration suite
+  - Reports:
+    - passed runs
+    - failed runs
+    - pass rate
+    - flaky status (mixed pass/fail across runs)
+
+
+Quick command reference
+-----------------------
+From WalletLens/api:
+
+  Matrix only:
+    npm run test:walterlens-matrix
+
+  Full test suite:
+    npm test
+
+  Soak stability:
+    $env:SOAK_RUNS='20'; npm run test:walterlens-soak
+
+
+Important Notes
+---------------
+- Run commands from:
+  - WalletLens/api
+
+- Matrix strictness:
+  - The matrix exits non-zero unless all matrix cases pass.
+
+- Updating tests when behavior changes:
+  - If you intentionally change classifier/routing behavior, update:
+    - walterlens.matrix.lib.mjs
+    - walterlens.integration.lib.mjs
+    - any affected *.test.js files
+
+- Recommended workflow:
+  1) Run matrix during prompt/routing edits
+  2) Run full suite before merge
+  3) Run soak for confidence on stability
+
+- Current key files:
+  - Matrix runner: walterlens.matrix.mjs
+  - Matrix cases: walterlens.matrix.lib.mjs
+  - Integration checks: walterlens.integration.lib.mjs
+  - Soak runner: ../../scripts/walterlens_soak.mjs

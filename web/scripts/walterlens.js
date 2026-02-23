@@ -1137,9 +1137,26 @@ const parseRecordLookup = (text, records) => {
 
 const detectIntent = (text) => {
   const key = normalizeText(text);
-  if (/\b(delete|remove)\b/.test(key)) return "delete";
-  if (/\b(edit|update|change)\b/.test(key)) return "edit";
-  if (/\b(add|create|log)\b/.test(key)) return "create";
+  if (/\b(delete|remove)\b/.test(key)) {
+    if (/\b(record|records|transaction|transactions|entry|entries|expense|expenses|income|incomes|receipt|receipts|category|categories)\b/.test(key)) {
+      return "delete";
+    }
+    return "unknown";
+  }
+  if (/\b(edit|update|change)\b/.test(key)) {
+    if (/\b(record|records|transaction|transactions|entry|entries|expense|expenses|income|incomes|category|categories|amount|note|date)\b/.test(key)) {
+      return "edit";
+    }
+    return "unknown";
+  }
+  if (/\b(add|create|log)\b/.test(key)) {
+    if (
+      /\b(record|records|transaction|transactions|entry|entries|expense|expenses|income|incomes|category|categories|budget|budgets)\b/.test(key) ||
+      /\$\s*\d|\b\d+(?:\.\d{1,2})?\b/.test(key)
+    ) {
+      return "create";
+    }
+  }
   if (
     /\brecord\s+(?:my|an?|expense|income)\b/.test(key) ||
     /\brecord\s+\$?\d/.test(key)
@@ -1156,9 +1173,9 @@ const detectIntent = (text) => {
     return "insight";
   }
   if (/\b(show|list|display)\b/.test(key)) {
-    if (/\b(record|transaction|entries)\b/.test(key)) return "list";
+    if (/\b(record|records|transaction|transactions|entry|entries)\b/.test(key)) return "list";
     if (/\b(spend|spent|spending|expenses|income|summary|insight|total|net|balance|budget|cash flow)\b/.test(key)) return "insight";
-    return "list";
+    return "unknown";
   }
   if (
     /\b(spend|spent|spending|overspend|expense|expenses|income|earned|earn|make|made|save|reduce|afford|top|insight|summary|total|net|balance|budget|cash flow|surplus|deficit|left over|average|trend)\b/.test(
@@ -1177,6 +1194,17 @@ const isFinancialQuestion = (text) => {
   );
 };
 
+const isPrivateDataQuestion = (text) => {
+  const key = normalizeText(text);
+  const mutatingRecordCommand =
+    /\b(add|create|delete|remove|update|edit|change|list|show)\b/.test(key) &&
+    /\b(record|records|transaction|transactions)\b/.test(key);
+  const personalFinanceQuery =
+    /\b(my|me|mine)\b/.test(key) &&
+    /\b(spending|income|expense|record|transaction|budget)\b/.test(key);
+  return mutatingRecordCommand || personalFinanceQuery;
+};
+
 const isLlmFinanceRelevant = (llmResult) => {
   if (!llmResult) return false;
   if (llmResult?.action?.kind) return true;
@@ -1191,7 +1219,7 @@ const isReceiptCapabilityQuestion = (text) => {
   const key = normalizeText(text);
   return (
     /\b(receipt|receipts)\b/.test(key) &&
-    /\b(scan|scanned|upload|uploaded|ocr|parse|extract|support|can|does|able)\b/.test(key)
+    /\b(can|does|support|supports|able|capable)\b/.test(key)
   );
 };
 
@@ -1204,6 +1232,81 @@ const isReceiptHistoryQuestion = (text) => {
   return /\b(what|which|show|list|my)\b/.test(key) && /\b(receipt|receipts)\b/.test(key);
 };
 
+const simulateMessageHandling = async (text, opts = {}) => {
+  const raw = String(text || "").trim();
+  const calls = [];
+  const deps = {
+    loadAllRecords: async () => [],
+    walterChat: async () => null,
+    listReceipts: async () => [],
+    ...opts.deps,
+  };
+  const state = {
+    isPublicMode: false,
+    hasPendingAction: false,
+    ...opts.state,
+  };
+
+  if (!raw) return { route: "empty", calls };
+
+  const key = normalizeKey(raw);
+  if (state.isPublicMode) {
+    if (isPublicInfoQuestion(raw)) return { route: "public_info", calls };
+    if (isPrivateDataQuestion(raw)) return { route: "public_private_data_blocked", calls };
+    return { route: "public_fallback", calls };
+  }
+
+  if (state.hasPendingAction) {
+    if (["yes", "y", "confirm", "ok", "okay", "do it"].includes(key)) {
+      return { route: "pending_action_confirmed", calls };
+    }
+    if (["no", "n", "cancel", "stop"].includes(key)) {
+      return { route: "pending_action_cancelled", calls };
+    }
+    return { route: "pending_action_needs_confirmation", calls };
+  }
+
+  if (isPublicInfoQuestion(raw)) return { route: "public_info", calls };
+  if (isReceiptCapabilityQuestion(raw)) return { route: "receipt_capability", calls };
+  if (isReceiptHistoryQuestion(raw)) {
+    calls.push("listReceipts");
+    await deps.listReceipts();
+    return { route: "receipt_history", calls };
+  }
+
+  const earlyIntent = detectIntent(raw);
+  if (earlyIntent === "edit" || earlyIntent === "delete") {
+    const hasRecordScope =
+      /\b(record|transaction|expense|income|category|amount|note|date|today|yesterday)\b/i.test(raw) ||
+      Boolean(parseRecordIdReference(raw));
+    if (hasRecordScope) {
+      calls.push("loadAllRecords");
+      await deps.loadAllRecords();
+      return { route: `record_resolution_${earlyIntent}`, calls };
+    }
+  }
+
+  calls.push("loadAllRecords");
+  const records = await deps.loadAllRecords();
+  const range = detectRange(raw);
+  const context = buildLlmContext(records || [], range);
+  calls.push("walterChat");
+  const llmResult = await deps.walterChat({ message: raw, context });
+
+  if (llmResult?.action?.kind) {
+    return { route: `llm_action_${llmResult.action.kind}`, calls };
+  }
+  if (isLlmFinanceRelevant(llmResult) && llmResult?.reply && detectIntent(raw) === "unknown") {
+    return { route: "llm_reply", calls };
+  }
+
+  const localIntent = detectIntent(raw);
+  if (localIntent === "list") return { route: "local_list", calls };
+  if (localIntent === "create") return { route: "local_create", calls };
+  if (localIntent === "insight" || isFinancialQuestion(raw)) return { route: "local_insight", calls };
+  return { route: "out_of_scope", calls };
+};
+
 export const __walterlensTest = {
   detectIntent,
   isFinancialQuestion,
@@ -1212,6 +1315,8 @@ export const __walterlensTest = {
   isReceiptHistoryQuestion,
   isPublicInfoQuestion,
   isLegalQuery,
+  isPrivateDataQuestion,
+  simulateMessageHandling,
 };
 
 const extractCategoryFromText = (text, categories) => {
@@ -2047,17 +2152,6 @@ export function initWalterLens() {
       const amountLabel = Number.isFinite(amount) && amount > 0 ? fmtMoney(amount) : "unknown amount";
       addMessage("assistant", `- ${source}: ${amountLabel} (${safeDate})`);
     });
-  };
-
-  const isPrivateDataQuestion = (text) => {
-    const key = normalizeText(text);
-    const mutatingRecordCommand =
-      /\b(add|create|delete|remove|update|edit|change|list|show)\b/.test(key) &&
-      /\b(record|transaction)\b/.test(key);
-    const personalFinanceQuery =
-      /\b(my|me|mine)\b/.test(key) &&
-      /\b(spending|income|expense|record|transaction|budget)\b/.test(key);
-    return mutatingRecordCommand || personalFinanceQuery;
   };
 
   const handleMessage = async (text) => {
