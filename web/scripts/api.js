@@ -46,6 +46,7 @@ function clearAuthToken() {
 // INTERNAL REQUEST WRAPPER
 // --------------------------------------
 async function request(path, options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
   const token = getAuthToken();
   const headers = {
     ...(options.body ? { "Content-Type": "application/json" } : {}),
@@ -74,6 +75,10 @@ async function request(path, options = {}) {
     }
     const message = data?.message || `Request failed (${res.status})`;
     throw new Error(message);
+  }
+
+  if (method !== "GET" && path !== "/achievements") {
+    window.dispatchEvent(new CustomEvent("achievements:check"));
   }
 
   return data;
@@ -533,6 +538,15 @@ export const activity = {
 };
 
 // ======================================================================
+// ACHIEVEMENTS MODULE
+// ======================================================================
+export const achievements = {
+  getAll() {
+    return request("/achievements");
+  },
+};
+
+// ======================================================================
 // APP SETTINGS MODULE (PUBLIC)
 // ======================================================================
 export const appSettings = {
@@ -682,6 +696,7 @@ export const api = {
   budgetSheets,
   fxRates,
   activity,
+  achievements,
   appSettings,
   admin,
   support,

@@ -140,6 +140,49 @@
   font-weight: 400;
 }
 
+.admin-achievements {
+  display: grid;
+  gap: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  background: color-mix(in srgb, var(--card-bg) 95%, #f8fafc);
+}
+
+.admin-achievements-head > span {
+  font-weight: 700;
+}
+
+.admin-achievements-head .subtle {
+  margin: 0.25rem 0 0;
+}
+
+.admin-achievement-builder {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3);
+}
+
+.admin-achievements-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.admin-achievement-item {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.7rem;
+}
+
+.admin-achievement-item .meta {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
 .admin-table {
   width: 100%;
   border-collapse: collapse;

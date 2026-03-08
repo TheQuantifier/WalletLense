@@ -12,6 +12,7 @@ import {
 
 import { query } from "../config/db.js";
 import { logActivity } from "../services/activity.service.js";
+import { evaluateAchievementsForUser } from "../services/achievements.service.js";
 import { enqueueReceiptJob } from "../models/receipt_job.model.js";
 
 import {
@@ -243,6 +244,7 @@ export const scanOnly = asyncHandler(async (req, res) => {
     receipt = await updateReceiptParsedData(req.user.id, receipt.id, {
       linkedRecordId: autoRecord.id,
     });
+    await evaluateAchievementsForUser(req.user.id);
   }
 
   await logActivity({
@@ -334,6 +336,7 @@ export const updateOcrText = asyncHandler(async (req, res) => {
       updated = await updateReceiptParsedData(req.user.id, receiptId, {
         linkedRecordId: autoRecord.id,
       });
+      await evaluateAchievementsForUser(req.user.id);
     }
   }
 

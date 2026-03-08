@@ -3,6 +3,7 @@ import { getAppSettings } from "../models/app_settings.model.js";
 import { getReceiptById, updateReceiptParsedData } from "../models/receipt.model.js";
 import { createRecord, updateRecord } from "../models/record.model.js";
 import { parseReceiptText } from "./ai_parser.service.js";
+import { evaluateAchievementsForUser } from "./achievements.service.js";
 import { runOcrBuffer } from "./ocr.service.js";
 import { presignGet, headObject, deleteObject } from "./r2.service.js";
 import {
@@ -127,6 +128,7 @@ export async function processReceipt({ userId, receiptId }) {
         linkedRecordId: autoRecord.id,
       });
     }
+    await evaluateAchievementsForUser(userId);
   }
 
   const keepReceiptFiles = await getReceiptKeepFiles();

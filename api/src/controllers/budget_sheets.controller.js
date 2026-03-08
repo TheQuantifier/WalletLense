@@ -11,6 +11,7 @@ import {
   deleteBudgetSheet,
 } from "../models/budget_sheet.model.js";
 import { logActivity } from "../services/activity.service.js";
+import { evaluateAchievementsForUser } from "../services/achievements.service.js";
 
 const CADENCES = new Set([
   "weekly",
@@ -252,6 +253,7 @@ export const create = asyncHandler(async (req, res) => {
     metadata: { cadence, period },
     req,
   });
+  await evaluateAchievementsForUser(req.user.id);
   res.status(201).json(sheet);
 });
 
@@ -285,6 +287,7 @@ export const update = asyncHandler(async (req, res) => {
     metadata: { cadence, period },
     req,
   });
+  await evaluateAchievementsForUser(req.user.id);
   res.json(sheet);
 });
 
@@ -303,6 +306,7 @@ export const remove = asyncHandler(async (req, res) => {
     metadata: { cadence: sheet.cadence, period: sheet.period },
     req,
   });
+  await evaluateAchievementsForUser(req.user.id);
 
   res.json({ success: true });
 });

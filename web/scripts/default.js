@@ -19,6 +19,12 @@ const AUTH_GUARD_ENABLED = true;
 const DEFAULT_APP_NAME = "<AppName>";
 const APP_NAME_REGEX = /<AppName>/g;
 const APP_NAME_TEST = /<AppName>/;
+const ACHIEVEMENT_SEEN_KEY = "seen_achievement_keys_v1";
+const ACHIEVEMENT_POLL_MS = 20000;
+const ACHIEVEMENT_CHECK_EVENT = "achievements:check";
+let achievementMonitorStarted = false;
+let achievementToastQueue = [];
+let achievementToastShowing = false;
 
 /**
  * Pages that do NOT require authentication
@@ -87,6 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
   applyCachedAppName();
   updateAppName();
   initWalterLens();
+  initAchievementCelebrations();
 });
 
 /**
@@ -165,6 +172,248 @@ function cachePageTitle() {
   if (document.title) {
     sessionStorage.setItem(`pageTitle:${currentPage}`, document.title);
   }
+}
+
+function isPublicPage() {
+  const rawPage = (window.location.pathname.split("/").pop() || "").toLowerCase();
+  const currentPage = rawPage === "" ? "index.html" : rawPage;
+  return PUBLIC_PAGES.includes(currentPage);
+}
+
+function getSeenAchievementKeys() {
+  try {
+    const raw = localStorage.getItem(ACHIEVEMENT_SEEN_KEY);
+    const parsed = JSON.parse(raw || "[]");
+    return Array.isArray(parsed) ? parsed.map((x) => String(x || "")).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function setSeenAchievementKeys(keys) {
+  const unique = Array.from(new Set((keys || []).map((k) => String(k || "")).filter(Boolean)));
+  localStorage.setItem(ACHIEVEMENT_SEEN_KEY, JSON.stringify(unique));
+}
+
+function ensureAchievementUiHost() {
+  let host = document.getElementById("achievementToastHost");
+  if (!host) {
+    host = document.createElement("div");
+    host.id = "achievementToastHost";
+    host.className = "achievement-toast-host";
+    document.body.appendChild(host);
+  }
+  return host;
+}
+
+function playFireworks() {
+  const canvas = document.createElement("canvas");
+  canvas.className = "achievement-fireworks";
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    canvas.remove();
+    return;
+  }
+
+  const dpr = window.devicePixelRatio || 1;
+  const resize = () => {
+    canvas.width = Math.floor(window.innerWidth * dpr);
+    canvas.height = Math.floor(window.innerHeight * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  };
+  resize();
+
+  const colors = ["#00a3e0", "#0057b8", "#22c55e", "#f59e0b", "#ef4444"];
+  const bursts = Array.from({ length: 6 }, (_, i) => {
+    const baseX = window.innerWidth * (0.15 + i * 0.14);
+    const baseY = window.innerHeight * (0.16 + Math.random() * 0.24);
+    return { baseX, baseY };
+  });
+
+  const particles = [];
+  bursts.forEach(({ baseX, baseY }) => {
+    for (let i = 0; i < 28; i += 1) {
+      const angle = (Math.PI * 2 * i) / 28 + Math.random() * 0.22;
+      const speed = 1.4 + Math.random() * 2.8;
+      particles.push({
+        x: baseX,
+        y: baseY,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 44 + Math.floor(Math.random() * 20),
+        radius: 1.6 + Math.random() * 1.9,
+        color: colors[Math.floor(Math.random() * colors.length)],
+      });
+    }
+  });
+
+  let frame = 0;
+  const animate = () => {
+    frame += 1;
+    ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    particles.forEach((p) => {
+      if (p.life <= 0) return;
+      p.life -= 1;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.045;
+      const alpha = Math.max(0, p.life / 64);
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    if (frame < 70) {
+      requestAnimationFrame(animate);
+    } else {
+      canvas.remove();
+    }
+  };
+
+  window.addEventListener("resize", resize, { once: true });
+  requestAnimationFrame(animate);
+}
+
+function enqueueAchievementToast(achievement) {
+  achievementToastQueue.push({ type: "single", item: achievement });
+  if (!achievementToastShowing) {
+    showNextAchievementToast();
+  }
+}
+
+function enqueueAchievementMultiToast(achievements) {
+  const safe = Array.isArray(achievements) ? achievements.filter(Boolean) : [];
+  if (!safe.length) return;
+  if (safe.length === 1) {
+    enqueueAchievementToast(safe[0]);
+    return;
+  }
+  achievementToastQueue.push({ type: "multi", items: safe });
+  if (!achievementToastShowing) {
+    showNextAchievementToast();
+  }
+}
+
+function showNextAchievementToast() {
+  const next = achievementToastQueue.shift();
+  if (!next) {
+    achievementToastShowing = false;
+    return;
+  }
+
+  achievementToastShowing = true;
+  const host = ensureAchievementUiHost();
+  const toast = document.createElement("article");
+  toast.className = "achievement-toast";
+  const isMulti = next.type === "multi";
+  if (isMulti) {
+    toast.classList.add("achievement-toast--multi");
+  }
+  const badge = document.createElement("div");
+  badge.className = "achievement-toast-badge";
+  badge.textContent = isMulti ? "🏆" : next.item?.icon || "🏆";
+
+  const body = document.createElement("div");
+  body.className = "achievement-toast-body";
+  const kicker = document.createElement("p");
+  kicker.className = "achievement-toast-kicker";
+  kicker.textContent = isMulti ? "Multiple Achievements" : "Achievement Unlocked";
+  const title = document.createElement("p");
+  title.className = "achievement-toast-title";
+  title.textContent = isMulti
+    ? `${next.items.length} achievements unlocked`
+    : next.item?.title || "Achievement";
+  body.appendChild(kicker);
+  body.appendChild(title);
+
+  if (isMulti) {
+    const hint = document.createElement("p");
+    hint.className = "achievement-toast-hint";
+    hint.textContent = "Click to view";
+    body.appendChild(hint);
+
+    const counter = document.createElement("span");
+    counter.className = "achievement-toast-counter";
+    counter.textContent = String(next.items.length);
+    toast.appendChild(counter);
+
+    const stack = document.createElement("div");
+    stack.className = "achievement-toast-stack";
+    next.items.forEach((item) => {
+      const row = document.createElement("div");
+      row.className = "achievement-toast-stack-item";
+      const icon = document.createElement("span");
+      icon.className = "achievement-toast-stack-icon";
+      icon.textContent = item.icon || "🏆";
+      const label = document.createElement("span");
+      label.className = "achievement-toast-stack-label";
+      label.textContent = item.title || "Achievement";
+      row.appendChild(icon);
+      row.appendChild(label);
+      stack.appendChild(row);
+    });
+    toast.appendChild(stack);
+    toast.addEventListener("click", () => {
+      toast.classList.toggle("is-expanded");
+    });
+  }
+
+  toast.appendChild(badge);
+  toast.appendChild(body);
+  host.appendChild(toast);
+
+  requestAnimationFrame(() => {
+    toast.classList.add("show");
+  });
+
+  playFireworks();
+
+  const ttlMs = isMulti ? 5200 : 3200;
+  window.setTimeout(() => {
+    toast.classList.remove("show");
+    window.setTimeout(() => {
+      toast.remove();
+      showNextAchievementToast();
+    }, 240);
+  }, ttlMs);
+}
+
+async function checkForNewAchievements() {
+  if (isPublicPage()) return;
+  try {
+    const data = await api.achievements.getAll();
+    const achievements = Array.isArray(data?.achievements) ? data.achievements : [];
+    const unlocked = achievements.filter((a) => a?.unlocked);
+
+    const seenKeys = getSeenAchievementKeys();
+    const seen = new Set(seenKeys);
+    const newlyUnlocked = unlocked.filter((a) => a?.key && !seen.has(String(a.key)));
+    if (!newlyUnlocked.length) return;
+
+    if (newlyUnlocked.length > 1) {
+      enqueueAchievementMultiToast(newlyUnlocked);
+    } else {
+      enqueueAchievementToast(newlyUnlocked[0]);
+    }
+    setSeenAchievementKeys([...seenKeys, ...newlyUnlocked.map((a) => a.key)]);
+  } catch {
+    // ignore on pages where auth is not ready yet
+  }
+}
+
+function initAchievementCelebrations() {
+  if (achievementMonitorStarted) return;
+  achievementMonitorStarted = true;
+  checkForNewAchievements();
+  window.setInterval(checkForNewAchievements, ACHIEVEMENT_POLL_MS);
+  window.addEventListener("focus", checkForNewAchievements);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) checkForNewAchievements();
+  });
+  window.addEventListener(ACHIEVEMENT_CHECK_EVENT, checkForNewAchievements);
 }
 
 

@@ -396,6 +396,10 @@ textarea { resize: vertical; }
   font-size: 1.4rem;
 }
 
+.achievement-card--locked {
+  opacity: 0.72;
+}
+
 /* ===== AVATAR MODAL ===== */
 .avatar-modal-content {
   --modal-max-width: 560px;

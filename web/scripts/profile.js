@@ -65,6 +65,8 @@ const stats = {
 };
 
 const activityBody = $("activityBody");
+const achievementGrid = $("achievementGrid");
+const achievementStatus = $("achievementStatus");
 
 // Linked accounts + identity placeholders
 const linkedAccountsList = $("linkedAccountsList");
@@ -283,6 +285,65 @@ const clearStatusSoon = (ms = 2000) => {
   }, ms);
 };
 
+const renderAchievements = (payload) => {
+  if (!achievementGrid) return;
+  const list = Array.isArray(payload?.achievements) ? payload.achievements : [];
+  const summary = payload?.summary || {};
+
+  if (achievementStatus) {
+    achievementStatus.textContent = list.length
+      ? `${summary.unlockedCount || 0} of ${summary.totalCount || list.length} unlocked`
+      : "No achievements configured yet.";
+  }
+
+  if (!list.length) {
+    achievementGrid.innerHTML = "";
+    return;
+  }
+
+  achievementGrid.innerHTML = "";
+  list.forEach((item) => {
+    const card = document.createElement("div");
+    card.className = "achievement-card";
+    if (!item.unlocked) card.classList.add("achievement-card--locked");
+
+    const badge = document.createElement("span");
+    badge.className = "badge";
+    badge.textContent = item.icon || "🏆";
+
+    const body = document.createElement("div");
+    const title = document.createElement("p");
+    title.className = "label";
+    title.textContent = item.title || "Achievement";
+    const subtitle = document.createElement("p");
+    subtitle.className = "subtle";
+    subtitle.textContent = item.unlocked
+      ? `Unlocked${item.unlockedAt ? ` on ${new Date(item.unlockedAt).toLocaleDateString()}` : ""}`
+      : `${Math.min(Number(item.progress || 0), Number(item.target || 0))} / ${Number(
+          item.target || 0
+        )}`;
+    body.appendChild(title);
+    body.appendChild(subtitle);
+
+    card.appendChild(badge);
+    card.appendChild(body);
+    achievementGrid.appendChild(card);
+  });
+};
+
+async function loadAchievements() {
+  if (achievementStatus) achievementStatus.textContent = "Loading achievements...";
+  try {
+    const payload = await api.achievements.getAll();
+    renderAchievements(payload);
+  } catch (err) {
+    if (achievementStatus) {
+      achievementStatus.textContent = "Failed to load achievements.";
+    }
+    if (achievementGrid) achievementGrid.innerHTML = "";
+  }
+}
+
 
 /* ----------------------------------------
    AVATAR PRESETS
@@ -420,7 +481,7 @@ async function loadUserProfile() {
       renderLinkedAccounts();
     }
 
-    await loadRecentActivity();
+    await Promise.all([loadRecentActivity(), loadAchievements()]);
   } catch (err) {
     showStatus("Please log in to view your profile.", "error");
     window.location.href = "login.html";
@@ -678,5 +739,4 @@ linkedAccountsList?.addEventListener("click", (e) => {
   saveLinkedAccounts(accounts);
   renderLinkedAccounts();
 });
-
 

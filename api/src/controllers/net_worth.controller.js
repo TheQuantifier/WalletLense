@@ -6,6 +6,7 @@ import {
   updateNetWorthItem,
   deleteNetWorthItem,
 } from "../models/net_worth.model.js";
+import { evaluateAchievementsForUser } from "../services/achievements.service.js";
 
 const VALID_TYPES = new Set(["asset", "liability"]);
 
@@ -38,6 +39,7 @@ export const create = asyncHandler(async (req, res) => {
     name: trimmed,
     amount: parsedAmount,
   });
+  await evaluateAchievementsForUser(req.user.id);
   res.status(201).json({ item });
 });
 
@@ -66,6 +68,7 @@ export const update = asyncHandler(async (req, res) => {
   if (!item) {
     return res.status(404).json({ message: "Net worth item not found." });
   }
+  await evaluateAchievementsForUser(req.user.id);
   res.json({ item });
 });
 
@@ -75,5 +78,6 @@ export const remove = asyncHandler(async (req, res) => {
   if (!item) {
     return res.status(404).json({ message: "Net worth item not found." });
   }
+  await evaluateAchievementsForUser(req.user.id);
   res.json({ item });
 });

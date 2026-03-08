@@ -12,6 +12,7 @@ import {
 
 import { query } from "../config/db.js";
 import { logActivity } from "../services/activity.service.js";
+import { evaluateAchievementsForUser } from "../services/achievements.service.js";
 import { findUserById } from "../models/user.model.js";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../constants/categories.js";
 
@@ -141,6 +142,7 @@ export const create = asyncHandler(async (req, res) => {
     metadata: { type },
     req,
   });
+  await evaluateAchievementsForUser(req.user.id);
   res.status(201).json(record);
 });
 
@@ -195,6 +197,7 @@ export const update = asyncHandler(async (req, res) => {
     metadata: { fields: Object.keys(changes) },
     req,
   });
+  await evaluateAchievementsForUser(req.user.id);
   res.json({ message: "Record updated", record: updated });
 });
 
@@ -244,6 +247,7 @@ export const remove = asyncHandler(async (req, res) => {
     metadata: { deletedReceipt: deleteReceiptFlag },
     req,
   });
+  await evaluateAchievementsForUser(req.user.id);
   res.json({
     message: "Record deleted",
     deletedReceipt: deleteReceiptFlag,

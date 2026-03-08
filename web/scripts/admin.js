@@ -32,6 +32,14 @@ const els = {
   settingsForm: document.getElementById("settingsForm"),
   appNameInput: document.getElementById("appNameInput"),
   receiptKeepFilesInput: document.getElementById("receiptKeepFilesInput"),
+  achievementKeyInput: document.getElementById("achievementKeyInput"),
+  achievementTitleInput: document.getElementById("achievementTitleInput"),
+  achievementDescriptionInput: document.getElementById("achievementDescriptionInput"),
+  achievementIconInput: document.getElementById("achievementIconInput"),
+  achievementMetricInput: document.getElementById("achievementMetricInput"),
+  achievementTargetInput: document.getElementById("achievementTargetInput"),
+  addAchievementBtn: document.getElementById("addAchievementBtn"),
+  adminAchievementsList: document.getElementById("adminAchievementsList"),
   settingsStatus: document.getElementById("settingsStatus"),
 
   userModal: document.getElementById("adminUserModal"),
@@ -66,11 +74,29 @@ const state = {
   records: [],
   receipts: [],
   budgetSheets: [],
+  settingsAchievements: [],
   sorts: {
     users: { key: "", dir: "" },
     records: { key: "", dir: "" },
   },
 };
+
+const ACHIEVEMENT_METRICS = new Set([
+  "records_total",
+  "records_income",
+  "records_expense",
+  "budgets_total",
+  "net_worth_total",
+]);
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 function setStatus(el, message, variant = "info") {
   if (!el) return;
@@ -373,6 +399,75 @@ function resetUserScopedData() {
   renderBudgetSheets();
 }
 
+function normalizeAchievementKey(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_");
+}
+
+function renderSettingsAchievements() {
+  if (!els.adminAchievementsList) return;
+  if (!state.settingsAchievements.length) {
+    els.adminAchievementsList.innerHTML =
+      '<p class="subtle">No achievements configured. Add one above, then save settings.</p>';
+    return;
+  }
+
+  els.adminAchievementsList.innerHTML = state.settingsAchievements
+    .map(
+      (item) => `
+        <div class="admin-achievement-item">
+          <div>
+            <strong>${escapeHtml(item.icon || "🏆")} ${escapeHtml(item.title)}</strong>
+            <p class="meta">${escapeHtml(item.key)} • ${escapeHtml(item.metric)} • target ${Number(item.target || 0)}</p>
+            <p class="meta">${escapeHtml(item.description)}</p>
+          </div>
+          <div class="admin-actions">
+            <button class="btn btn--link" data-action="remove-achievement" data-key="${escapeHtml(item.key)}" type="button">Remove</button>
+          </div>
+        </div>
+      `
+    )
+    .join("");
+}
+
+function addAchievementFromInputs() {
+  const key = normalizeAchievementKey(els.achievementKeyInput?.value);
+  const title = String(els.achievementTitleInput?.value || "").trim();
+  const description = String(els.achievementDescriptionInput?.value || "").trim();
+  const icon = String(els.achievementIconInput?.value || "🏆").trim() || "🏆";
+  const metric = String(els.achievementMetricInput?.value || "").trim();
+  const target = Number(els.achievementTargetInput?.value || 0);
+
+  if (!key || !title || !description || !ACHIEVEMENT_METRICS.has(metric) || !Number.isFinite(target) || target < 1) {
+    setStatus(els.settingsStatus, "Fill all achievement fields with valid values.", "error");
+    return;
+  }
+
+  if (state.settingsAchievements.some((item) => item.key === key)) {
+    setStatus(els.settingsStatus, `Achievement key "${key}" already exists.`, "error");
+    return;
+  }
+
+  state.settingsAchievements.push({
+    key,
+    title,
+    description,
+    icon,
+    metric,
+    target: Math.floor(target),
+  });
+
+  if (els.achievementKeyInput) els.achievementKeyInput.value = "";
+  if (els.achievementTitleInput) els.achievementTitleInput.value = "";
+  if (els.achievementDescriptionInput) els.achievementDescriptionInput.value = "";
+  if (els.achievementIconInput) els.achievementIconInput.value = "";
+  if (els.achievementTargetInput) els.achievementTargetInput.value = "1";
+  renderSettingsAchievements();
+  setStatus(els.settingsStatus, "Achievement added. Save settings to apply.", "ok");
+}
+
 function resolveUserForQuery(users, query) {
   const normalized = normalizeText(query);
   if (!normalized) return users.length === 1 ? users[0] : null;
@@ -663,6 +758,10 @@ async function loadSettings() {
       const keep = settings?.receipt_keep_files;
       els.receiptKeepFilesInput.checked = typeof keep === "boolean" ? keep : true;
     }
+    state.settingsAchievements = Array.isArray(settings?.achievements_catalog)
+      ? settings.achievements_catalog
+      : [];
+    renderSettingsAchievements();
   } catch (err) {
     console.error(err);
     setStatus(els.settingsStatus, err.message || "Failed to load settings.", "error");
@@ -682,6 +781,7 @@ async function saveSettings(event) {
     await api.admin.updateSettings({
       appName,
       receiptKeepFiles: Boolean(els.receiptKeepFilesInput?.checked),
+      achievementsCatalog: state.settingsAchievements,
     });
     sessionStorage.setItem("appName", appName);
     window.dispatchEvent(new CustomEvent("appName:updated", { detail: { appName } }));
@@ -767,6 +867,9 @@ function bindEvents() {
   if (els.settingsForm) {
     els.settingsForm.addEventListener("submit", saveSettings);
   }
+  if (els.addAchievementBtn) {
+    els.addAchievementBtn.addEventListener("click", addAchievementFromInputs);
+  }
 
   document.addEventListener("click", (event) => {
     const btn = event.target.closest("button[data-action]");
@@ -774,6 +877,7 @@ function bindEvents() {
 
     const action = btn.dataset.action;
     const id = btn.dataset.id;
+    const key = btn.dataset.key;
 
     if (action === "edit-user") {
       const user = state.users.find((u) => u.id === id);
@@ -792,6 +896,12 @@ function bindEvents() {
 
     if (action === "delete-record") {
       deleteRecord(id);
+    }
+
+    if (action === "remove-achievement") {
+      state.settingsAchievements = state.settingsAchievements.filter((item) => item.key !== key);
+      renderSettingsAchievements();
+      setStatus(els.settingsStatus, "Achievement removed. Save settings to apply.", "ok");
     }
   });
 }
