@@ -20,7 +20,11 @@ const normalizeAchievement = (raw = {}, index = 0) => {
   const title = String(raw.title || "").trim();
   const description = String(raw.description || "").trim();
   const rawMetric = String(raw.metric || "").trim();
-  const metric = rawMetric === "account_age_days" ? "account_age_years" : rawMetric;
+  const metric = rawMetric === "account_age_days"
+    ? "account_age_years"
+    : rawMetric === "net_worth_total"
+      ? "net_worth_items"
+      : rawMetric;
   const icon = String(raw.icon || "🏆").trim() || "🏆";
   let target = null;
   if (BOOLEAN_METRIC_SET.has(metric)) {
@@ -82,7 +86,7 @@ async function getMetricCounts(userId) {
       (SELECT COUNT(*)::int FROM records WHERE user_id = $1 AND type = 'expense') AS records_expense,
       (SELECT COUNT(*)::int FROM receipts WHERE user_id = $1) AS receipts_total,
       (SELECT COUNT(*)::int FROM budget_sheets WHERE user_id = $1) AS budgets_total,
-      (SELECT COUNT(*)::int FROM net_worth_items WHERE user_id = $1) AS net_worth_total,
+      (SELECT COUNT(*)::int FROM net_worth_items WHERE user_id = $1) AS net_worth_items,
       (
         SELECT GREATEST(
           0,

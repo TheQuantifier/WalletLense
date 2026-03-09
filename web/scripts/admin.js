@@ -102,7 +102,7 @@ const ACHIEVEMENT_METRICS = new Set([
   "records_expense",
   "receipts_total",
   "budgets_total",
-  "net_worth_total",
+  "net_worth_items",
   "account_age_years",
   "two_fa_enabled",
   "google_signin_enabled",

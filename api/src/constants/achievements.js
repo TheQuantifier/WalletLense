@@ -4,7 +4,7 @@ export const ACHIEVEMENT_METRICS = Object.freeze([
   "records_expense",
   "receipts_total",
   "budgets_total",
-  "net_worth_total",
+  "net_worth_items",
   "account_age_years",
   "two_fa_enabled",
   "google_signin_enabled",
@@ -63,7 +63,7 @@ export const DEFAULT_ACHIEVEMENTS = Object.freeze([
     title: "Net Worth Starter",
     description: "Add your first net worth item.",
     icon: "📈",
-    metric: "net_worth_total",
+    metric: "net_worth_items",
     target: 1,
   },
 ]);
