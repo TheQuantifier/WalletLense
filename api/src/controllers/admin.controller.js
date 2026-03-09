@@ -14,6 +14,11 @@ import {
 } from "../models/record.model.js";
 import { logActivity } from "../services/activity.service.js";
 import { parseDateOnly } from "./records.controller.js";
+import { getAppSettings, updateAppSettings } from "../models/app_settings.model.js";
+import {
+  listSupportTickets,
+  updateSupportTicket,
+} from "../models/support_ticket.model.js";
 
 // ==========================================================
 // USERS
@@ -95,7 +100,10 @@ export const updateUserAdmin = asyncHandler(async (req, res) => {
     }
   }
 
-  if (updates.role !== undefined && !["user", "admin"].includes(updates.role)) {
+  if (
+    updates.role !== undefined &&
+    !["user", "admin", "support_admin", "analyst"].includes(updates.role)
+  ) {
     return res.status(400).json({ message: "Invalid role" });
   }
 
@@ -284,4 +292,259 @@ export const listBudgetSheetsAdminController = asyncHandler(async (req, res) => 
   );
 
   res.json({ budgetSheets: rows });
+});
+
+// ==========================================================
+// AUDIT LOG
+// ==========================================================
+export const listAuditLogAdmin = asyncHandler(async (req, res) => {
+  const limit = Math.min(Number(req.query.limit) || 200, 500);
+  const action = String(req.query.action || "").trim();
+  const queryText = String(req.query.q || "").trim();
+  const scope = String(req.query.scope || "all").trim().toLowerCase();
+  const params = [];
+  const where = [];
+  let i = 1;
+
+  if (action) {
+    where.push(`a.action = $${i++}`);
+    params.push(action);
+  }
+  if (queryText) {
+    where.push(`(
+      u.username ILIKE $${i}
+      OR u.email ILIKE $${i}
+      OR u.full_name ILIKE $${i}
+      OR a.action ILIKE $${i}
+    )`);
+    params.push(`%${queryText}%`);
+    i += 1;
+  }
+  if (scope === "admins") {
+    where.push(`u.role IN ('admin', 'support_admin', 'analyst')`);
+  } else if (scope === "users") {
+    where.push(`u.role = 'user'`);
+  }
+  params.push(limit);
+
+  const { rows } = await query(
+    `
+    SELECT
+      a.id,
+      a.user_id,
+      a.action,
+      a.entity_type,
+      a.entity_id,
+      a.metadata,
+      a.ip_address,
+      a.user_agent,
+      a.created_at,
+      u.username,
+      u.email,
+      u.full_name,
+      u.role
+    FROM activity_log a
+    LEFT JOIN users u ON u.id = a.user_id
+    ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+    ORDER BY a.created_at DESC
+    LIMIT $${i++}
+    `,
+    params
+  );
+
+  res.json({ auditLog: rows });
+});
+
+// ==========================================================
+// SUPPORT INBOX
+// ==========================================================
+export const listSupportTicketsAdmin = asyncHandler(async (req, res) => {
+  const status = String(req.query.status || "").trim().toLowerCase();
+  const q = String(req.query.q || "").trim();
+  const limit = Math.min(Number(req.query.limit) || 200, 500);
+  const offset = Math.max(Number(req.query.offset) || 0, 0);
+  const tickets = await listSupportTickets({
+    status,
+    queryText: q,
+    limit,
+    offset,
+  });
+  res.json({ tickets });
+});
+
+export const updateSupportTicketAdmin = asyncHandler(async (req, res) => {
+  const id = String(req.params.id || "").trim();
+  if (!id) return res.status(400).json({ message: "Ticket id is required" });
+
+  const hasStatus = req.body?.status !== undefined;
+  const hasAdminNote = req.body?.adminNote !== undefined;
+  if (!hasStatus && !hasAdminNote) {
+    return res.status(400).json({ message: "status or adminNote is required" });
+  }
+
+  let status = null;
+  if (hasStatus) {
+    status = String(req.body.status || "").trim().toLowerCase();
+    if (!["open", "in_progress", "resolved", "closed"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+  }
+
+  const adminNote = hasAdminNote ? String(req.body.adminNote || "") : null;
+  const ticket = await updateSupportTicket(id, { status, adminNote });
+  if (!ticket) return res.status(404).json({ message: "Ticket not found" });
+
+  await logActivity({
+    userId: req.user.id,
+    action: "admin_support_ticket_update",
+    entityType: "support_ticket",
+    entityId: ticket.id,
+    metadata: {
+      status: ticket.status,
+    },
+    req,
+  });
+
+  res.json({ ticket });
+});
+
+// ==========================================================
+// SYSTEM HEALTH
+// ==========================================================
+export const getSystemHealthAdmin = asyncHandler(async (_req, res) => {
+  const dbProbe = await query("SELECT now() as now");
+  const dbConnected = Boolean(dbProbe?.rows?.[0]?.now);
+
+  const hasBrevo = Boolean(process.env.BREVO_API_KEY);
+  const hasSmtp =
+    Boolean(process.env.SMTP_HOST) &&
+    Boolean(process.env.SMTP_PORT) &&
+    Boolean(process.env.SMTP_USER) &&
+    Boolean(process.env.SMTP_PASS);
+
+  const { rows: failedJobsRows } = await query(
+    `
+    SELECT COUNT(*)::int AS failed_receipt_jobs
+    FROM receipt_jobs
+    WHERE status = 'failed'
+    `
+  );
+  const { rows: queuedJobsRows } = await query(
+    `
+    SELECT COUNT(*)::int AS queued_receipt_jobs
+    FROM receipt_jobs
+    WHERE status in ('queued', 'running')
+    `
+  );
+
+  res.json({
+    health: {
+      dbConnected,
+      emailProvider: hasBrevo ? "brevo" : hasSmtp ? "smtp" : "dev_stream",
+      hasBrevoKey: hasBrevo,
+      hasSmtpConfig: hasSmtp,
+      failedReceiptJobs: Number(failedJobsRows?.[0]?.failed_receipt_jobs || 0),
+      queuedOrRunningReceiptJobs: Number(queuedJobsRows?.[0]?.queued_receipt_jobs || 0),
+      checkedAt: new Date().toISOString(),
+    },
+  });
+});
+
+// ==========================================================
+// DATA SAFETY
+// ==========================================================
+export const getDataSafetyAdmin = asyncHandler(async (_req, res) => {
+  const settings = await getAppSettings();
+  const { rows } = await query(
+    `
+    SELECT
+      (SELECT COUNT(*)::int FROM users) AS users_count,
+      (SELECT COUNT(*)::int FROM records) AS records_count,
+      (SELECT COUNT(*)::int FROM receipts) AS receipts_count,
+      (SELECT COUNT(*)::int FROM support_tickets) AS support_tickets_count,
+      (SELECT COUNT(*)::int FROM notifications) AS notifications_count
+    `
+  );
+
+  res.json({
+    dataSafety: {
+      retentionDays: Number(settings?.data_retention_days || 365),
+      backupStatus: settings?.backup_status || "unknown",
+      lastBackupAt: settings?.last_backup_at || null,
+      totals: rows[0] || {},
+    },
+  });
+});
+
+export const updateDataSafetyAdmin = asyncHandler(async (req, res) => {
+  const hasRetention = req.body?.retentionDays !== undefined;
+  const hasBackupStatus = req.body?.backupStatus !== undefined;
+  const markBackupNow = Boolean(req.body?.markBackupNow);
+  if (!hasRetention && !hasBackupStatus && !markBackupNow) {
+    return res.status(400).json({ message: "At least one data safety update is required" });
+  }
+
+  let retentionDays = null;
+  if (hasRetention) {
+    retentionDays = Number(req.body.retentionDays);
+    if (!Number.isInteger(retentionDays) || retentionDays < 30 || retentionDays > 3650) {
+      return res.status(400).json({ message: "retentionDays must be an integer between 30 and 3650" });
+    }
+  }
+
+  let backupStatus = null;
+  if (hasBackupStatus) {
+    backupStatus = String(req.body.backupStatus || "").trim().toLowerCase();
+    if (!["unknown", "healthy", "warning", "failed"].includes(backupStatus)) {
+      return res.status(400).json({ message: "Invalid backupStatus value" });
+    }
+  }
+
+  const settings = await updateAppSettings({
+    dataRetentionDays: retentionDays,
+    backupStatus,
+    lastBackupAt: markBackupNow ? new Date().toISOString() : null,
+    updatedBy: req.user.id,
+  });
+
+  await logActivity({
+    userId: req.user.id,
+    action: "admin_data_safety_update",
+    entityType: "app_settings",
+    entityId: settings?.id || null,
+    metadata: {
+      retentionDays: settings?.data_retention_days,
+      backupStatus: settings?.backup_status,
+      lastBackupAt: settings?.last_backup_at,
+    },
+    req,
+  });
+
+  res.json({
+    dataSafety: {
+      retentionDays: Number(settings?.data_retention_days || 365),
+      backupStatus: settings?.backup_status || "unknown",
+      lastBackupAt: settings?.last_backup_at || null,
+    },
+  });
+});
+
+export const runDataExportAdmin = asyncHandler(async (_req, res) => {
+  const { rows } = await query(
+    `
+    SELECT
+      (SELECT COUNT(*)::int FROM users) AS users_count,
+      (SELECT COUNT(*)::int FROM records) AS records_count,
+      (SELECT COUNT(*)::int FROM receipts) AS receipts_count,
+      (SELECT COUNT(*)::int FROM support_tickets) AS support_tickets_count,
+      (SELECT COUNT(*)::int FROM notifications) AS notifications_count,
+      (SELECT COUNT(*)::int FROM activity_log) AS activity_rows
+    `
+  );
+  res.json({
+    export: {
+      generatedAt: new Date().toISOString(),
+      summary: rows[0] || {},
+    },
+  });
 });

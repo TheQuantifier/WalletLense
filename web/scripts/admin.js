@@ -26,6 +26,40 @@ const els = {
   notificationsPanel: document.getElementById("notificationsPanel"),
   notificationsPanelBody: document.getElementById("notificationsPanelBody"),
   toggleNotificationsPanelCaret: document.getElementById("toggleNotificationsPanelCaret"),
+  notificationFilterType: document.getElementById("notificationFilterType"),
+  notificationFilterActive: document.getElementById("notificationFilterActive"),
+  notificationFilterApplyBtn: document.getElementById("notificationFilterApplyBtn"),
+  auditPanel: document.getElementById("auditPanel"),
+  auditPanelBody: document.getElementById("auditPanelBody"),
+  toggleAuditPanelCaret: document.getElementById("toggleAuditPanelCaret"),
+  auditQueryInput: document.getElementById("auditQueryInput"),
+  auditScopeInput: document.getElementById("auditScopeInput"),
+  auditRefreshBtn: document.getElementById("auditRefreshBtn"),
+  auditTbody: document.getElementById("auditTbody"),
+  auditStatus: document.getElementById("auditStatus"),
+  supportPanel: document.getElementById("supportPanel"),
+  supportPanelBody: document.getElementById("supportPanelBody"),
+  toggleSupportPanelCaret: document.getElementById("toggleSupportPanelCaret"),
+  supportStatusFilter: document.getElementById("supportStatusFilter"),
+  supportRefreshBtn: document.getElementById("supportRefreshBtn"),
+  supportTbody: document.getElementById("supportTbody"),
+  supportStatusMsg: document.getElementById("supportStatusMsg"),
+  systemHealthPanel: document.getElementById("systemHealthPanel"),
+  systemHealthPanelBody: document.getElementById("systemHealthPanelBody"),
+  toggleSystemHealthPanelCaret: document.getElementById("toggleSystemHealthPanelCaret"),
+  healthRefreshBtn: document.getElementById("healthRefreshBtn"),
+  healthSummary: document.getElementById("healthSummary"),
+  healthStatus: document.getElementById("healthStatus"),
+  dataSafetyPanel: document.getElementById("dataSafetyPanel"),
+  dataSafetyPanelBody: document.getElementById("dataSafetyPanelBody"),
+  toggleDataSafetyPanelCaret: document.getElementById("toggleDataSafetyPanelCaret"),
+  dataRetentionDaysInput: document.getElementById("dataRetentionDaysInput"),
+  backupStatusInput: document.getElementById("backupStatusInput"),
+  saveDataSafetyBtn: document.getElementById("saveDataSafetyBtn"),
+  markBackupNowBtn: document.getElementById("markBackupNowBtn"),
+  exportDataSummaryBtn: document.getElementById("exportDataSummaryBtn"),
+  dataSafetyStatus: document.getElementById("dataSafetyStatus"),
+  dataSafetyExportOutput: document.getElementById("dataSafetyExportOutput"),
 
   recordsTbody: document.getElementById("recordsTbody"),
   recordsStatus: document.getElementById("recordsStatus"),
@@ -100,6 +134,11 @@ const state = {
   budgetSheets: [],
   settingsAchievements: [],
   notificationsHistory: [],
+  auditLog: [],
+  supportTickets: [],
+  systemHealth: null,
+  dataSafety: null,
+  editingNotificationId: "",
   sorts: {
     users: { key: "", dir: "" },
     records: { key: "", dir: "" },
@@ -174,7 +213,7 @@ function bindModalClose() {
 async function ensureAdmin() {
   try {
     const { user } = await api.auth.me();
-    if (user?.role !== "admin") {
+    if (!["admin", "support_admin", "analyst"].includes(String(user?.role || ""))) {
       window.location.href = "home.html";
       return false;
     }
@@ -277,6 +316,62 @@ function setNotificationsPanelCollapsed(collapsed) {
     els.toggleNotificationsPanelCaret.setAttribute(
       "aria-label",
       `${collapsed ? "Expand" : "Collapse"} Notifications section`
+    );
+  }
+}
+
+function setAuditPanelCollapsed(collapsed) {
+  if (!els.auditPanel) return;
+  els.auditPanel.classList.toggle("is-collapsed", collapsed);
+  if (els.auditPanelBody) els.auditPanelBody.hidden = collapsed;
+  if (els.toggleAuditPanelCaret) {
+    els.toggleAuditPanelCaret.textContent = collapsed ? ">" : "v";
+    els.toggleAuditPanelCaret.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    els.toggleAuditPanelCaret.setAttribute(
+      "aria-label",
+      `${collapsed ? "Expand" : "Collapse"} Audit Log section`
+    );
+  }
+}
+
+function setSupportPanelCollapsed(collapsed) {
+  if (!els.supportPanel) return;
+  els.supportPanel.classList.toggle("is-collapsed", collapsed);
+  if (els.supportPanelBody) els.supportPanelBody.hidden = collapsed;
+  if (els.toggleSupportPanelCaret) {
+    els.toggleSupportPanelCaret.textContent = collapsed ? ">" : "v";
+    els.toggleSupportPanelCaret.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    els.toggleSupportPanelCaret.setAttribute(
+      "aria-label",
+      `${collapsed ? "Expand" : "Collapse"} Support Inbox section`
+    );
+  }
+}
+
+function setSystemHealthPanelCollapsed(collapsed) {
+  if (!els.systemHealthPanel) return;
+  els.systemHealthPanel.classList.toggle("is-collapsed", collapsed);
+  if (els.systemHealthPanelBody) els.systemHealthPanelBody.hidden = collapsed;
+  if (els.toggleSystemHealthPanelCaret) {
+    els.toggleSystemHealthPanelCaret.textContent = collapsed ? ">" : "v";
+    els.toggleSystemHealthPanelCaret.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    els.toggleSystemHealthPanelCaret.setAttribute(
+      "aria-label",
+      `${collapsed ? "Expand" : "Collapse"} System Health section`
+    );
+  }
+}
+
+function setDataSafetyPanelCollapsed(collapsed) {
+  if (!els.dataSafetyPanel) return;
+  els.dataSafetyPanel.classList.toggle("is-collapsed", collapsed);
+  if (els.dataSafetyPanelBody) els.dataSafetyPanelBody.hidden = collapsed;
+  if (els.toggleDataSafetyPanelCaret) {
+    els.toggleDataSafetyPanelCaret.textContent = collapsed ? ">" : "v";
+    els.toggleDataSafetyPanelCaret.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    els.toggleDataSafetyPanelCaret.setAttribute(
+      "aria-label",
+      `${collapsed ? "Expand" : "Collapse"} Data Safety section`
     );
   }
 }
@@ -662,10 +757,18 @@ function renderNotificationHistory() {
       const creator = escapeHtml(String(item.created_by_username || "admin"));
       const createdAt = escapeHtml(formatDateTime(item.created_at));
       const type = escapeHtml(String(item.notification_type || "general"));
+      const isActive = Boolean(item.is_active);
       return `
         <article class="admin-notification-item">
-          <div class="admin-notification-meta">${createdAt} • ${type} • by ${creator}</div>
+          <div class="admin-notification-meta">${createdAt} • ${type} • ${isActive ? "active" : "inactive"} • by ${creator}</div>
           <p>${content}</p>
+          <div class="admin-notification-controls">
+            <button class="btn btn--link" type="button" data-action="edit-notification" data-id="${item.id}">Edit</button>
+            <button class="btn btn--link" type="button" data-action="toggle-notification-active" data-id="${item.id}" data-active="${isActive ? "true" : "false"}">
+              ${isActive ? "Deactivate" : "Activate"}
+            </button>
+            <button class="btn btn--link" type="button" data-action="resend-notification" data-id="${item.id}">Resend Email</button>
+          </div>
         </article>
       `;
     })
@@ -675,7 +778,9 @@ function renderNotificationHistory() {
 async function loadNotificationHistory() {
   if (!els.notificationHistoryList) return;
   try {
-    const { notifications } = await api.admin.listNotifications();
+    const type = String(els.notificationFilterType?.value || "").trim();
+    const active = String(els.notificationFilterActive?.value || "").trim();
+    const { notifications } = await api.admin.listNotificationsFiltered({ type, active });
     state.notificationsHistory = Array.isArray(notifications) ? notifications : [];
     renderNotificationHistory();
   } catch (err) {
@@ -700,17 +805,26 @@ async function publishNotificationFromEditor() {
   if (els.publishNotificationBtn) {
     els.publishNotificationBtn.disabled = true;
   }
-  setStatus(els.notificationAdminStatus, "Publishing notification...");
+  const isEdit = Boolean(state.editingNotificationId);
+  setStatus(els.notificationAdminStatus, isEdit ? "Updating notification..." : "Publishing notification...");
   try {
-    await api.admin.createNotification({ messageHtml: html, notificationType });
+    if (isEdit) {
+      await api.admin.updateNotification(state.editingNotificationId, {
+        messageHtml: html,
+        notificationType,
+      });
+    } else {
+      await api.admin.createNotification({ messageHtml: html, notificationType });
+    }
     if (els.notificationEditor) {
       els.notificationEditor.innerHTML = "";
     }
     if (els.notificationTypeInput) {
       els.notificationTypeInput.value = "general";
     }
+    state.editingNotificationId = "";
     await loadNotificationHistory();
-    setStatus(els.notificationAdminStatus, "Notification published.", "ok");
+    setStatus(els.notificationAdminStatus, isEdit ? "Notification updated." : "Notification published.", "ok");
   } catch (err) {
     console.error(err);
     setStatus(els.notificationAdminStatus, err.message || "Failed to publish notification.", "error");
@@ -718,6 +832,181 @@ async function publishNotificationFromEditor() {
     if (els.publishNotificationBtn) {
       els.publishNotificationBtn.disabled = false;
     }
+  }
+}
+
+function renderAuditLog() {
+  if (!els.auditTbody) return;
+  if (!state.auditLog.length) {
+    els.auditTbody.innerHTML = `<tr><td colspan="4" class="subtle">No audit entries found.</td></tr>`;
+    return;
+  }
+  els.auditTbody.innerHTML = state.auditLog
+    .map((row) => {
+      const actor = escapeHtml(
+        row.full_name || row.username || row.email || row.user_id || "Unknown"
+      );
+      const action = escapeHtml(row.action || "");
+      const entity = escapeHtml(
+        `${row.entity_type || "—"}${row.entity_id ? ` (${row.entity_id})` : ""}`
+      );
+      return `
+        <tr>
+          <td>${escapeHtml(formatDateTime(row.created_at))}</td>
+          <td>${actor}</td>
+          <td>${action}</td>
+          <td>${entity}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+async function loadAuditLog() {
+  if (!els.auditTbody) return;
+  try {
+    const q = String(els.auditQueryInput?.value || "").trim();
+    const scope = String(els.auditScopeInput?.value || "all").trim();
+    const { auditLog } = await api.admin.getAuditLog({ q, scope, limit: 200 });
+    state.auditLog = Array.isArray(auditLog) ? auditLog : [];
+    renderAuditLog();
+    setStatus(els.auditStatus, "");
+  } catch (err) {
+    console.error(err);
+    setStatus(els.auditStatus, err.message || "Failed to load audit log.", "error");
+  }
+}
+
+function renderSupportTickets() {
+  if (!els.supportTbody) return;
+  if (!state.supportTickets.length) {
+    els.supportTbody.innerHTML = `<tr><td colspan="5" class="subtle">No support tickets found.</td></tr>`;
+    return;
+  }
+  els.supportTbody.innerHTML = state.supportTickets
+    .map((t) => {
+      const sender = escapeHtml(t.name || t.email || t.user_full_name || t.user_username || "Unknown");
+      const subject = escapeHtml(t.subject || "");
+      const status = escapeHtml(t.status || "open");
+      return `
+        <tr>
+          <td>${escapeHtml(formatDateTime(t.created_at))}</td>
+          <td>${sender}</td>
+          <td>${subject}</td>
+          <td>${status}</td>
+          <td>
+            <button class="btn btn--link" type="button" data-action="support-status" data-id="${t.id}" data-status="in_progress">In Progress</button>
+            <button class="btn btn--link" type="button" data-action="support-status" data-id="${t.id}" data-status="resolved">Resolve</button>
+            <button class="btn btn--link" type="button" data-action="support-status" data-id="${t.id}" data-status="closed">Close</button>
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+async function loadSupportTickets() {
+  if (!els.supportTbody) return;
+  try {
+    const status = String(els.supportStatusFilter?.value || "").trim();
+    const { tickets } = await api.admin.listSupportTickets({ status, limit: 200 });
+    state.supportTickets = Array.isArray(tickets) ? tickets : [];
+    renderSupportTickets();
+    setStatus(els.supportStatusMsg, "");
+  } catch (err) {
+    console.error(err);
+    setStatus(els.supportStatusMsg, err.message || "Failed to load support tickets.", "error");
+  }
+}
+
+function renderSystemHealth() {
+  if (!els.healthSummary) return;
+  if (!state.systemHealth) {
+    els.healthSummary.innerHTML = `<p class="subtle">System health unavailable.</p>`;
+    return;
+  }
+  const h = state.systemHealth;
+  els.healthSummary.innerHTML = `
+    <div class="admin-health-item"><strong>Database</strong><span>${h.dbConnected ? "Connected" : "Down"}</span></div>
+    <div class="admin-health-item"><strong>Email Provider</strong><span>${escapeHtml(h.emailProvider || "unknown")}</span></div>
+    <div class="admin-health-item"><strong>Failed Receipt Jobs</strong><span>${escapeHtml(String(h.failedReceiptJobs ?? 0))}</span></div>
+    <div class="admin-health-item"><strong>Queued/Running Jobs</strong><span>${escapeHtml(String(h.queuedOrRunningReceiptJobs ?? 0))}</span></div>
+    <div class="admin-health-item"><strong>Checked At</strong><span>${escapeHtml(formatDateTime(h.checkedAt))}</span></div>
+  `;
+}
+
+async function loadSystemHealth() {
+  if (!els.healthSummary) return;
+  try {
+    const { health } = await api.admin.getSystemHealth();
+    state.systemHealth = health || null;
+    renderSystemHealth();
+    setStatus(els.healthStatus, "");
+  } catch (err) {
+    console.error(err);
+    setStatus(els.healthStatus, err.message || "Failed to load system health.", "error");
+  }
+}
+
+function renderDataSafety() {
+  const data = state.dataSafety;
+  if (!data) return;
+  if (els.dataRetentionDaysInput) {
+    els.dataRetentionDaysInput.value = String(data.retentionDays || 365);
+  }
+  if (els.backupStatusInput) {
+    els.backupStatusInput.value = String(data.backupStatus || "unknown");
+  }
+}
+
+async function loadDataSafety() {
+  try {
+    const { dataSafety } = await api.admin.getDataSafety();
+    state.dataSafety = dataSafety || null;
+    renderDataSafety();
+    setStatus(els.dataSafetyStatus, "");
+  } catch (err) {
+    console.error(err);
+    setStatus(els.dataSafetyStatus, err.message || "Failed to load data safety.", "error");
+  }
+}
+
+async function saveDataSafety() {
+  try {
+    const retentionDays = Number(els.dataRetentionDaysInput?.value || 365);
+    const backupStatus = String(els.backupStatusInput?.value || "unknown");
+    const { dataSafety } = await api.admin.updateDataSafety({ retentionDays, backupStatus });
+    state.dataSafety = dataSafety || state.dataSafety;
+    renderDataSafety();
+    setStatus(els.dataSafetyStatus, "Data safety settings saved.", "ok");
+  } catch (err) {
+    console.error(err);
+    setStatus(els.dataSafetyStatus, err.message || "Failed to save data safety settings.", "error");
+  }
+}
+
+async function markBackupNow() {
+  try {
+    const { dataSafety } = await api.admin.updateDataSafety({ markBackupNow: true, backupStatus: "healthy" });
+    state.dataSafety = dataSafety || state.dataSafety;
+    renderDataSafety();
+    setStatus(els.dataSafetyStatus, "Backup timestamp updated.", "ok");
+  } catch (err) {
+    console.error(err);
+    setStatus(els.dataSafetyStatus, err.message || "Failed to update backup timestamp.", "error");
+  }
+}
+
+async function exportDataSafetySummary() {
+  try {
+    const { export: payload } = await api.admin.exportDataSafetySummary();
+    if (els.dataSafetyExportOutput) {
+      els.dataSafetyExportOutput.textContent = JSON.stringify(payload || {}, null, 2);
+    }
+    setStatus(els.dataSafetyStatus, "Summary export generated.", "ok");
+  } catch (err) {
+    console.error(err);
+    setStatus(els.dataSafetyStatus, err.message || "Failed to export data summary.", "error");
   }
 }
 
@@ -1258,6 +1547,65 @@ function bindEvents() {
       setNotificationsPanelCollapsed(!collapsed);
     });
   }
+  if (els.toggleAuditPanelCaret) {
+    els.toggleAuditPanelCaret.addEventListener("click", () => {
+      const collapsed = els.auditPanel?.classList.contains("is-collapsed");
+      setAuditPanelCollapsed(!collapsed);
+    });
+  }
+  if (els.toggleSupportPanelCaret) {
+    els.toggleSupportPanelCaret.addEventListener("click", () => {
+      const collapsed = els.supportPanel?.classList.contains("is-collapsed");
+      setSupportPanelCollapsed(!collapsed);
+    });
+  }
+  if (els.toggleSystemHealthPanelCaret) {
+    els.toggleSystemHealthPanelCaret.addEventListener("click", () => {
+      const collapsed = els.systemHealthPanel?.classList.contains("is-collapsed");
+      setSystemHealthPanelCollapsed(!collapsed);
+    });
+  }
+  if (els.toggleDataSafetyPanelCaret) {
+    els.toggleDataSafetyPanelCaret.addEventListener("click", () => {
+      const collapsed = els.dataSafetyPanel?.classList.contains("is-collapsed");
+      setDataSafetyPanelCollapsed(!collapsed);
+    });
+  }
+  if (els.notificationFilterApplyBtn) {
+    els.notificationFilterApplyBtn.addEventListener("click", loadNotificationHistory);
+  }
+  if (els.auditRefreshBtn) {
+    els.auditRefreshBtn.addEventListener("click", loadAuditLog);
+  }
+  if (els.auditQueryInput) {
+    els.auditQueryInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        loadAuditLog();
+      }
+    });
+  }
+  if (els.auditScopeInput) {
+    els.auditScopeInput.addEventListener("change", loadAuditLog);
+  }
+  if (els.supportRefreshBtn) {
+    els.supportRefreshBtn.addEventListener("click", loadSupportTickets);
+  }
+  if (els.supportStatusFilter) {
+    els.supportStatusFilter.addEventListener("change", loadSupportTickets);
+  }
+  if (els.healthRefreshBtn) {
+    els.healthRefreshBtn.addEventListener("click", loadSystemHealth);
+  }
+  if (els.saveDataSafetyBtn) {
+    els.saveDataSafetyBtn.addEventListener("click", saveDataSafety);
+  }
+  if (els.markBackupNowBtn) {
+    els.markBackupNowBtn.addEventListener("click", markBackupNow);
+  }
+  if (els.exportDataSummaryBtn) {
+    els.exportDataSummaryBtn.addEventListener("click", exportDataSafetySummary);
+  }
   if (els.addAchievementBtn) {
     els.addAchievementBtn.addEventListener("click", addAchievementFromInputs);
   }
@@ -1316,6 +1664,46 @@ function bindEvents() {
       const nextCatalog = state.settingsAchievements.filter((item) => item.key !== key);
       persistAchievementsCatalog(nextCatalog, "Achievement removed.");
     }
+    if (action === "edit-notification") {
+      const item = state.notificationsHistory.find((n) => n.id === id);
+      if (!item || !els.notificationEditor) return;
+      els.notificationEditor.innerHTML = String(item.message_html || item.message_text || "");
+      if (els.notificationTypeInput) {
+        els.notificationTypeInput.value = String(item.notification_type || "general");
+      }
+      state.editingNotificationId = String(item.id || "");
+      setStatus(els.notificationAdminStatus, "Editing existing notification. Click publish to update.");
+      setNotificationsPanelCollapsed(false);
+    }
+    if (action === "toggle-notification-active") {
+      const isActive = String(btn.dataset.active || "") === "true";
+      api.admin
+        .updateNotification(id, { isActive: !isActive })
+        .then(() => loadNotificationHistory())
+        .catch((err) => setStatus(els.notificationAdminStatus, err.message || "Failed to update notification", "error"));
+    }
+    if (action === "resend-notification") {
+      api.admin
+        .resendNotification(id)
+        .then((result) =>
+          setStatus(
+            els.notificationAdminStatus,
+            `Resend complete. Sent: ${result?.sent ?? 0}, Failed: ${result?.failed ?? 0}`,
+            "ok"
+          )
+        )
+        .catch((err) => setStatus(els.notificationAdminStatus, err.message || "Resend failed", "error"));
+    }
+    if (action === "support-status") {
+      const status = String(btn.dataset.status || "").trim();
+      api.admin
+        .updateSupportTicket(id, { status })
+        .then(() => {
+          setStatus(els.supportStatusMsg, "Ticket updated.", "ok");
+          loadSupportTickets();
+        })
+        .catch((err) => setStatus(els.supportStatusMsg, err.message || "Failed to update ticket", "error"));
+    }
   });
 }
 
@@ -1337,11 +1725,19 @@ async function init() {
   setStatus(els.budgetsStatus, "");
   setStatus(els.achievementStatus, "");
   setStatus(els.notificationAdminStatus, "");
+  setStatus(els.auditStatus, "");
+  setStatus(els.supportStatusMsg, "");
+  setStatus(els.healthStatus, "");
+  setStatus(els.dataSafetyStatus, "");
   updateRecordsContext();
   setUsersPanelCollapsed(true);
   setSettingsPanelCollapsed(true);
   setAchievementsPanelCollapsed(true);
   setNotificationsPanelCollapsed(true);
+  setAuditPanelCollapsed(true);
+  setSupportPanelCollapsed(true);
+  setSystemHealthPanelCollapsed(true);
+  setDataSafetyPanelCollapsed(true);
   syncAchievementTargetInput();
 
   await Promise.all([
@@ -1349,6 +1745,10 @@ async function init() {
     loadUserOptions(),
     loadSettings(),
     loadNotificationHistory(),
+    loadAuditLog(),
+    loadSupportTickets(),
+    loadSystemHealth(),
+    loadDataSafety(),
     loadUsers({ resetPage: true, evaluateSelection: false }),
   ]);
 }

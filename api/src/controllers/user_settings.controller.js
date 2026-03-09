@@ -3,6 +3,7 @@ import {
   getUserNotificationSettings,
   updateUserNotificationSettings,
 } from "../models/user.model.js";
+import { logActivity } from "../services/activity.service.js";
 
 export const getMine = asyncHandler(async (req, res) => {
   const settings = await getUserNotificationSettings(req.user.id);
@@ -25,9 +26,20 @@ export const updateMine = asyncHandler(async (req, res) => {
     notificationSmsEnabled: hasSms ? Boolean(notifications.sms) : null,
   });
 
+  await logActivity({
+    userId: req.user.id,
+    action: "user_notification_settings_update",
+    entityType: "user",
+    entityId: req.user.id,
+    metadata: {
+      notifEmail: Boolean(updated?.notification_email_enabled),
+      notifSMS: Boolean(updated?.notification_sms_enabled),
+    },
+    req,
+  });
+
   res.json({
     notifEmail: Boolean(updated?.notification_email_enabled),
     notifSMS: Boolean(updated?.notification_sms_enabled),
   });
 });
-

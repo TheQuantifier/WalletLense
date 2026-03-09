@@ -663,10 +663,66 @@ export const admin = {
     return request("/admin/notifications");
   },
 
+  listNotificationsFiltered(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return request(`/admin/notifications${query ? `?${query}` : ""}`);
+  },
+
   createNotification(payload) {
     return request("/admin/notifications", {
       method: "POST",
       body: JSON.stringify(payload),
+    });
+  },
+
+  updateNotification(id, payload) {
+    return request(`/admin/notifications/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload || {}),
+    });
+  },
+
+  resendNotification(id) {
+    return request(`/admin/notifications/${id}/resend`, {
+      method: "POST",
+    });
+  },
+
+  getAuditLog(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return request(`/admin/audit-log${query ? `?${query}` : ""}`);
+  },
+
+  listSupportTickets(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return request(`/admin/support-tickets${query ? `?${query}` : ""}`);
+  },
+
+  updateSupportTicket(id, payload) {
+    return request(`/admin/support-tickets/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload || {}),
+    });
+  },
+
+  getSystemHealth() {
+    return request("/admin/system-health");
+  },
+
+  getDataSafety() {
+    return request("/admin/data-safety");
+  },
+
+  updateDataSafety(payload) {
+    return request("/admin/data-safety", {
+      method: "PUT",
+      body: JSON.stringify(payload || {}),
+    });
+  },
+
+  exportDataSafetySummary() {
+    return request("/admin/data-safety/export", {
+      method: "POST",
     });
   },
 };

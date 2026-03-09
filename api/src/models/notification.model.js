@@ -29,8 +29,25 @@ export async function createNotification({
   return rows[0] || null;
 }
 
-export async function listNotificationHistory(limit = 100) {
+export async function listNotificationHistory({
+  limit = 100,
+  notificationType = "",
+  isActive = null,
+} = {}) {
   const safeLimit = Math.max(1, Math.min(500, Number(limit) || 100));
+  const params = [];
+  const where = [];
+  let i = 1;
+  if (notificationType) {
+    where.push(`n.notification_type = $${i++}`);
+    params.push(notificationType);
+  }
+  if (typeof isActive === "boolean") {
+    where.push(`n.is_active = $${i++}`);
+    params.push(isActive);
+  }
+  params.push(safeLimit);
+
   const { rows } = await query(
     `
     SELECT
@@ -44,12 +61,60 @@ export async function listNotificationHistory(limit = 100) {
       u.username as created_by_username
     FROM notifications n
     LEFT JOIN users u ON u.id = n.created_by
+    ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
     ORDER BY n.created_at DESC
-    LIMIT $1
+    LIMIT $${i++}
     `,
-    [safeLimit]
+    params
   );
   return rows || [];
+}
+
+export async function getNotificationById(id) {
+  const { rows } = await query(
+    `
+    SELECT
+      id,
+      message_html,
+      message_text,
+      notification_type,
+      is_active,
+      created_by,
+      created_at
+    FROM notifications
+    WHERE id = $1
+    LIMIT 1
+    `,
+    [id]
+  );
+  return rows[0] || null;
+}
+
+export async function updateNotificationById(
+  id,
+  { messageHtml = null, messageText = null, notificationType = null, isActive = null } = {}
+) {
+  const { rows } = await query(
+    `
+    UPDATE notifications
+    SET
+      message_html = COALESCE($1, message_html),
+      message_text = COALESCE($2, message_text),
+      notification_type = COALESCE($3, notification_type),
+      is_active = COALESCE($4, is_active)
+    WHERE id = $5
+    RETURNING
+      id,
+      message_html,
+      message_text,
+      notification_type,
+      is_active,
+      created_by,
+      created_at
+    `,
+    [messageHtml, messageText, notificationType, isActive, id]
+  );
+  return rows[0] || null;
 }
 
 export async function listActiveNotificationsForUser(userId, limit = 20) {

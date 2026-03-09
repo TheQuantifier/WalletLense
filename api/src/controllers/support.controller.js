@@ -2,6 +2,8 @@
 import asyncHandler from "../middleware/async.js";
 import { sendEmail } from "../services/email.service.js";
 import env from "../config/env.js";
+import { createSupportTicket } from "../models/support_ticket.model.js";
+import { logActivity } from "../services/activity.service.js";
 
 const SUPPORT_EMAIL =
   process.env.SUPPORT_EMAIL || "support.wisewallet@manuswebworks.org";
@@ -94,6 +96,15 @@ export const contactSupport = asyncHandler(async (req, res) => {
     });
   }
 
+  const ticket = await createSupportTicket({
+    source: "authenticated",
+    userId: req.user?.id || null,
+    name,
+    email,
+    subject,
+    message,
+  });
+
   const metaLines = [
     name ? `Name: ${name}` : null,
     email ? `Email: ${email}` : null,
@@ -126,7 +137,19 @@ export const contactSupport = asyncHandler(async (req, res) => {
     from,
   });
 
-  res.json({ ok: true });
+  await logActivity({
+    userId: req.user.id,
+    action: "support_contact_authenticated",
+    entityType: "support_ticket",
+    entityId: ticket?.id || null,
+    metadata: {
+      subject,
+      source: "authenticated",
+    },
+    req,
+  });
+
+  res.json({ ok: true, ticketId: ticket?.id || null });
 });
 
 export const contactSupportPublic = asyncHandler(async (req, res) => {
@@ -140,6 +163,15 @@ export const contactSupportPublic = asyncHandler(async (req, res) => {
   if (!captcha.ok) {
     return res.status(400).json({ message: captcha.message });
   }
+
+  const ticket = await createSupportTicket({
+    source: "public",
+    userId: null,
+    name,
+    email,
+    subject,
+    message,
+  });
 
   const metaLines = [
     `Name: ${name}`,
@@ -171,5 +203,5 @@ export const contactSupportPublic = asyncHandler(async (req, res) => {
     from,
   });
 
-  res.json({ ok: true });
+  res.json({ ok: true, ticketId: ticket?.id || null });
 });

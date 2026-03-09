@@ -30,13 +30,32 @@ export const getAdmin = asyncHandler(async (_req, res) => {
 });
 
 export const updateAdmin = asyncHandler(async (req, res) => {
-  const { appName, receiptKeepFiles, sessionTimeoutMinutes, achievementsCatalog } = req.body;
+  const {
+    appName,
+    receiptKeepFiles,
+    sessionTimeoutMinutes,
+    achievementsCatalog,
+    dataRetentionDays,
+    backupStatus,
+    lastBackupAt,
+  } = req.body;
   const hasAppName = appName !== undefined;
   const hasReceiptKeepFiles = receiptKeepFiles !== undefined;
   const hasSessionTimeoutMinutes = sessionTimeoutMinutes !== undefined;
   const hasAchievementsCatalog = achievementsCatalog !== undefined;
+  const hasDataRetentionDays = dataRetentionDays !== undefined;
+  const hasBackupStatus = backupStatus !== undefined;
+  const hasLastBackupAt = lastBackupAt !== undefined;
 
-  if (!hasAppName && !hasReceiptKeepFiles && !hasSessionTimeoutMinutes && !hasAchievementsCatalog) {
+  if (
+    !hasAppName &&
+    !hasReceiptKeepFiles &&
+    !hasSessionTimeoutMinutes &&
+    !hasAchievementsCatalog &&
+    !hasDataRetentionDays &&
+    !hasBackupStatus &&
+    !hasLastBackupAt
+  ) {
     return res.status(400).json({ message: "At least one setting is required" });
   }
 
@@ -52,6 +71,27 @@ export const updateAdmin = asyncHandler(async (req, res) => {
     const timeout = Number(sessionTimeoutMinutes);
     if (!Number.isFinite(timeout) || timeout < 1 || timeout > 60 || !Number.isInteger(timeout)) {
       return res.status(400).json({ message: "sessionTimeoutMinutes must be an integer between 1 and 60" });
+    }
+  }
+
+  if (hasDataRetentionDays) {
+    const days = Number(dataRetentionDays);
+    if (!Number.isInteger(days) || days < 30 || days > 3650) {
+      return res.status(400).json({ message: "dataRetentionDays must be an integer between 30 and 3650" });
+    }
+  }
+
+  if (hasBackupStatus) {
+    const safeStatus = String(backupStatus).trim().toLowerCase();
+    if (!["unknown", "healthy", "warning", "failed"].includes(safeStatus)) {
+      return res.status(400).json({ message: "backupStatus must be one of unknown, healthy, warning, failed" });
+    }
+  }
+
+  if (hasLastBackupAt) {
+    const parsed = new Date(String(lastBackupAt));
+    if (Number.isNaN(parsed.getTime())) {
+      return res.status(400).json({ message: "lastBackupAt must be a valid datetime string" });
     }
   }
 
@@ -75,12 +115,21 @@ export const updateAdmin = asyncHandler(async (req, res) => {
     await replaceAchievementsCatalog(normalizedCatalog, req.user.id);
   }
 
-  const needsAppSettingsUpdate = hasAppName || hasReceiptKeepFiles || hasSessionTimeoutMinutes;
+  const needsAppSettingsUpdate =
+    hasAppName ||
+    hasReceiptKeepFiles ||
+    hasSessionTimeoutMinutes ||
+    hasDataRetentionDays ||
+    hasBackupStatus ||
+    hasLastBackupAt;
   const updated = needsAppSettingsUpdate
     ? await updateAppSettings({
         appName: hasAppName ? String(appName).trim() : null,
         receiptKeepFiles: hasReceiptKeepFiles ? receiptKeepFiles : null,
         sessionTimeoutMinutes: hasSessionTimeoutMinutes ? Number(sessionTimeoutMinutes) : null,
+        dataRetentionDays: hasDataRetentionDays ? Number(dataRetentionDays) : null,
+        backupStatus: hasBackupStatus ? String(backupStatus).trim().toLowerCase() : null,
+        lastBackupAt: hasLastBackupAt ? new Date(String(lastBackupAt)).toISOString() : null,
         updatedBy: req.user.id,
       })
     : await getAppSettings();
@@ -100,6 +149,9 @@ export const updateAdmin = asyncHandler(async (req, res) => {
       appName: updated?.app_name,
       receiptKeepFiles: updated?.receipt_keep_files,
       sessionTimeoutMinutes: updated?.session_timeout_minutes,
+      dataRetentionDays: updated?.data_retention_days,
+      backupStatus: updated?.backup_status,
+      lastBackupAt: updated?.last_backup_at,
       achievementsCatalogCount: Array.isArray(achievementsCatalogSanitized)
         ? achievementsCatalogSanitized.length
         : null,

@@ -9,6 +9,9 @@ export async function getAppSettings() {
       app_name,
       receipt_keep_files,
       session_timeout_minutes,
+      data_retention_days,
+      backup_status,
+      last_backup_at,
       updated_by,
       created_at,
       updated_at
@@ -24,6 +27,9 @@ export async function updateAppSettings({
   appName,
   receiptKeepFiles,
   sessionTimeoutMinutes,
+  dataRetentionDays,
+  backupStatus,
+  lastBackupAt,
   updatedBy,
 }) {
   const { rows } = await query(
@@ -32,17 +38,33 @@ export async function updateAppSettings({
     SET app_name = COALESCE($1, app_name),
         receipt_keep_files = COALESCE($2, receipt_keep_files),
         session_timeout_minutes = COALESCE($3, session_timeout_minutes),
-        updated_by = $4,
+        data_retention_days = COALESCE($4, data_retention_days),
+        backup_status = COALESCE($5, backup_status),
+        last_backup_at = COALESCE($6, last_backup_at),
+        updated_by = $7,
         updated_at = now()
     WHERE id = (
       SELECT id FROM app_settings ORDER BY created_at ASC LIMIT 1
     )
-    RETURNING id, app_name, receipt_keep_files, session_timeout_minutes, updated_by, created_at, updated_at
+    RETURNING
+      id,
+      app_name,
+      receipt_keep_files,
+      session_timeout_minutes,
+      data_retention_days,
+      backup_status,
+      last_backup_at,
+      updated_by,
+      created_at,
+      updated_at
     `,
     [
       appName ?? null,
       receiptKeepFiles ?? null,
       sessionTimeoutMinutes ?? null,
+      dataRetentionDays ?? null,
+      backupStatus ?? null,
+      lastBackupAt ?? null,
       updatedBy || null,
     ]
   );
