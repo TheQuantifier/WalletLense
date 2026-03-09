@@ -25,6 +25,14 @@ function stripHtmlToText(html) {
     .trim();
 }
 
+function normalizeNotificationType(rawType) {
+  const value = String(rawType || "general").trim().toLowerCase();
+  if (value === "security" || value === "general" || value === "updates") {
+    return value;
+  }
+  return "";
+}
+
 export const getMine = asyncHandler(async (req, res) => {
   const notifications = await listActiveNotificationsForUser(req.user.id, 20);
   res.json({ notifications });
@@ -46,15 +54,22 @@ export const listAdmin = asyncHandler(async (_req, res) => {
 
 export const createAdmin = asyncHandler(async (req, res) => {
   const rawHtml = String(req.body?.messageHtml || "").trim();
+  const notificationType = normalizeNotificationType(req.body?.notificationType);
   const html = sanitizeNotificationHtml(rawHtml);
   const text = stripHtmlToText(html);
   if (!html || !text) {
     return res.status(400).json({ message: "Notification text is required" });
   }
+  if (!notificationType) {
+    return res
+      .status(400)
+      .json({ message: "notificationType must be one of: security, general, updates" });
+  }
 
   const notification = await createNotification({
     messageHtml: html,
     messageText: text,
+    notificationType,
     createdBy: req.user.id,
   });
   res.status(201).json({

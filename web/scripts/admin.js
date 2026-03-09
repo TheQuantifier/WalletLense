@@ -59,6 +59,7 @@ const els = {
   adminAchievementsList: document.getElementById("adminAchievementsList"),
   achievementStatus: document.getElementById("achievementStatus"),
   notificationEditor: document.getElementById("notificationEditor"),
+  notificationTypeInput: document.getElementById("notificationTypeInput"),
   publishNotificationBtn: document.getElementById("publishNotificationBtn"),
   notificationHistoryList: document.getElementById("notificationHistoryList"),
   notificationAdminStatus: document.getElementById("notificationAdminStatus"),
@@ -659,9 +660,10 @@ function renderNotificationHistory() {
       const content = html || fallback;
       const creator = escapeHtml(String(item.created_by_username || "admin"));
       const createdAt = escapeHtml(formatDateTime(item.created_at));
+      const type = escapeHtml(String(item.notification_type || "general"));
       return `
         <article class="admin-notification-item">
-          <div class="admin-notification-meta">${createdAt} • by ${creator}</div>
+          <div class="admin-notification-meta">${createdAt} • ${type} • by ${creator}</div>
           <p>${content}</p>
         </article>
       `;
@@ -684,8 +686,13 @@ async function loadNotificationHistory() {
 async function publishNotificationFromEditor() {
   const html = String(els.notificationEditor?.innerHTML || "").trim();
   const text = extractNotificationTextFromHtml(html);
+  const notificationType = String(els.notificationTypeInput?.value || "general").trim().toLowerCase();
   if (!text) {
     setStatus(els.notificationAdminStatus, "Notification text is required.", "error");
+    return;
+  }
+  if (!["security", "general", "updates"].includes(notificationType)) {
+    setStatus(els.notificationAdminStatus, "Notification type is invalid.", "error");
     return;
   }
 
@@ -694,9 +701,12 @@ async function publishNotificationFromEditor() {
   }
   setStatus(els.notificationAdminStatus, "Publishing notification...");
   try {
-    await api.admin.createNotification({ messageHtml: html });
+    await api.admin.createNotification({ messageHtml: html, notificationType });
     if (els.notificationEditor) {
       els.notificationEditor.innerHTML = "";
+    }
+    if (els.notificationTypeInput) {
+      els.notificationTypeInput.value = "general";
     }
     await loadNotificationHistory();
     setStatus(els.notificationAdminStatus, "Notification published.", "ok");

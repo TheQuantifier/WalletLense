@@ -1,17 +1,30 @@
 import { query } from "../config/db.js";
 
-export async function createNotification({ messageHtml, messageText, createdBy }) {
+export async function createNotification({
+  messageHtml,
+  messageText,
+  notificationType = "general",
+  createdBy,
+}) {
   const { rows } = await query(
     `
     INSERT INTO notifications (
       message_html,
       message_text,
+      notification_type,
       created_by
     )
-    VALUES ($1, $2, $3)
-    RETURNING id, message_html, message_text, is_active, created_by, created_at
+    VALUES ($1, $2, $3, $4)
+    RETURNING
+      id,
+      message_html,
+      message_text,
+      notification_type,
+      is_active,
+      created_by,
+      created_at
     `,
-    [messageHtml, messageText, createdBy || null]
+    [messageHtml, messageText, notificationType, createdBy || null]
   );
   return rows[0] || null;
 }
@@ -24,6 +37,7 @@ export async function listNotificationHistory(limit = 100) {
       n.id,
       n.message_html,
       n.message_text,
+      n.notification_type,
       n.is_active,
       n.created_by,
       n.created_at,
@@ -46,6 +60,7 @@ export async function listActiveNotificationsForUser(userId, limit = 20) {
       n.id,
       n.message_html,
       n.message_text,
+      n.notification_type,
       n.created_at
     FROM notifications n
     LEFT JOIN user_notification_dismissals d
@@ -83,6 +98,7 @@ export async function listPendingWeeklyNotificationsForUser(userId, limit = 100)
       n.id,
       n.message_html,
       n.message_text,
+      n.notification_type,
       n.created_at
     FROM notifications n
     LEFT JOIN user_notification_dismissals d

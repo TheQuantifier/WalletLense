@@ -368,6 +368,22 @@
   min-width: auto;
 }
 
+.admin-notification-toolbar-type {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.admin-notification-toolbar-type span {
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.admin-notification-toolbar-type select {
+  min-width: 130px;
+}
+
 .admin-notification-input {
   min-height: 150px;
   border: 1px solid var(--border);

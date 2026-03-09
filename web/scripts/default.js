@@ -538,10 +538,13 @@ function showNextNotificationToast() {
   }
   notificationToastShowing = true;
   notificationToastCurrentId = String(next.id || "");
+  const notificationType = String(
+    next?.notification_type || next?.type || next?.kind || next?.category || "general"
+  )
+    .toLowerCase()
+    .trim();
   const isSecurity =
-    String(next?.type || "").toLowerCase() === "security" ||
-    String(next?.kind || "").toLowerCase() === "security" ||
-    String(next?.category || "").toLowerCase() === "security";
+    notificationType === "security";
 
   const host = ensureNotificationUiHost();
   const toast = document.createElement("article");
@@ -560,7 +563,11 @@ function showNextNotificationToast() {
   body.className = "notification-toast-body";
   const title = document.createElement("p");
   title.className = "notification-toast-title";
-  title.textContent = isSecurity ? "Security Alert" : "Notification";
+  if (notificationType === "updates") {
+    title.textContent = "Update";
+  } else {
+    title.textContent = isSecurity ? "Security Alert" : "Notification";
+  }
   const textWrap = document.createElement("div");
   textWrap.className = "notification-toast-text";
   textWrap.innerHTML = String(next.message_html || next.message_text || "");
