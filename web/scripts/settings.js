@@ -281,6 +281,23 @@ import { api } from "./api.js";
     updateThemeButtonLabel();
   };
 
+  const loadNotificationPrefsFromBackend = async () => {
+    if (!api?.settings?.get) return;
+    try {
+      const data = await api.settings.get();
+      const notifEmail = Boolean(data?.notifEmail);
+      const notifSMS = Boolean(data?.notifSMS);
+
+      localStorage.setItem("settings_notif_email", String(notifEmail));
+      localStorage.setItem("settings_notif_sms", String(notifSMS));
+
+      if (els.notifEmail) els.notifEmail.checked = notifEmail;
+      if (els.notifSms) els.notifSms.checked = notifSMS;
+    } catch (err) {
+      console.warn("Failed to load notification preferences from backend:", err);
+    }
+  };
+
   const saveSettings = async () => {
     if (els.save) {
       els.save.disabled = true;
@@ -303,19 +320,23 @@ import { api } from "./api.js";
       if (els.dashboardView) localStorage.setItem("defaultDashboardView", els.dashboardView.value);
 
       // Optional backend persistence if your API supports it (guarded)
+      const notificationsPayload = {};
+      if (els.notifEmail) notificationsPayload.email = els.notifEmail.checked;
+      if (els.notifSms) notificationsPayload.sms = els.notifSms.checked;
+
       const payload = {
         currency: els.currency?.value,
         numberFormat: els.numberFormat?.value,
         timezone: els.timezone?.value,
         language: els.language?.value,
         dashboardView: els.dashboardView?.value,
-        notifications: {
-          email: els.notifEmail?.checked,
-          sms: els.notifSms?.checked,
-        },
       };
 
-      if (api?.settings?.save) {
+      if (Object.keys(notificationsPayload).length) {
+        payload.notifications = notificationsPayload;
+      }
+
+      if (api?.settings?.save && payload.notifications) {
         await api.settings.save(payload);
       }
 
@@ -854,6 +875,7 @@ import { api } from "./api.js";
     await loadGoogleAvailability();
     const user = await updateTwoFaUI();
     updateGoogleConnectUI(user);
+    await loadNotificationPrefsFromBackend();
     loadSessions();
     wire();
 

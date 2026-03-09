@@ -10,9 +10,11 @@ import activityRoutes from "./activity.routes.js";
 import supportRoutes from "./support.routes.js";
 import adminRoutes from "./admin.routes.js";
 import appSettingsRoutes from "./app_settings.routes.js";
+import settingsRoutes from "./settings.routes.js";
 import walterlensRoutes from "./walterlens.routes.js";
 import netWorthRoutes from "./net_worth.routes.js";
 import achievementsRoutes from "./achievements.routes.js";
+import notificationsRoutes from "./notifications.routes.js";
 
 const router = express.Router();
 
@@ -25,8 +27,10 @@ router.use("/activity", activityRoutes);
 router.use("/support", supportRoutes);
 router.use("/admin", adminRoutes);
 router.use("/app-settings", appSettingsRoutes);
+router.use("/settings", settingsRoutes);
 router.use("/walterlens", walterlensRoutes);
 router.use("/net-worth", netWorthRoutes);
 router.use("/achievements", achievementsRoutes);
+router.use("/notifications", notificationsRoutes);
 
 export default router;

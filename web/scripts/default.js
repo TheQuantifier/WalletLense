@@ -22,6 +22,7 @@ const APP_NAME_TEST = /<AppName>/;
 const ACHIEVEMENT_SEEN_KEY = "seen_achievement_keys_v1";
 const ACHIEVEMENT_POLL_MS = 20000;
 const ACHIEVEMENT_CHECK_EVENT = "achievements:check";
+const NOTIFICATION_POLL_MS = 20000;
 const SESSION_TIMEOUT_MINUTES_KEY = "sessionTimeoutMinutes";
 const DEFAULT_SESSION_TIMEOUT_MINUTES = 15;
 const MAX_SESSION_TIMEOUT_MINUTES = 60;
@@ -32,6 +33,10 @@ const TIMEOUT_PAGE = "timeout.html";
 let achievementMonitorStarted = false;
 let achievementToastQueue = [];
 let achievementToastShowing = false;
+let notificationMonitorStarted = false;
+let notificationToastQueue = [];
+let notificationToastShowing = false;
+let notificationToastCurrentId = "";
 let inactivityMonitorStarted = false;
 let inactivityTimedOut = false;
 
@@ -110,6 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
   updateAppName();
   initWalterLens();
   initAchievementCelebrations();
+  initNotifications();
   initInactivityTimeoutMonitor();
 });
 
@@ -499,6 +505,108 @@ function initAchievementCelebrations() {
     if (!document.hidden) checkForNewAchievements();
   });
   window.addEventListener(ACHIEVEMENT_CHECK_EVENT, checkForNewAchievements);
+}
+
+function ensureNotificationUiHost() {
+  let host = document.getElementById("notificationToastHost");
+  if (!host) {
+    host = document.createElement("div");
+    host.id = "notificationToastHost";
+    host.className = "notification-toast-host";
+    document.body.appendChild(host);
+  }
+  return host;
+}
+
+function enqueueNotificationToast(item) {
+  const id = String(item?.id || "");
+  if (!id) return;
+  if (notificationToastCurrentId === id) return;
+  if (notificationToastQueue.some((q) => String(q?.id || "") === id)) return;
+  notificationToastQueue.push(item);
+  if (!notificationToastShowing) {
+    showNextNotificationToast();
+  }
+}
+
+function showNextNotificationToast() {
+  const next = notificationToastQueue.shift();
+  if (!next) {
+    notificationToastShowing = false;
+    notificationToastCurrentId = "";
+    return;
+  }
+  notificationToastShowing = true;
+  notificationToastCurrentId = String(next.id || "");
+  const isSecurity =
+    String(next?.type || "").toLowerCase() === "security" ||
+    String(next?.kind || "").toLowerCase() === "security" ||
+    String(next?.category || "").toLowerCase() === "security";
+
+  const host = ensureNotificationUiHost();
+  const toast = document.createElement("article");
+  toast.className = "notification-toast show";
+  if (isSecurity) {
+    toast.classList.add("notification-toast--security");
+  }
+
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "notification-toast-close";
+  closeBtn.setAttribute("aria-label", "Dismiss notification");
+  closeBtn.textContent = "X";
+
+  const body = document.createElement("div");
+  body.className = "notification-toast-body";
+  const title = document.createElement("p");
+  title.className = "notification-toast-title";
+  title.textContent = isSecurity ? "Security Alert" : "Notification";
+  const textWrap = document.createElement("div");
+  textWrap.className = "notification-toast-text";
+  textWrap.innerHTML = String(next.message_html || next.message_text || "");
+
+  body.appendChild(title);
+  body.appendChild(textWrap);
+  toast.appendChild(closeBtn);
+  toast.appendChild(body);
+  host.appendChild(toast);
+
+  closeBtn.addEventListener("click", async () => {
+    closeBtn.disabled = true;
+    try {
+      if (next.id) {
+        await api.notifications.dismiss(next.id);
+      }
+    } catch {
+      // ignore; still close locally to avoid blocking queue
+    } finally {
+      toast.remove();
+      notificationToastCurrentId = "";
+      showNextNotificationToast();
+    }
+  });
+}
+
+async function checkForNotifications() {
+  if (isPublicPage()) return;
+  try {
+    const data = await api.notifications.getActive();
+    const list = Array.isArray(data?.notifications) ? data.notifications : [];
+    list.forEach((item) => enqueueNotificationToast(item));
+  } catch {
+    // ignore if auth is not ready
+  }
+}
+
+function initNotifications() {
+  if (notificationMonitorStarted) return;
+  notificationMonitorStarted = true;
+  checkForNotifications();
+  window.setInterval(checkForNotifications, NOTIFICATION_POLL_MS);
+  window.addEventListener("focus", checkForNotifications);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) checkForNotifications();
+  });
 }
 
 

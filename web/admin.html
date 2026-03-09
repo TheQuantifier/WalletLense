@@ -369,6 +369,59 @@
           <p id="achievementStatus" class="status-banner subtle is-hidden" aria-live="polite"></p>
         </div>
       </section>
+
+      <section class="card admin-panel is-collapsed" id="notificationsPanel">
+        <div class="admin-panel-header">
+          <div class="admin-panel-title">
+            <button
+              class="admin-caret-toggle"
+              id="toggleNotificationsPanelCaret"
+              type="button"
+              aria-expanded="false"
+              aria-controls="notificationsPanelBody"
+              aria-label="Expand Notifications section"
+            >
+              >
+            </button>
+            <div>
+              <h2>Notifications</h2>
+              <p class="subtle">Create rich-text notifications shown to users at the top bar until dismissed.</p>
+            </div>
+          </div>
+        </div>
+        <div id="notificationsPanelBody">
+          <div class="admin-notification-editor card">
+            <div class="admin-notification-toolbar" role="toolbar" aria-label="Notification formatting controls">
+              <button class="btn btn--link" type="button" data-notification-cmd="bold"><strong>B</strong></button>
+              <button class="btn btn--link" type="button" data-notification-cmd="italic"><em>I</em></button>
+              <button class="btn btn--link" type="button" data-notification-cmd="underline"><u>U</u></button>
+              <button class="btn btn--link" type="button" data-notification-cmd="insertUnorderedList">• List</button>
+              <button class="btn btn--link" type="button" data-notification-cmd="insertOrderedList">1. List</button>
+              <button class="btn btn--link" type="button" data-notification-cmd="createLink">Link</button>
+              <button class="btn btn--link" type="button" data-notification-cmd="removeFormat">Clear</button>
+            </div>
+            <div
+              id="notificationEditor"
+              class="admin-notification-input"
+              contenteditable="true"
+              role="textbox"
+              aria-multiline="true"
+              data-placeholder="Write notification text here..."
+            ></div>
+            <div class="admin-actions">
+              <button class="btn btn--primary" id="publishNotificationBtn" type="button">Publish Notification</button>
+            </div>
+            <p id="notificationAdminStatus" class="status-banner subtle is-hidden" aria-live="polite"></p>
+          </div>
+
+          <section class="admin-notification-history-wrap">
+            <h3>Notification History</h3>
+            <div id="notificationHistoryList" class="admin-notification-history">
+              <p class="subtle">Loading notifications…</p>
+            </div>
+          </section>
+        </div>
+      </section>
     </section>
   </main>
 

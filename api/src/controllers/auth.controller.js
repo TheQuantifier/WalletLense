@@ -61,6 +61,15 @@ function generateSixDigitCode() {
   return String(n).padStart(6, "0");
 }
 
+async function sendSecurityNoticeEmail({ to, subject, text }) {
+  if (!to) return;
+  try {
+    await sendEmail({ to, subject, text });
+  } catch (err) {
+    console.error("Failed to send security notice email:", err);
+  }
+}
+
 function setTokenCookie(res, token) {
   const isProd = env.nodeEnv === "production";
 
@@ -799,6 +808,13 @@ export const changePassword = asyncHandler(async (req, res) => {
     entityId: userId,
     req,
   });
+
+  await sendSecurityNoticeEmail({
+    to: safeUser?.email || user?.email,
+    subject: "Your <AppName> password was changed",
+    text: "Your password was successfully changed. If you did not do this, contact support immediately.",
+  });
+
   res.json({
     message: "Password updated successfully",
     user: safeUser,
@@ -890,6 +906,12 @@ export const confirmTwoFaEnable = asyncHandler(async (req, res) => {
 
   await deleteTwoFaCodeById(match.id);
   const updated = await setTwoFaEnabled(req.user.id, true);
+
+  await sendSecurityNoticeEmail({
+    to: updated?.email,
+    subject: "<AppName> two-factor authentication enabled",
+    text: "Two-factor authentication was enabled on your account. If this was not you, contact support immediately.",
+  });
 
   res.json({ message: "Two-factor authentication enabled", user: updated });
 });

@@ -49,6 +49,10 @@ const env = {
 
   autoRunMigrations: boolFromEnv(process.env.AUTO_RUN_MIGRATIONS, false),
   runReceiptWorkerInApi: boolFromEnv(process.env.RUN_RECEIPT_WORKER_IN_API, true),
+  runWeeklyNotificationWorkerInApi: boolFromEnv(
+    process.env.RUN_WEEKLY_NOTIFICATION_WORKER_IN_API,
+    true
+  ),
 
   // OCR
   ocrEnabled: boolFromEnv(process.env.OCR_ENABLED, true),

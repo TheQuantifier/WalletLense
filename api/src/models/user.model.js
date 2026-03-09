@@ -233,6 +233,58 @@ export async function deleteUserById(id) {
   return rows[0] || null;
 }
 
+export async function getUserNotificationSettings(userId) {
+  const { rows } = await query(
+    `
+    SELECT
+      notification_email_enabled,
+      notification_sms_enabled
+    FROM users
+    WHERE id = $1
+    LIMIT 1
+    `,
+    [userId]
+  );
+  return rows[0] || null;
+}
+
+export async function updateUserNotificationSettings(
+  userId,
+  { notificationEmailEnabled = null, notificationSmsEnabled = null } = {}
+) {
+  const { rows } = await query(
+    `
+    UPDATE users
+    SET
+      notification_email_enabled = COALESCE($1, notification_email_enabled),
+      notification_sms_enabled = COALESCE($2, notification_sms_enabled),
+      updated_at = now()
+    WHERE id = $3
+    RETURNING
+      notification_email_enabled,
+      notification_sms_enabled
+    `,
+    [notificationEmailEnabled, notificationSmsEnabled, userId]
+  );
+  return rows[0] || null;
+}
+
+export async function listUsersWithNotificationEmailEnabled() {
+  const { rows } = await query(
+    `
+    SELECT
+      id,
+      email,
+      full_name
+    FROM users
+    WHERE notification_email_enabled = true
+      AND email IS NOT NULL
+      AND trim(email) <> ''
+    `
+  );
+  return rows || [];
+}
+
 export async function listUsers({ limit = 50, offset = 0, queryText = "" } = {}) {
   const params = [];
   const where = [];

@@ -20,6 +20,10 @@ import {
   getAdmin as getAppSettingsAdmin,
   updateAdmin as updateAppSettingsAdmin,
 } from "../controllers/app_settings.controller.js";
+import {
+  createAdmin as createNotificationAdmin,
+  listAdmin as listNotificationsAdmin,
+} from "../controllers/notifications.controller.js";
 
 const router = express.Router();
 
@@ -49,5 +53,9 @@ router.get("/budget-sheets", listBudgetSheetsAdminController);
 // App settings
 router.get("/settings", getAppSettingsAdmin);
 router.put("/settings", updateAppSettingsAdmin);
+
+// Notifications
+router.get("/notifications", listNotificationsAdmin);
+router.post("/notifications", createNotificationAdmin);
 
 export default router;

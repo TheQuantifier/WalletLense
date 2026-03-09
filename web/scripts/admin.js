@@ -22,6 +22,9 @@ const els = {
   achievementsPanel: document.getElementById("achievementsPanel"),
   achievementsPanelBody: document.getElementById("achievementsPanelBody"),
   toggleAchievementsPanelCaret: document.getElementById("toggleAchievementsPanelCaret"),
+  notificationsPanel: document.getElementById("notificationsPanel"),
+  notificationsPanelBody: document.getElementById("notificationsPanelBody"),
+  toggleNotificationsPanelCaret: document.getElementById("toggleNotificationsPanelCaret"),
 
   recordsTbody: document.getElementById("recordsTbody"),
   recordsStatus: document.getElementById("recordsStatus"),
@@ -55,6 +58,10 @@ const els = {
   addAchievementBtn: document.getElementById("addAchievementBtn"),
   adminAchievementsList: document.getElementById("adminAchievementsList"),
   achievementStatus: document.getElementById("achievementStatus"),
+  notificationEditor: document.getElementById("notificationEditor"),
+  publishNotificationBtn: document.getElementById("publishNotificationBtn"),
+  notificationHistoryList: document.getElementById("notificationHistoryList"),
+  notificationAdminStatus: document.getElementById("notificationAdminStatus"),
   settingsStatus: document.getElementById("settingsStatus"),
 
   userModal: document.getElementById("adminUserModal"),
@@ -90,6 +97,7 @@ const state = {
   receipts: [],
   budgetSheets: [],
   settingsAchievements: [],
+  notificationsHistory: [],
   sorts: {
     users: { key: "", dir: "" },
     records: { key: "", dir: "" },
@@ -182,6 +190,13 @@ function formatDate(value) {
   return dt.toISOString().slice(0, 10);
 }
 
+function formatDateTime(value) {
+  if (!value) return "—";
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return "—";
+  return dt.toLocaleString();
+}
+
 function normalizeText(value) {
   return String(value || "").toLowerCase().trim();
 }
@@ -244,6 +259,22 @@ function setSettingsPanelCollapsed(collapsed) {
     els.toggleSettingsPanelCaret.setAttribute(
       "aria-label",
       `${collapsed ? "Expand" : "Collapse"} App Settings section`
+    );
+  }
+}
+
+function setNotificationsPanelCollapsed(collapsed) {
+  if (!els.notificationsPanel) return;
+  els.notificationsPanel.classList.toggle("is-collapsed", collapsed);
+  if (els.notificationsPanelBody) {
+    els.notificationsPanelBody.hidden = collapsed;
+  }
+  if (els.toggleNotificationsPanelCaret) {
+    els.toggleNotificationsPanelCaret.textContent = collapsed ? ">" : "v";
+    els.toggleNotificationsPanelCaret.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    els.toggleNotificationsPanelCaret.setAttribute(
+      "aria-label",
+      `${collapsed ? "Expand" : "Collapse"} Notifications section`
     );
   }
 }
@@ -606,6 +637,77 @@ function renderSettingsAchievements() {
     ${nonBooleanGroupsHtml}
     ${booleanGroupsHtml ? `<div class="admin-achievement-boolean-metrics">${booleanGroupsHtml}</div>` : ""}
   `;
+}
+
+function extractNotificationTextFromHtml(html) {
+  const container = document.createElement("div");
+  container.innerHTML = String(html || "");
+  return String(container.textContent || "").trim();
+}
+
+function renderNotificationHistory() {
+  if (!els.notificationHistoryList) return;
+  if (!state.notificationsHistory.length) {
+    els.notificationHistoryList.innerHTML = '<p class="subtle">No notifications yet.</p>';
+    return;
+  }
+
+  els.notificationHistoryList.innerHTML = state.notificationsHistory
+    .map((item) => {
+      const html = String(item.message_html || "").trim();
+      const fallback = escapeHtml(String(item.message_text || "").trim());
+      const content = html || fallback;
+      const creator = escapeHtml(String(item.created_by_username || "admin"));
+      const createdAt = escapeHtml(formatDateTime(item.created_at));
+      return `
+        <article class="admin-notification-item">
+          <div class="admin-notification-meta">${createdAt} • by ${creator}</div>
+          <p>${content}</p>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+async function loadNotificationHistory() {
+  if (!els.notificationHistoryList) return;
+  try {
+    const { notifications } = await api.admin.listNotifications();
+    state.notificationsHistory = Array.isArray(notifications) ? notifications : [];
+    renderNotificationHistory();
+  } catch (err) {
+    console.error(err);
+    els.notificationHistoryList.innerHTML = `<p class="subtle">${escapeHtml(err.message || "Failed to load notifications.")}</p>`;
+  }
+}
+
+async function publishNotificationFromEditor() {
+  const html = String(els.notificationEditor?.innerHTML || "").trim();
+  const text = extractNotificationTextFromHtml(html);
+  if (!text) {
+    setStatus(els.notificationAdminStatus, "Notification text is required.", "error");
+    return;
+  }
+
+  if (els.publishNotificationBtn) {
+    els.publishNotificationBtn.disabled = true;
+  }
+  setStatus(els.notificationAdminStatus, "Publishing notification...");
+  try {
+    await api.admin.createNotification({ messageHtml: html });
+    if (els.notificationEditor) {
+      els.notificationEditor.innerHTML = "";
+    }
+    await loadNotificationHistory();
+    setStatus(els.notificationAdminStatus, "Notification published.", "ok");
+  } catch (err) {
+    console.error(err);
+    setStatus(els.notificationAdminStatus, err.message || "Failed to publish notification.", "error");
+  } finally {
+    if (els.publishNotificationBtn) {
+      els.publishNotificationBtn.disabled = false;
+    }
+  }
 }
 
 async function persistAchievementsCatalog(nextCatalog, successMessage) {
@@ -1124,6 +1226,12 @@ function bindEvents() {
       setSettingsPanelCollapsed(!collapsed);
     });
   }
+  if (els.toggleNotificationsPanelCaret) {
+    els.toggleNotificationsPanelCaret.addEventListener("click", () => {
+      const collapsed = els.notificationsPanel?.classList.contains("is-collapsed");
+      setNotificationsPanelCollapsed(!collapsed);
+    });
+  }
   if (els.addAchievementBtn) {
     els.addAchievementBtn.addEventListener("click", addAchievementFromInputs);
   }
@@ -1134,6 +1242,22 @@ function bindEvents() {
   if (els.achievementMetricInput) {
     els.achievementMetricInput.addEventListener("change", syncAchievementTargetInput);
   }
+  if (els.publishNotificationBtn) {
+    els.publishNotificationBtn.addEventListener("click", publishNotificationFromEditor);
+  }
+  document.querySelectorAll("button[data-notification-cmd]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const cmd = String(btn.dataset.notificationCmd || "").trim();
+      if (!cmd || !els.notificationEditor) return;
+      els.notificationEditor.focus();
+      if (cmd === "createLink") {
+        const url = window.prompt("Enter URL");
+        if (url) document.execCommand("createLink", false, url);
+        return;
+      }
+      document.execCommand(cmd, false, null);
+    });
+  });
 
   document.addEventListener("click", (event) => {
     const btn = event.target.closest("button[data-action]");
@@ -1186,16 +1310,19 @@ async function init() {
   setStatus(els.receiptsStatus, "");
   setStatus(els.budgetsStatus, "");
   setStatus(els.achievementStatus, "");
+  setStatus(els.notificationAdminStatus, "");
   updateRecordsContext();
   setUsersPanelCollapsed(true);
   setSettingsPanelCollapsed(true);
   setAchievementsPanelCollapsed(true);
+  setNotificationsPanelCollapsed(true);
   syncAchievementTargetInput();
 
   await Promise.all([
     loadStats(),
     loadUserOptions(),
     loadSettings(),
+    loadNotificationHistory(),
     loadUsers({ resetPage: true, evaluateSelection: false }),
   ]);
 }

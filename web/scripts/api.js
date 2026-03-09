@@ -549,11 +549,42 @@ export const achievements = {
 };
 
 // ======================================================================
+// NOTIFICATIONS MODULE
+// ======================================================================
+export const notifications = {
+  getActive() {
+    return request("/notifications");
+  },
+
+  dismiss(id) {
+    return request(`/notifications/${id}/dismiss`, {
+      method: "POST",
+    });
+  },
+};
+
+// ======================================================================
 // APP SETTINGS MODULE (PUBLIC)
 // ======================================================================
 export const appSettings = {
   getPublic() {
     return request("/app-settings/public");
+  },
+};
+
+// ======================================================================
+// USER SETTINGS MODULE (AUTHENTICATED)
+// ======================================================================
+export const settings = {
+  get() {
+    return request("/settings");
+  },
+
+  save(payload) {
+    return request("/settings", {
+      method: "PUT",
+      body: JSON.stringify(payload || {}),
+    });
   },
 };
 
@@ -625,6 +656,17 @@ export const admin = {
     return request("/admin/settings", {
       method: "PUT",
       body: JSON.stringify(updates),
+    });
+  },
+
+  listNotifications() {
+    return request("/admin/notifications");
+  },
+
+  createNotification(payload) {
+    return request("/admin/notifications", {
+      method: "POST",
+      body: JSON.stringify(payload),
     });
   },
 };
@@ -699,7 +741,9 @@ export const api = {
   fxRates,
   activity,
   achievements,
+  notifications,
   appSettings,
+  settings,
   admin,
   support,
   getUploadType,

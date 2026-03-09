@@ -4,6 +4,10 @@ import app from "./app.js";
 import env from "./config/env.js";
 import { connectDb, closeDb } from "./config/db.js";
 import { startReceiptJobWorker, stopReceiptJobWorker } from "./jobs/receipt_job_worker.js";
+import {
+  startWeeklyNotificationEmailWorker,
+  stopWeeklyNotificationEmailWorker,
+} from "./jobs/weekly_notification_email_worker.js";
 import { runMigrations } from "./db/run_migrations.js";
 
 const server = http.createServer(app);
@@ -19,6 +23,9 @@ const start = async () => {
       console.log(`🚀 API server listening on port ${env.port}`);
       if (env.runReceiptWorkerInApi) {
         startReceiptJobWorker();
+      }
+      if (env.runWeeklyNotificationWorkerInApi) {
+        startWeeklyNotificationEmailWorker();
       }
     });
   } catch (err) {
@@ -57,6 +64,7 @@ process.on("uncaughtException", async (err) => {
 process.on("SIGINT", async () => {
   console.log("🛑 SIGINT received. Shutting down...");
   stopReceiptJobWorker();
+  stopWeeklyNotificationEmailWorker();
   server.close(async () => {
     await closeDb();
     process.exit(0);
@@ -66,6 +74,7 @@ process.on("SIGINT", async () => {
 process.on("SIGTERM", async () => {
   console.log("🛑 SIGTERM received. Shutting down...");
   stopReceiptJobWorker();
+  stopWeeklyNotificationEmailWorker();
   server.close(async () => {
     await closeDb();
     process.exit(0);
