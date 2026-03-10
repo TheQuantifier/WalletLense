@@ -1,5 +1,6 @@
 // scripts/records.js
 import { api } from "./api.js";
+import { applyRulesToRecord, loadRules } from "./rules-engine.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   // ===============================
@@ -15,6 +16,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const addIncomeModal = document.getElementById("addIncomeModal");
   const expenseForm = document.getElementById("expenseForm");
   const incomeForm = document.getElementById("incomeForm");
+  const applyRulesExpense = document.getElementById("applyRulesExpense");
+  const applyRulesIncome = document.getElementById("applyRulesIncome");
 
   const customCategoryModal = document.getElementById("customCategoryModal");
   const customCategoryForm = document.getElementById("customCategoryForm");
@@ -581,6 +584,11 @@ document.addEventListener("DOMContentLoaded", () => {
     editBtn.dataset.edit = recordId;
     editBtn.textContent = "Edit Record";
 
+    const ruleBtn = document.createElement("button");
+    ruleBtn.type = "button";
+    ruleBtn.dataset.rule = recordId;
+    ruleBtn.textContent = "Create Rule";
+
     const delBtn = document.createElement("button");
     delBtn.type = "button";
     delBtn.dataset.delete = recordId;
@@ -588,6 +596,7 @@ document.addEventListener("DOMContentLoaded", () => {
     delBtn.textContent = "Delete Record";
 
     dropdown.appendChild(editBtn);
+    dropdown.appendChild(ruleBtn);
     dropdown.appendChild(delBtn);
     wrap.appendChild(menuBtn);
     wrap.appendChild(dropdown);
@@ -719,6 +728,24 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    if (e.target.dataset.rule) {
+      const id = e.target.dataset.rule;
+      const cached = allRecordsCache.find((r) => getRecordId(r) === id);
+      const record = cached || (await api.records.getOne(id));
+      if (!record) return;
+
+      const params = new URLSearchParams({
+        prefill: "1",
+        type: record.type || "",
+        category: record.category || "",
+        note: record.note || "",
+        amount: record.amount ?? "",
+        origin: getLinkedReceiptId(record) ? "receipt" : "manual",
+      });
+      window.location.href = `rules.html?${params.toString()}`;
+      return;
+    }
+
     if (e.target.dataset.edit) {
       const record = await api.records.getOne(e.target.dataset.edit);
       if (!record) return;
@@ -737,6 +764,9 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById(`${prefix}Notes`).value = record.note;
 
       modal.dataset.editId = getRecordId(record);
+      modal.dataset.linkedReceiptId = getLinkedReceiptId(record);
+      if (record.type === "expense" && applyRulesExpense) applyRulesExpense.checked = true;
+      if (record.type === "income" && applyRulesIncome) applyRulesIncome.checked = true;
       showModal(modal);
       return;
     }
@@ -878,6 +908,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===============================
   btnAddExpense?.addEventListener("click", () => {
     delete addExpenseModal.dataset.editId;
+    delete addExpenseModal.dataset.linkedReceiptId;
+    if (applyRulesExpense) applyRulesExpense.checked = true;
     expenseForm?.reset();
     populateBudgetCategorySelects();
     showModal(addExpenseModal);
@@ -885,6 +917,8 @@ document.addEventListener("DOMContentLoaded", () => {
   cancelExpenseBtn?.addEventListener("click", () => hideModal(addExpenseModal));
   btnAddIncome?.addEventListener("click", () => {
     delete addIncomeModal.dataset.editId;
+    delete addIncomeModal.dataset.linkedReceiptId;
+    if (applyRulesIncome) applyRulesIncome.checked = true;
     incomeForm?.reset();
     populateBudgetCategorySelects();
     showModal(addIncomeModal);
@@ -896,13 +930,22 @@ document.addEventListener("DOMContentLoaded", () => {
     const submitBtn = form?.querySelector('button[type="submit"]');
     const prevBtnText = submitBtn?.textContent;
     const editId = modal.dataset.editId;
-    const payload = {
+    let payload = {
       type,
       date: document.getElementById(`${type}Date`).value,
       amount: parseFloat(document.getElementById(`${type}Amount`).value),
       category: document.getElementById(`${type}Category`).value,
       note: document.getElementById(`${type}Notes`).value
     };
+
+    const rules = loadRules();
+    const applyRules = type === "income" ? applyRulesIncome?.checked : applyRulesExpense?.checked;
+    if (applyRules && rules.length) {
+      const origin = modal.dataset.linkedReceiptId ? "receipt" : "manual";
+      payload = applyRulesToRecord(payload, rules, { origin });
+      document.getElementById(`${type}Category`).value = payload.category || "";
+      document.getElementById(`${type}Notes`).value = payload.note || "";
+    }
 
     if (!payload.date) {
       showStatus(type, "Please choose a date.", "error");

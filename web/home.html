@@ -40,19 +40,47 @@
   <!-- ==================== MAIN ==================== -->
   <main class="main main--home">
     
-    <!-- Greeting -->
-    <section class="welcome">
-      <div class="welcome-left">
-        <h1 id="welcomeTitle">Welcome back</h1>
-        <p class="subtle" id="lastUpdated">Loading summary…</p>
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-primary card">
+        <span class="hero-badge">Monthly outlook</span>
+        <div class="hero-head">
+          <h1 id="welcomeTitle">Welcome back</h1>
+          <p class="subtle" id="lastUpdated">Loading summary…</p>
+        </div>
+
+        <div class="hero-metrics" aria-label="Key insights">
+          <div class="hero-metric">
+            <span class="label">Projected savings</span>
+            <span class="value" id="heroProjectedSavings">—</span>
+            <span class="delta subtle" id="heroProjectedDelta">Based on last 30 days</span>
+          </div>
+          <div class="hero-metric">
+            <span class="label">Cashflow health</span>
+            <span class="value" id="heroCashflowHealth">—</span>
+            <span class="delta subtle" id="heroCashflowDelta">Income vs spending</span>
+          </div>
+        </div>
+
+        <div class="quick-actions" role="group" aria-label="Quick actions">
+          <button class="btn btn--primary" id="btnUpload">Upload Receipt</button>
+          <button class="btn" id="btnAddTxn">Add Transaction</button>
+          <button class="btn" id="btnExport">Export CSV</button>
+          <a class="btn btn--link" href="reports.html" id="btnReports">Go to Reports →</a>
+        </div>
       </div>
 
-      <div class="quick-actions" role="group" aria-label="Quick actions">
-        <button class="btn btn--primary" id="btnUpload">Upload Receipt</button>
-        <button class="btn" id="btnAddTxn">Add Transaction</button>
-        <button class="btn" id="btnExport">Export CSV</button>
-        <a class="btn btn--link" href="reports.html" id="btnReports">Go to Reports →</a>
-      </div>
+      <aside class="hero-secondary card" aria-label="Focus summary">
+        <h3>Focus this week</h3>
+        <ul class="focus-list">
+          <li><span class="focus-dot"></span><span>Review subscriptions for hidden spend.</span></li>
+          <li><span class="focus-dot"></span><span>Set a target for dining to stay on track.</span></li>
+          <li><span class="focus-dot"></span><span>Move excess cash to a savings goal.</span></li>
+        </ul>
+        <div class="focus-foot">
+          <a class="btn btn--link" href="budgeting.html">Plan your budget →</a>
+        </div>
+      </aside>
     </section>
 
     <section class="net-worth" aria-label="Net worth dashboard">
@@ -270,4 +298,3 @@
   <script src="scripts/home.js" type="module" defer></script>
 </body>
 </html>
-

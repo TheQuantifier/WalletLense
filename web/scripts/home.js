@@ -360,7 +360,7 @@ import { api } from "./api.js";
   //  FILTER RECORDS BY DASHBOARD VIEW
   // ============================================================
   function filterRecordsByView(records, view) {
-    if (view === "All") return records; // NEW: All-time view
+    if (view === "All" || view === "All Time") return records;
 
     const now = new Date();
     return records.filter((r) => {
@@ -1281,7 +1281,7 @@ import { api } from "./api.js";
         ? "This Month"
         : dashboardView === "Yearly"
         ? "This Year"
-        : dashboardView === "All"
+        : dashboardView === "All" || dashboardView === "All Time"
         ? "All Time"
         : "This Month";
 
@@ -1321,7 +1321,12 @@ import { api } from "./api.js";
       const storedView =
         localStorage.getItem("settings_dashboard_view") ||
         localStorage.getItem("defaultDashboardView");
-      const dashboardView = storedView || legacyView || "Monthly";
+      const normalizedView =
+        storedView === "All" ? "All Time" : storedView;
+      const normalizedLegacy =
+        legacyView === "All" ? "All Time" : legacyView;
+      const dashboardView =
+        normalizedView || normalizedLegacy || "All Time";
       const accounts = loadLinkedAccounts();
 
       setupBankFilter(accounts, () => {

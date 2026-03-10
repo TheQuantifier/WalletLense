@@ -1068,7 +1068,9 @@ function wireDashboardViewSelector() {
 
   // Load saved setting
   const savedSettings = JSON.parse(localStorage.getItem("userSettings")) || {};
-  selector.value = savedSettings.dashboardView || "Monthly";
+  const savedView =
+    savedSettings.dashboardView === "All" ? "All Time" : savedSettings.dashboardView;
+  selector.value = savedView || "All Time";
 
   // Listen for changes
   selector.addEventListener("change", async () => {

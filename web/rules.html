@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    (function () {
+      const rawPage = (window.location.pathname.split("/").pop() || "").toLowerCase();
+      const currentPage = rawPage === "" ? "index.html" : rawPage;
+      const cachedTitle = sessionStorage.getItem(`pageTitle:${currentPage}`);
+      if (cachedTitle) {
+        document.title = cachedTitle;
+      }
+    })();
+  </script>
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>&lt;AppName&gt; - Rules</title>
+
+  <meta name="description" content="Create automation rules to categorize, tag, and organize your records." />
+  <link rel="icon" type="image/png" href="images/favicon.png" />
+
+  <link rel="stylesheet" href="styles/default.css" />
+  <link rel="stylesheet" href="styles/rules.css" />
+
+  <script>
+    const savedTheme = localStorage.getItem("theme") || "light";
+    document.documentElement.setAttribute("data-theme", savedTheme);
+  </script>
+</head>
+
+<body>
+  <div id="header"></div>
+
+  <main class="main main--rules">
+    <section class="rules-hero">
+      <div>
+        <h1>Rules Engine</h1>
+        <p class="subtle">
+          Automate categorization, tags, and consistency. Rules run on new records and can be applied in bulk.
+        </p>
+      </div>
+      <div class="rules-hero-actions">
+        <button class="btn btn--primary" id="btnCreateRule" type="button">Create Rule</button>
+        <button class="btn" id="btnApplyRules" type="button">Apply To Existing</button>
+      </div>
+    </section>
+
+    <section class="rules-section">
+      <div class="rules-header">
+        <h2>Active Rules</h2>
+        <p id="rulesStatus" class="status-banner subtle is-hidden" aria-live="polite"></p>
+      </div>
+      <div id="rulesEmpty" class="rule-empty card">
+        <h3>No rules yet</h3>
+        <p class="subtle">Create your first rule to automate categorization and tags.</p>
+        <button class="btn btn--primary" id="btnCreateRuleEmpty" type="button">Create Rule</button>
+      </div>
+      <div id="rulesList" class="rules-grid"></div>
+    </section>
+  </main>
+
+  <div id="footer"></div>
+
+  <!-- Create/Edit Rule Modal -->
+  <div id="ruleModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="ruleModalTitle">
+    <div class="modal-content rule-modal">
+      <h2 id="ruleModalTitle">Create Rule</h2>
+
+      <form id="ruleForm" class="rule-form">
+        <div class="form-row">
+          <label>
+            <span>Rule Name</span>
+            <input type="text" id="ruleName" name="ruleName" placeholder="e.g., Starbucks → Dining" required />
+          </label>
+          <label>
+            <span>Priority</span>
+            <input type="number" id="rulePriority" name="rulePriority" min="1" max="999" value="100" />
+          </label>
+        </div>
+
+        <div class="form-row">
+          <label>
+            <span>Apply Mode</span>
+            <select id="ruleApplyMode" name="ruleApplyMode">
+              <option value="first">Stop after first match</option>
+              <option value="all">Apply all matching rules</option>
+            </select>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" id="ruleEnabled" name="ruleEnabled" checked />
+            <span>Rule enabled</span>
+          </label>
+        </div>
+
+        <div class="rule-divider">
+          <span>Conditions</span>
+        </div>
+
+        <div class="form-row">
+          <label>
+            <span>Type</span>
+            <select id="ruleType" name="ruleType">
+              <option value="any">Any</option>
+              <option value="expense">Expense</option>
+              <option value="income">Income</option>
+            </select>
+          </label>
+          <label>
+            <span>Category</span>
+            <select id="ruleCategory" name="ruleCategory">
+              <option value="">Any</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="form-row">
+          <label>
+            <span>Note contains</span>
+            <input type="text" id="ruleNoteContains" name="ruleNoteContains" placeholder="e.g., Starbucks" />
+          </label>
+          <label>
+            <span>Origin</span>
+            <select id="ruleOrigin" name="ruleOrigin">
+              <option value="any">Any</option>
+              <option value="manual">Manual</option>
+              <option value="receipt">Receipt</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="form-row">
+          <label>
+            <span>Min Amount</span>
+            <input type="number" id="ruleAmountMin" name="ruleAmountMin" step="0.01" min="0" placeholder="0.00" />
+          </label>
+          <label>
+            <span>Max Amount</span>
+            <input type="number" id="ruleAmountMax" name="ruleAmountMax" step="0.01" min="0" placeholder="9999.99" />
+          </label>
+        </div>
+
+        <div class="rule-divider">
+          <span>Actions</span>
+        </div>
+
+        <div class="form-row">
+          <label>
+            <span>Set Category</span>
+            <select id="actionCategory" name="actionCategory">
+              <option value="">No change</option>
+            </select>
+          </label>
+          <label>
+            <span>Add Tag / Note</span>
+            <input type="text" id="actionTag" name="actionTag" placeholder="e.g., #recurring" />
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button type="submit" class="btn btn--primary" id="ruleSaveBtn">Save Rule</button>
+          <button type="button" class="btn" id="ruleCancelBtn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="scripts/default.js" type="module" defer></script>
+  <script src="scripts/rules.js" type="module" defer></script>
+</body>
+</html>
