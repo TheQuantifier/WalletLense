@@ -136,6 +136,15 @@
   padding-top: 1.4rem;
 }
 
+.rules-onboarding-list {
+  margin: 0.75rem 0 0;
+  padding-left: 1.2rem;
+  color: var(--text);
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.95rem;
+}
+
 @media (max-width: 840px) {
   .rules-hero {
     flex-direction: column;

@@ -2,6 +2,7 @@ import { api } from "./api.js";
 import { applyRulesToRecord, loadRules, saveRules, summarizeRule } from "./rules-engine.js";
 
 document.addEventListener("DOMContentLoaded", () => {
+  const ONBOARDING_KEY = "rules_onboarding_seen_v1";
   const rulesList = document.getElementById("rulesList");
   const rulesEmpty = document.getElementById("rulesEmpty");
   const rulesStatus = document.getElementById("rulesStatus");
@@ -10,6 +11,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnApplyRules = document.getElementById("btnApplyRules");
 
   const ruleModal = document.getElementById("ruleModal");
+  const rulesOnboardingModal = document.getElementById("rulesOnboardingModal");
+  const rulesOnboardingClose = document.getElementById("rulesOnboardingClose");
   const ruleForm = document.getElementById("ruleForm");
   const ruleModalTitle = document.getElementById("ruleModalTitle");
   const ruleCancelBtn = document.getElementById("ruleCancelBtn");
@@ -79,6 +82,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const showModal = () => ruleModal?.classList.remove("hidden");
   const hideModal = () => ruleModal?.classList.add("hidden");
+  const showOnboarding = () => rulesOnboardingModal?.classList.remove("hidden");
+  const hideOnboarding = () => rulesOnboardingModal?.classList.add("hidden");
 
   const populateCategoryOptions = async () => {
     let customExpense = [];
@@ -341,6 +346,10 @@ document.addEventListener("DOMContentLoaded", () => {
   ruleCancelBtn?.addEventListener("click", () => hideModal());
   btnCreateRule?.addEventListener("click", openCreate);
   btnCreateRuleEmpty?.addEventListener("click", openCreate);
+  rulesOnboardingClose?.addEventListener("click", () => {
+    localStorage.setItem(ONBOARDING_KEY, "true");
+    hideOnboarding();
+  });
 
   btnApplyRules?.addEventListener("click", async () => {
     clearStatus();
@@ -385,5 +394,8 @@ document.addEventListener("DOMContentLoaded", () => {
   populateCategoryOptions().then(() => {
     renderRules();
     prefillFromQuery();
+    if (!localStorage.getItem(ONBOARDING_KEY)) {
+      showOnboarding();
+    }
   });
 });

@@ -164,6 +164,24 @@
     </div>
   </div>
 
+  <!-- Onboarding Modal -->
+  <div id="rulesOnboardingModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="rulesOnboardingTitle">
+    <div class="modal-content rule-modal">
+      <h2 id="rulesOnboardingTitle">Welcome to Rules</h2>
+      <p class="subtle">
+        Rules automatically organize your records. When a record matches your conditions, the rule will apply actions like setting a category or adding a tag.
+      </p>
+      <ul class="rules-onboarding-list">
+        <li><strong>Example:</strong> If note contains “Starbucks”, set category to Dining.</li>
+        <li><strong>Apply mode:</strong> Stop after the first match or apply all matching rules.</li>
+        <li><strong>Bulk apply:</strong> Use “Apply To Existing” to update past records.</li>
+      </ul>
+      <div class="modal-actions">
+        <button type="button" class="btn btn--primary" id="rulesOnboardingClose">Got it</button>
+      </div>
+    </div>
+  </div>
+
   <script src="scripts/default.js" type="module" defer></script>
   <script src="scripts/rules.js" type="module" defer></script>
 </body>
