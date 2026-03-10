@@ -112,6 +112,7 @@ applySavedTheme();
 
 document.addEventListener("DOMContentLoaded", () => {
   cachePageTitle();
+  setLogoLinkDestination("index.html");
   loadHeaderAndFooter();
   initLiveNavigation();
   applyCachedAppName();
@@ -160,11 +161,12 @@ function loadHeaderAndFooter() {
     })
     .then((html) => {
       if (headerEl && headerEl.innerHTML !== html) {
-        headerEl.innerHTML = html;
-      }
-      sessionStorage.setItem("cachedHeaderHtml", html);
+      headerEl.innerHTML = html;
+    }
+    sessionStorage.setItem("cachedHeaderHtml", html);
+    setLogoLinkDestination("index.html");
 
-      setActiveNavLink();
+    setActiveNavLink();
       initMobileNavMenu();
       initAccountMenu();
       updateHeaderAuthState();
@@ -190,6 +192,13 @@ function loadHeaderAndFooter() {
       setActiveFooterLink();
     })
     .catch((err) => console.error("Footer load failed:", err));
+}
+
+function setLogoLinkDestination(href) {
+  const target = String(href || "index.html").trim() || "index.html";
+  document.querySelectorAll(".logo-link").forEach((link) => {
+    link.setAttribute("href", target);
+  });
 }
 
 function cachePageTitle() {
@@ -846,6 +855,7 @@ async function updateHeaderAuthState() {
     applyAccountAvatar(avatarUrl, user.fullName || user.full_name || user.username || "");
     sessionStorage.setItem("cachedUser", JSON.stringify(user));
     setAdminVisibility(user?.role);
+    setLogoLinkDestination("about.html");
 
   } catch {
     // Not authenticated
@@ -857,6 +867,7 @@ async function updateHeaderAuthState() {
 
     applyAccountAvatar("", "");
     setAdminVisibility("user");
+    setLogoLinkDestination("index.html");
   }
 }
 

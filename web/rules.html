@@ -38,6 +38,20 @@
         <p class="subtle">
           Automate categorization, tags, and consistency. Rules run on new records and can be applied in bulk.
         </p>
+        <div class="rules-overview" aria-label="Rules overview">
+          <div class="rules-overview-card">
+            <span class="rules-overview-label">Enabled</span>
+            <strong id="rulesEnabledCount">0</strong>
+          </div>
+          <div class="rules-overview-card">
+            <span class="rules-overview-label">Total Rules</span>
+            <strong id="rulesTotalCount">0</strong>
+          </div>
+          <div class="rules-overview-card rules-overview-card--wide">
+            <span class="rules-overview-label">How It Runs</span>
+            <strong>Higher priority first. Bulk apply updates past records.</strong>
+          </div>
+        </div>
       </div>
       <div class="rules-hero-actions">
         <button class="btn btn--primary" id="btnCreateRule" type="button">Create Rule</button>
@@ -156,6 +170,11 @@
           </label>
         </div>
 
+        <div class="rule-preview" aria-live="polite">
+          <span class="rule-preview-label">Live Summary</span>
+          <p id="ruleLiveSummary" class="subtle">Start adding conditions and actions to preview the rule.</p>
+        </div>
+
         <div class="modal-actions">
           <button type="submit" class="btn btn--primary" id="ruleSaveBtn">Save Rule</button>
           <button type="button" class="btn" id="ruleCancelBtn">Cancel</button>
@@ -176,6 +195,10 @@
         <li><strong>Apply mode:</strong> Stop after the first match or apply all matching rules.</li>
         <li><strong>Bulk apply:</strong> Use “Apply To Existing” to update past records.</li>
       </ul>
+      <label class="checkbox-row checkbox-row--compact">
+        <input type="checkbox" id="rulesOnboardingDontShow" />
+        <span>Don’t show again</span>
+      </label>
       <div class="modal-actions">
         <button type="button" class="btn btn--primary" id="rulesOnboardingClose">Got it</button>
       </div>

@@ -9,14 +9,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnCreateRule = document.getElementById("btnCreateRule");
   const btnCreateRuleEmpty = document.getElementById("btnCreateRuleEmpty");
   const btnApplyRules = document.getElementById("btnApplyRules");
+  const rulesEnabledCount = document.getElementById("rulesEnabledCount");
+  const rulesTotalCount = document.getElementById("rulesTotalCount");
 
   const ruleModal = document.getElementById("ruleModal");
   const rulesOnboardingModal = document.getElementById("rulesOnboardingModal");
   const rulesOnboardingClose = document.getElementById("rulesOnboardingClose");
+  const rulesOnboardingDontShow = document.getElementById("rulesOnboardingDontShow");
   const ruleForm = document.getElementById("ruleForm");
   const ruleModalTitle = document.getElementById("ruleModalTitle");
   const ruleCancelBtn = document.getElementById("ruleCancelBtn");
   const ruleSaveBtn = document.getElementById("ruleSaveBtn");
+  const ruleLiveSummary = document.getElementById("ruleLiveSummary");
 
   const els = {
     name: document.getElementById("ruleName"),
@@ -106,9 +110,31 @@ document.addEventListener("DOMContentLoaded", () => {
     btnApplyRules.textContent = saving ? "Applying..." : "Apply To Existing";
   };
 
+  const updateOverview = () => {
+    if (rulesEnabledCount) {
+      rulesEnabledCount.textContent = String(rules.filter((rule) => rule.enabled !== false).length);
+    }
+    if (rulesTotalCount) {
+      rulesTotalCount.textContent = String(rules.length);
+    }
+  };
+
+  const updateLiveSummary = () => {
+    if (!ruleLiveSummary) return;
+    const payload = getRulePayload();
+    if (!payload.conditions.length && !payload.actions.length) {
+      ruleLiveSummary.textContent = "Start adding conditions and actions to preview the rule.";
+      return;
+    }
+
+    const summary = summarizeRule(payload);
+    ruleLiveSummary.textContent = summary || "This rule still needs at least one condition and one action.";
+  };
+
   const renderRules = () => {
     if (!rulesList) return;
 
+    updateOverview();
     rulesList.innerHTML = "";
     if (!rules.length) {
       rulesEmpty?.classList.remove("is-hidden");
@@ -195,6 +221,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (els.applyMode) els.applyMode.value = "first";
     if (els.enabled) els.enabled.checked = true;
     ruleForm?.setAttribute("data-edit-id", "");
+    updateLiveSummary();
   };
 
   const openCreate = () => {
@@ -202,6 +229,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (ruleModalTitle) ruleModalTitle.textContent = "Create Rule";
     clearStatus();
     showModal();
+    els.name?.focus();
   };
 
   const openEdit = (rule) => {
@@ -239,6 +267,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     clearStatus();
     showModal();
+    updateLiveSummary();
   };
 
   const prefillFromQuery = () => {
@@ -378,9 +407,22 @@ document.addEventListener("DOMContentLoaded", () => {
   btnCreateRule?.addEventListener("click", openCreate);
   btnCreateRuleEmpty?.addEventListener("click", openCreate);
   rulesOnboardingClose?.addEventListener("click", () => {
-    localStorage.setItem(ONBOARDING_KEY, "true");
+    if (rulesOnboardingDontShow?.checked) {
+      localStorage.setItem(ONBOARDING_KEY, "true");
+    } else {
+      localStorage.removeItem(ONBOARDING_KEY);
+    }
     hideOnboarding();
   });
+
+  [els.name, els.priority, els.applyMode, els.enabled, els.type, els.category, els.noteContains,
+    els.origin, els.amountMin, els.amountMax, els.actionCategory, els.actionTag]
+    .filter(Boolean)
+    .forEach((element) => {
+      element.addEventListener("input", updateLiveSummary);
+      element.addEventListener("change", updateLiveSummary);
+    });
+
   btnApplyRules?.addEventListener("click", async () => {
     clearStatus();
     if (!rules.length) {
@@ -408,7 +450,9 @@ document.addEventListener("DOMContentLoaded", () => {
       await populateCategoryOptions();
       await loadRemoteRules();
       prefillFromQuery();
+      updateLiveSummary();
       if (!localStorage.getItem(ONBOARDING_KEY)) {
+        if (rulesOnboardingDontShow) rulesOnboardingDontShow.checked = false;
         showOnboarding();
       }
     } catch (err) {

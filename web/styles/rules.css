@@ -21,6 +21,41 @@
   margin-bottom: 0.35rem;
 }
 
+.rules-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.rules-overview-card {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: 1rem;
+  background: rgba(255,255,255,0.72);
+  border: 1px solid rgba(15,23,42,0.08);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.rules-overview-card strong {
+  font-size: 1.1rem;
+  color: var(--text);
+}
+
+.rules-overview-card--wide strong {
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.rules-overview-label {
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+}
+
 .rules-hero-actions {
   display: flex;
   gap: 0.6rem;
@@ -129,11 +164,37 @@
   background: var(--border);
 }
 
+.rule-preview {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.95rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(15,23,42,0.08);
+  background: linear-gradient(180deg, rgba(248,250,252,0.95), rgba(255,255,255,0.9));
+}
+
+.rule-preview-label {
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.rule-preview p {
+  margin: 0;
+}
+
 .checkbox-row {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   padding-top: 1.4rem;
+}
+
+.checkbox-row--compact {
+  padding-top: 0;
+  margin-top: 0.9rem;
 }
 
 .rules-onboarding-list {
@@ -150,6 +211,10 @@
     flex-direction: column;
     align-items: flex-start;
   }
+
+  .rules-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {
@@ -157,10 +222,20 @@
     flex-direction: column;
     align-items: flex-start;
   }
+
+  .rules-overview {
+    grid-template-columns: 1fr;
+  }
 }
 
 :root[data-theme="dark"] .rules-hero {
   background: linear-gradient(135deg, rgba(45,212,191,0.18), rgba(251,191,36,0.12));
+  border-color: var(--border);
+}
+
+:root[data-theme="dark"] .rules-overview-card,
+:root[data-theme="dark"] .rule-preview {
+  background: rgba(15, 23, 42, 0.7);
   border-color: var(--border);
 }
 

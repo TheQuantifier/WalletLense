@@ -12,21 +12,203 @@
     })();
   </script>
 
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="icon" type="image/png" href="images/favicon.png">
-  <title>&lt;AppName&gt; - Redirecting</title>
+  <title>&lt;AppName&gt; - Smart Receipt and Expense Tracking</title>
 
-  <script>
-    window.location.replace("register.html");
-  </script>
+  <meta
+    name="description"
+    content="&lt;AppName&gt; turns receipts, manual records, and reports into a clean money workflow with automation, rules, and export-ready insights."
+  />
+  <meta name="author" content="&lt;AppName&gt;" />
+  <link rel="icon" type="image/png" href="images/favicon.png" />
+
+  <link rel="stylesheet" href="styles/default.css" />
+  <link rel="stylesheet" href="styles/auth.css" />
+  <link rel="stylesheet" href="styles/index.css" />
 
   <script>
     const savedTheme = localStorage.getItem("theme") || "light";
     document.documentElement.setAttribute("data-theme", savedTheme);
   </script>
 </head>
-<body>
+
+<body class="landing-light">
+  <header class="nf-header" role="banner">
+    <div class="nf-header-inner">
+      <div class="logo-group">
+        <h1 class="logo">
+          <a class="logo-link" href="index.html" style="text-decoration:none; color:inherit;">
+            <img src="images/favicon.png" alt="App icon" class="logo-icon" />
+            <span>&lt;AppName&gt;</span>
+          </a>
+        </h1>
+        <span class="tagline">Track Smarter. Stress Less.</span>
+      </div>
+
+      <nav class="index-auth-actions" aria-label="Authentication">
+        <a href="login.html" class="btn">Login</a>
+        <a href="register.html" class="btn btn--primary">Register</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main main--index">
+    <section class="nf-hero index-hero">
+      <div class="index-hero-copy">
+        <p class="index-kicker">Financial clarity without the spreadsheet chaos</p>
+        <h1 class="nf-title">A real home for receipts, records, budgets, and smarter automation.</h1>
+        <p class="nf-subtitle">
+          &lt;AppName&gt; helps you capture expenses fast, organize them consistently, and turn raw transactions
+          into reports you can actually use. Scan receipts, add records manually, build rules, and stay ready
+          for taxes, reimbursement, or review.
+        </p>
+
+        <div class="index-cta-row">
+          <a href="register.html" class="btn btn--primary index-primary-cta">Create Free Account</a>
+          <a href="login.html" class="btn index-secondary-cta">Log In</a>
+        </div>
+
+        <div class="index-proof-grid" aria-label="Highlights">
+          <article class="index-proof-card">
+            <strong>Receipt OCR</strong>
+            <span>Pull amounts, dates, and merchant details from uploads.</span>
+          </article>
+          <article class="index-proof-card">
+            <strong>Rules + AI</strong>
+            <span>Blend smart suggestions with your own deterministic automation.</span>
+          </article>
+          <article class="index-proof-card">
+            <strong>Export Ready</strong>
+            <span>Keep records organized for accountants, tax prep, or reimbursement.</span>
+          </article>
+        </div>
+      </div>
+
+      <aside class="index-hero-panel card" aria-label="Product summary">
+        <p class="index-panel-kicker">What the app gives you</p>
+        <div class="index-stack">
+          <div class="index-stack-item">
+            <span class="index-stack-number">01</span>
+            <div>
+              <h2>Capture everything</h2>
+              <p>Upload receipts or enter records manually without splitting your workflow across tools.</p>
+            </div>
+          </div>
+          <div class="index-stack-item">
+            <span class="index-stack-number">02</span>
+            <div>
+              <h2>Organize automatically</h2>
+              <p>Use AI categorization and rules to standardize categories, notes, and repeatable patterns.</p>
+            </div>
+          </div>
+          <div class="index-stack-item">
+            <span class="index-stack-number">03</span>
+            <div>
+              <h2>Understand the trends</h2>
+              <p>Move from transaction clutter to reports, budgets, and useful spending visibility.</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="index-section index-section--what">
+      <div class="index-section-heading">
+        <p class="index-kicker">What &lt;AppName&gt; actually does</p>
+        <h2>One workflow from raw receipt to clean financial record.</h2>
+        <p class="subtle">
+          Built for people who want less manual cleanup and more confidence in their numbers.
+        </p>
+      </div>
+
+      <div class="index-feature-grid">
+        <article class="card index-feature-card">
+          <h3>Smart receipt intake</h3>
+          <p>Upload images or PDFs and extract structured transaction data with OCR-backed processing.</p>
+        </article>
+        <article class="card index-feature-card">
+          <h3>Manual record support</h3>
+          <p>Add income and expenses directly while still benefiting from categories, rules, and reporting.</p>
+        </article>
+        <article class="card index-feature-card">
+          <h3>Rules engine</h3>
+          <p>Create repeatable logic like “if note contains payroll, categorize as Salary / Wages.”</p>
+        </article>
+        <article class="card index-feature-card">
+          <h3>Budgeting and reports</h3>
+          <p>Track where money goes, compare against plan, and export organized data when needed.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="index-section index-section--story">
+      <div class="index-story card">
+        <div>
+          <p class="index-kicker">Why this matters</p>
+          <h2>Most people do not need more finance software. They need less cleanup.</h2>
+        </div>
+        <p>
+          &lt;AppName&gt; is designed to remove repeated administrative work from personal and small-business finance.
+          Instead of manually retyping receipts, fixing categories every week, and hunting for old records later,
+          you get one place to collect information, automate decisions, and keep your books readable.
+        </p>
+      </div>
+    </section>
+
+    <section class="nf-about index-about">
+      <div class="nf-about-inner">
+        <h2>Built for real-world finance workflows</h2>
+        <p>
+          Whether you are tracking personal spending, side-income, freelance expenses, or a small operation,
+          &lt;AppName&gt; gives you a system that stays usable as your data grows.
+        </p>
+
+        <div class="nf-about-grid">
+          <div class="nf-about-card">
+            <h3>Fewer repeated edits</h3>
+            <p>Use rules and structured categories so recurring transactions stop requiring manual correction.</p>
+          </div>
+          <div class="nf-about-card">
+            <h3>Faster month-end review</h3>
+            <p>Look back through organized records and receipts without reconstructing context from scratch.</p>
+          </div>
+          <div class="nf-about-card">
+            <h3>Cleaner handoff</h3>
+            <p>Exports and reporting stay useful because the data behind them is more consistent from day one.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="index-section index-section--cta">
+      <div class="index-cta-panel card">
+        <div>
+          <p class="index-kicker">Ready to start</p>
+          <h2>See what your finances look like when the system does the boring part.</h2>
+        </div>
+        <div class="index-cta-actions">
+          <a href="register.html" class="btn btn--primary">Create Your Account</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="nf-footer index-footer" role="contentinfo">
+    <div class="nf-footer-inner">
+      <p>&copy; <span id="year"></span> &lt;AppName&gt;. All rights reserved.</p>
+      <nav class="nf-legal" aria-label="Footer">
+        <a href="about.html" class="nf-legal-link">About</a><span class="sep">&bull;</span>
+        <a href="privacy.html" class="nf-legal-link">Privacy</a><span class="sep">&bull;</span>
+        <a href="terms.html" class="nf-legal-link">Terms</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script>
+    const year = document.getElementById("year");
+    if (year) year.textContent = new Date().getFullYear();
+  </script>
   <script src="scripts/default.js" type="module" defer></script>
 </body>
 </html>
