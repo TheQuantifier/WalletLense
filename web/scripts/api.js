@@ -286,7 +286,6 @@ export const records = {
 };
 
 // ======================================================================
-<<<<<<< Updated upstream
 // RULES MODULE
 // ======================================================================
 export const rules = {
@@ -314,7 +313,10 @@ export const rules = {
 
   applyAll() {
     return request("/rules/apply", { method: "POST" });
-=======
+  },
+};
+
+// ======================================================================
 // RECURRING MODULE
 // ======================================================================
 export const recurring = {
@@ -340,7 +342,6 @@ export const recurring = {
   upcoming(params = {}) {
     const query = new URLSearchParams(params).toString();
     return request(`/recurring/upcoming${query ? `?${query}` : ""}`);
->>>>>>> Stashed changes
   },
 };
 
@@ -873,11 +874,8 @@ export function getReceiptSummary(receipt) {
 export const api = {
   auth,
   records,
-<<<<<<< Updated upstream
   rules,
-=======
   recurring,
->>>>>>> Stashed changes
   receipts,
   walterlens,
   netWorth,
