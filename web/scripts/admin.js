@@ -1393,32 +1393,17 @@ function renderSystemHealth() {
     return { key: "unknown", label: "unknown" };
   };
 
-  const canHealthWrite = hasPermission("health.write");
   const renderServiceRow = (service) => {
       const id = String(service.id || "");
       const currentState = String(service.state || "unknown").toLowerCase();
       const statusClass = `admin-health-state admin-health-state--${escapeHtml(currentState)}`;
       const testing = state.testingHealthServiceIds.has(id);
       const passText = state.healthPassByService[id] ? `<span class="admin-health-pass">${escapeHtml(state.healthPassByService[id])}</span>` : "";
-      const disableDeactivate = !canHealthWrite || !service.deactivatable || service.deactivated;
-      const disableActivate = !canHealthWrite || !service.deactivatable || !service.deactivated;
-      const isUnconfigured = currentState === "unconfigured";
-      const actionsHtml = isUnconfigured
-        ? `<span class="subtle">Configure first</span>`
-        : `<div class="admin-health-actions">
+      const actionsHtml = `<div class="admin-health-actions">
               ${passText}
               <button class="btn btn--link" type="button" data-action="test-health-service" data-id="${escapeHtml(id)}" ${testing ? "disabled" : ""}>
                 ${testing ? "Testing..." : "Test"}
               </button>
-              ${
-                service.deactivated
-                  ? `<button class="btn btn--link admin-health-btn admin-health-btn--activate" type="button" data-action="activate-health-service" data-id="${escapeHtml(id)}" ${disableActivate ? "disabled" : ""}>
-                Activate
-              </button>`
-                  : `<button class="btn btn--link admin-health-btn admin-health-btn--deactivate" type="button" data-action="deactivate-health-service" data-id="${escapeHtml(id)}" ${disableDeactivate ? "disabled" : ""}>
-                Deactivate
-              </button>`
-              }
             </div>`;
       return `
         <tr>
@@ -2409,9 +2394,6 @@ function bindEvents() {
   if (els.publishNotificationBtn) {
     els.publishNotificationBtn.addEventListener("click", publishNotificationFromEditor);
   }
-  if (els.healthDisconnectForm) {
-    els.healthDisconnectForm.addEventListener("submit", submitHealthDisconnect);
-  }
   document.querySelectorAll("button[data-notification-cmd]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const cmd = String(btn.dataset.notificationCmd || "").trim();
@@ -2569,20 +2551,6 @@ function bindEvents() {
     }
     if (action === "test-health-service") {
       testHealthService(id);
-    }
-    if (action === "deactivate-health-service") {
-      if (!hasPermission("health.write")) {
-        openPermissionModal("admin");
-        return;
-      }
-      openHealthServiceActionModal(id, "deactivate");
-    }
-    if (action === "activate-health-service") {
-      if (!hasPermission("health.write")) {
-        openPermissionModal("admin");
-        return;
-      }
-      openHealthServiceActionModal(id, "activate");
     }
   });
 }

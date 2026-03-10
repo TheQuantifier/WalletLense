@@ -58,11 +58,8 @@ export async function getSystemHealthControls({ useCache = true } = {}) {
 }
 
 export async function isSystemHealthServiceDeactivated(serviceId) {
-  if (String(serviceId || "").trim() === "database_connection") {
-    return isDatabaseEmergencyDeactivated();
-  }
-  const controls = await getSystemHealthControls();
-  return Boolean(controls?.[serviceId]?.deactivated);
+  void serviceId;
+  return false;
 }
 
 export async function setSystemHealthServiceDeactivated({

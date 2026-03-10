@@ -133,12 +133,6 @@ async function testSystemHealthService(serviceId) {
   }
 
   if (id === "database_connection") {
-    if (isDatabaseEmergencyDeactivated()) {
-      return {
-        passed: false,
-        detail: "Database is disconnected by admin. Use emergency activate if admin auth is unavailable.",
-      };
-    }
     const probe = await query("SELECT now() as now");
     return {
       passed: Boolean(probe?.rows?.[0]?.now),
@@ -307,35 +301,25 @@ async function testSystemHealthService(serviceId) {
 }
 
 async function buildSystemHealthServicesSnapshot() {
-  const controls = await getSystemHealthControls();
-  const dbEmergency = getDatabaseEmergencyState();
+  await getSystemHealthControls();
   const services = [];
   for (const service of SYSTEM_HEALTH_SERVICES) {
-    const control = controls?.[service.id];
-    const deactivated = service.id === "database_connection"
-      ? Boolean(dbEmergency?.deactivated)
-      : Boolean(control?.deactivated);
     const testResult = await testSystemHealthService(service.id);
     let state = testResult.passed ? "active" : "down";
     if (!testResult.passed && String(testResult.detail || "").toLowerCase().includes("missing")) {
       state = "unconfigured";
     }
-    if (deactivated) state = "deactivated";
     services.push({
       id: service.id,
       label: service.label,
       type: service.type,
       state,
-      deactivatable: service.deactivatable,
-      deactivated,
+      deactivatable: false,
+      deactivated: false,
       detail: service.purpose || testResult.detail,
       testedAt: new Date().toISOString(),
-      deactivatedAt: service.id === "database_connection"
-        ? dbEmergency?.deactivatedAt || null
-        : control?.deactivatedAt || null,
-      deactivatedBy: service.id === "database_connection"
-        ? dbEmergency?.deactivatedBy || null
-        : control?.deactivatedBy || null,
+      deactivatedAt: null,
+      deactivatedBy: null,
     });
   }
   return services;
