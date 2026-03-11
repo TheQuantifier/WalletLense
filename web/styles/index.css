@@ -240,31 +240,6 @@
   color: #15803d;
 }
 
-.index-hero-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.75rem;
-}
-
-.index-metric {
-  padding: 0.75rem;
-  border-radius: 0.85rem;
-  background: rgba(15,23,42,0.04);
-  display: grid;
-  gap: 0.25rem;
-  text-align: left;
-}
-
-.index-metric-value {
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: #0f172a;
-}
-
-.index-metric-label {
-  font-size: 0.82rem;
-  color: var(--muted);
-}
 
 
 .index-cta-panel h2,
@@ -490,7 +465,6 @@
 }
 
 :root[data-theme="dark"] .index-hero-mock,
-:root[data-theme="dark"] .index-metric,
 :root[data-theme="dark"] .index-mock-row,
 :root[data-theme="dark"] .index-trust,
 :root[data-theme="dark"] .index-compare-card--after,
@@ -504,7 +478,6 @@
 }
 
 :root[data-theme="dark"] .index-mock-header,
-:root[data-theme="dark"] .index-metric-value,
 :root[data-theme="dark"] .index-testimonial p,
 :root[data-theme="dark"] .index-trust-label {
   color: #f8fafc;
@@ -562,7 +535,4 @@
     width: 100%;
   }
 
-  .index-hero-metrics {
-    grid-template-columns: 1fr;
-  }
 }
