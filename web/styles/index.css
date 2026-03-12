@@ -532,6 +532,11 @@
     width: 100%;
   }
 
+  .index-cta-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .index-primary-cta,
   .index-secondary-cta,
   .index-auth-actions .btn {
