@@ -62,6 +62,10 @@
   flex-wrap: wrap;
 }
 
+.rules-help-btn {
+  padding-inline: 0;
+}
+
 .rules-section {
   display: grid;
   gap: 1rem;

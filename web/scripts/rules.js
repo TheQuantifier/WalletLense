@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnCreateRule = document.getElementById("btnCreateRule");
   const btnCreateRuleEmpty = document.getElementById("btnCreateRuleEmpty");
   const btnApplyRules = document.getElementById("btnApplyRules");
+  const btnRulesHelp = document.getElementById("btnRulesHelp");
   const rulesEnabledCount = document.getElementById("rulesEnabledCount");
   const rulesTotalCount = document.getElementById("rulesTotalCount");
 
@@ -58,6 +59,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const hideModal = () => ruleModal?.classList.add("hidden");
   const showOnboarding = () => rulesOnboardingModal?.classList.remove("hidden");
   const hideOnboarding = () => rulesOnboardingModal?.classList.add("hidden");
+  const syncOnboardingPreference = () => {
+    if (!rulesOnboardingDontShow) return;
+    rulesOnboardingDontShow.checked = !!localStorage.getItem(ONBOARDING_KEY);
+  };
+  const openOnboarding = () => {
+    syncOnboardingPreference();
+    showOnboarding();
+  };
 
   const getRulePayload = () => {
     const conditions = [];
@@ -406,6 +415,7 @@ document.addEventListener("DOMContentLoaded", () => {
   ruleCancelBtn?.addEventListener("click", () => hideModal());
   btnCreateRule?.addEventListener("click", openCreate);
   btnCreateRuleEmpty?.addEventListener("click", openCreate);
+  btnRulesHelp?.addEventListener("click", openOnboarding);
   rulesOnboardingClose?.addEventListener("click", () => {
     if (rulesOnboardingDontShow?.checked) {
       localStorage.setItem(ONBOARDING_KEY, "true");
@@ -452,8 +462,7 @@ document.addEventListener("DOMContentLoaded", () => {
       prefillFromQuery();
       updateLiveSummary();
       if (!localStorage.getItem(ONBOARDING_KEY)) {
-        if (rulesOnboardingDontShow) rulesOnboardingDontShow.checked = false;
-        showOnboarding();
+        openOnboarding();
       }
     } catch (err) {
       showStatus(`Failed to load rules: ${err?.message || "Unknown error"}`, "error");

@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const googleRegisterBtn = document.getElementById("googleRegisterBtn");
   const passwordInput = document.getElementById("password");
   const confirmInput = document.getElementById("confirmPassword");
+  const passwordToggles = document.querySelectorAll(".password-toggle");
   const legalModal = document.getElementById("legalModal");
   const legalModalTitle = document.getElementById("legalModalTitle");
   const legalModalBody = document.getElementById("legalModalBody");
@@ -96,6 +97,23 @@ document.addEventListener("DOMContentLoaded", () => {
   if (googleRedirect?.error) {
     showMsg(googleRedirect.error, "error");
   }
+
+  passwordToggles.forEach((toggle) => {
+    toggle.addEventListener("click", () => {
+      const targetId = toggle.getAttribute("data-target");
+      const target = targetId ? document.getElementById(targetId) : null;
+      if (!target) return;
+      const showing = target.type === "password";
+      target.type = showing ? "text" : "password";
+      toggle.classList.toggle("is-active", showing);
+      toggle.setAttribute("aria-pressed", showing ? "true" : "false");
+      toggle.setAttribute("aria-label", showing ? "Hide password" : "Show password");
+      target.focus();
+      if (target === passwordInput || target === confirmInput) {
+        updatePasswordStyles();
+      }
+    });
+  });
 
   const syncModalScrollLock = () => {
     const legalOpen = legalModal && !legalModal.classList.contains("hidden");

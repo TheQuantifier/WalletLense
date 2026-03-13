@@ -490,6 +490,61 @@ body.landing-light {
   gap: 1rem;
 }
 
+.password-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-field .nf-input {
+  width: 100%;
+  padding-right: 2.75rem;
+}
+
+.auth-form .password-toggle {
+  position: absolute;
+  right: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0.25rem;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 999px;
+  cursor: pointer;
+  line-height: 0;
+  box-shadow: none;
+}
+
+.auth-form .password-toggle:hover {
+  color: var(--text);
+  background: rgba(15,23,42,0.06);
+}
+
+.auth-form .password-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.password-toggle-icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+  fill: currentColor;
+}
+
+.password-toggle .eye-off {
+  opacity: 0;
+}
+
+.password-toggle.is-active .eye {
+  opacity: 0;
+}
+
+.password-toggle.is-active .eye-off {
+  opacity: 1;
+}
+
 .auth-form input {
   padding: 0.75rem;
   border-radius: var(--radius);
