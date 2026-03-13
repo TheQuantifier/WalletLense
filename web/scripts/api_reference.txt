@@ -283,7 +283,7 @@ EXAMPLE:
     amount: 16.99,
     category: "Entertainment",
     note: "Subscription",
-    frequency: "monthly",
+    frequency: "quarterly",
     dayOfMonth: 15,
     startDate: "2025-01-15",
     endDate: null,

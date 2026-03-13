@@ -26,6 +26,28 @@ test("monthly recurrence clamps to last valid day of month", () => {
   }), ["2026-01-31", "2026-02-28", "2026-03-31", "2026-04-30"]);
 });
 
+test("quarterly recurrence advances by three months and clamps month end", () => {
+  const schedule = {
+    id: "sched-q1",
+    name: "Quarterly taxes",
+    type: "expense",
+    amount: 500,
+    category: "Taxes",
+    frequency: "quarterly",
+    dayOfMonth: 31,
+    startDate: "2026-01-31",
+    active: true,
+  };
+
+  assert.deepEqual(
+    getOccurrenceDatesInRange(schedule, {
+      from: "2026-01-01",
+      to: "2026-12-31",
+    }),
+    ["2026-01-31", "2026-04-30", "2026-07-31", "2026-10-31"]
+  );
+});
+
 test("yearly recurrence honors leap-day fallback and future next run", () => {
   const schedule = {
     frequency: "yearly",

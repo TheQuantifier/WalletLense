@@ -1,4 +1,4 @@
-const VALID_FREQUENCIES = new Set(["weekly", "biweekly", "monthly", "yearly"]);
+const VALID_FREQUENCIES = new Set(["weekly", "biweekly", "monthly", "quarterly", "yearly"]);
 
 export function isValidDateOnly(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) return false;
@@ -55,6 +55,7 @@ export function advanceOccurrence(date, schedule) {
   if (frequency === "weekly") return addDays(date, 7);
   if (frequency === "biweekly") return addDays(date, 14);
   if (frequency === "monthly") return addMonths(date, 1, preferredDay);
+  if (frequency === "quarterly") return addMonths(date, 3, preferredDay);
   if (frequency === "yearly") return addMonths(date, 12, preferredDay);
   throw new Error(`Unsupported recurring frequency: ${frequency}`);
 }
@@ -160,7 +161,7 @@ export function validateRecurringPayload(payload, { partial = false } = {}) {
 
   if (!partial || payload.frequency !== undefined) {
     if (!VALID_FREQUENCIES.has(payload.frequency)) {
-      return "Frequency must be weekly, biweekly, monthly, or yearly";
+      return "Frequency must be weekly, biweekly, monthly, quarterly, or yearly";
     }
   }
 
