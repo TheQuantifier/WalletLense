@@ -369,6 +369,7 @@ textarea { resize: vertical; }
 }
 
 .achievement-card {
+  position: relative;
   display: flex;
   gap: 0.75rem;
   align-items: center;
@@ -384,6 +385,37 @@ textarea { resize: vertical; }
 
 .achievement-card--locked {
   opacity: 0.72;
+}
+
+.achievement-hint {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: calc(100% + 0.55rem);
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--primary) 14%, var(--border));
+  background: color-mix(in srgb, var(--card-bg) 96%, #fff);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.16);
+  color: var(--text);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+  transition: opacity 140ms ease, transform 140ms ease;
+  z-index: 5;
+}
+
+.achievement-card:hover .achievement-hint,
+.achievement-card:focus-within .achievement-hint {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+:root[data-theme="dark"] .achievement-hint {
+  background: color-mix(in srgb, var(--card-bg) 94%, #0f172a);
+  box-shadow: 0 14px 32px rgba(2, 6, 23, 0.5);
 }
 
 /* ===== AVATAR MODAL ===== */

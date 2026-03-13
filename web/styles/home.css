@@ -58,7 +58,7 @@
 }
 
 .hero-metric .value--gradient {
-  --cashflow-color: #f59e0b;
+  --cashflow-color: var(--accent);
   color: var(--cashflow-color);
   background-image: linear-gradient(
     90deg,
@@ -178,7 +178,7 @@
 :root[data-theme="dark"] .info-popover__trigger {
   background: rgba(15, 23, 42, 0.56);
   border-color: rgba(148, 163, 184, 0.28);
-  color: #cbd5e1;
+  color: var(--muted);
 }
 
 :root[data-theme="dark"] .info-popover__panel {
@@ -248,11 +248,11 @@
 }
 
 .kpi-value.kpi-warn {
-  color: #f59e0b;
+  color: var(--accent);
 }
 
 .kpi-value.kpi-alert {
-  color: #f97316;
+  color: color-mix(in srgb, var(--accent) 70%, #f97316);
 }
 
 .kpi-value.kpi-bad {
@@ -273,18 +273,33 @@
 }
 
 .kpi--income {
-  background: linear-gradient(135deg, #ecfeff 0%, #f0fdfa 55%, #ffffff 100%);
-  border-color: rgba(20, 184, 166, 0.25);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary) 12%, #ffffff) 0%,
+    color-mix(in srgb, var(--primary) 6%, #ffffff) 55%,
+    #ffffff 100%
+  );
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
 }
 
 .kpi--spending {
-  background: linear-gradient(135deg, #fff7ed 0%, #fffbeb 55%, #ffffff 100%);
-  border-color: rgba(245, 158, 11, 0.3);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 18%, #ffffff) 0%,
+    color-mix(in srgb, var(--accent) 8%, #ffffff) 55%,
+    #ffffff 100%
+  );
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 .kpi--balance {
-  background: linear-gradient(135deg, #ecfdf3 0%, #f0fdf4 55%, #ffffff 100%);
-  border-color: rgba(16, 185, 129, 0.3);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--good) 18%, #ffffff) 0%,
+    color-mix(in srgb, var(--good) 8%, #ffffff) 55%,
+    #ffffff 100%
+  );
+  border-color: color-mix(in srgb, var(--good) 40%, transparent);
 }
 
 :root[data-theme="dark"] .kpi::after {
@@ -292,15 +307,30 @@
 }
 
 :root[data-theme="dark"] .kpi--income {
-  background: linear-gradient(135deg, rgba(20, 184, 166, 0.28) 0%, rgba(13, 148, 136, 0.26) 60%, rgba(15, 118, 110, 0.28) 100%);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary) 35%, transparent) 0%,
+    color-mix(in srgb, var(--primary) 25%, transparent) 60%,
+    color-mix(in srgb, var(--primary) 30%, transparent) 100%
+  );
 }
 
 :root[data-theme="dark"] .kpi--spending {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.28) 60%, rgba(180, 83, 9, 0.3) 100%);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 30%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 24%, transparent) 60%,
+    color-mix(in srgb, var(--accent) 28%, transparent) 100%
+  );
 }
 
 :root[data-theme="dark"] .kpi--balance {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.28) 0%, rgba(5, 150, 105, 0.28) 60%, rgba(4, 120, 87, 0.3) 100%);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--good) 30%, transparent) 0%,
+    color-mix(in srgb, var(--good) 24%, transparent) 60%,
+    color-mix(in srgb, var(--good) 28%, transparent) 100%
+  );
 }
 
 :root[data-theme="dark"] .upcoming-item {
@@ -448,8 +478,8 @@
   font-weight: 700;
 }
 
-/* ===== Chart + Breakdown layout ===== */
-.chart-section {
+/* ===== Summary + Breakdown layout ===== */
+.summary-section {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 1.2fr);
   gap: 1rem;
@@ -457,27 +487,103 @@
   width: 100%;
 }
 
-.chart-card {
+.summary-card {
   padding: 1.25rem;
   max-width: 100%;
   min-width: 0;
-  overflow-x: auto;
 }
 
-/* Fix canvas overflow */
-#categoriesChart {
-  width: 100% !important;
-  height: auto !important;
-  max-width: 100%;
-  display: block;
-}
-
-.chart-header {
+.summary-header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   margin-bottom: 0.5rem;
 }
+
+.velocity-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: center;
+}
+
+.velocity-gauge {
+  position: relative;
+  width: 100%;
+  max-width: 240px;
+  margin: 0 auto;
+}
+
+#spendVelocityGauge {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.gauge-track {
+  fill: none;
+  stroke: color-mix(in srgb, var(--border) 70%, transparent);
+  stroke-width: 12;
+  stroke-linecap: round;
+}
+
+.gauge-progress {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 12;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 160ms ease, stroke 160ms ease;
+}
+
+.gauge-progress.is-over {
+  stroke: var(--bad);
+}
+
+.gauge-marker {
+  fill: var(--text);
+  stroke: var(--card-bg);
+  stroke-width: 2;
+}
+
+:root[data-theme="dark"] .gauge-marker {
+  fill: var(--text);
+  stroke: var(--card-bg);
+}
+
+.velocity-center {
+  position: absolute;
+  left: 50%;
+  top: 64%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.velocity-center strong {
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+.velocity-metrics {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.velocity-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.velocity-row .label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
 .chart-caption {
   margin-top: 0.5rem;
 }
@@ -650,14 +756,14 @@
 .custom-category-delete {
   border: none;
   background: transparent;
-  color: #dc2626;
+  color: var(--bad);
   font-size: 1rem;
   line-height: 1;
   cursor: pointer;
 }
 
 .custom-category-delete:hover {
-  color: #b91c1c;
+  color: color-mix(in srgb, var(--bad) 80%, #000);
 }
 
 /* Small screens */
@@ -670,7 +776,11 @@
     width: 100%;
   }
 
-  .chart-section {
+  .summary-section {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .velocity-grid {
     grid-template-columns: minmax(0, 1fr);
   }
   .net-worth-grid {
@@ -699,10 +809,6 @@
   .quick-actions {
     justify-content: flex-start;
   }
-  .legend {
-    display: none;
-  }
-
   /* Recent table: avoid cramped columns */
   .txn-table {
     display: block;

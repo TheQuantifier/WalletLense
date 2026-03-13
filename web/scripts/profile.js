@@ -344,6 +344,15 @@ const renderAchievements = (payload) => {
 
     card.appendChild(badge);
     card.appendChild(body);
+
+    const description = String(item.description || "").trim();
+    if (description) {
+      const hint = document.createElement("span");
+      hint.className = "achievement-hint";
+      hint.textContent = description;
+      card.appendChild(hint);
+    }
+
     achievementGrid.appendChild(card);
   });
 };

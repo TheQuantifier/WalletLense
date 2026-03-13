@@ -42,6 +42,8 @@ import { api } from "./api.js";
   const BANK_FILTER_KEY = "home_bank_filter";
   let currentComputed = null;
   let currentNetWorth = null;
+  let currentViewLabel = "This Month";
+  let currentSpendVelocity = null;
 
   const NETWORTH_ITEMS_KEY = "netWorthItems";
 
@@ -92,6 +94,12 @@ import { api } from "./api.js";
     }).format(Number.isFinite(num) ? num : 0);
   };
 
+  const fmtPercent = (value) => {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return "—";
+    return `${(num * 100).toFixed(1)}%`;
+  };
+
   const getCSSVar = (name) =>
     getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
@@ -111,6 +119,11 @@ import { api } from "./api.js";
   };
 
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  const formatMonthKey = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    return `${year}-${month}`;
+  };
 
   const normalizeName = (name) => String(name || "").trim().toLowerCase();
 
@@ -404,87 +417,169 @@ import { api } from "./api.js";
     });
   }
 
+  function computeMonthlyProjection(records) {
+    const now = new Date();
+    const monthRecords = filterRecordsByView(records, "Monthly");
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const daysElapsed = Math.max(1, now.getDate());
+
+    const totalIncome = monthRecords
+      .filter((r) => r.type === "income")
+      .reduce((s, r) => s + Number(r.amount || 0), 0);
+    const totalSpending = monthRecords
+      .filter((r) => r.type === "expense")
+      .reduce((s, r) => s + Number(r.amount || 0), 0);
+
+    const avgIncomePerDay = totalIncome / daysElapsed;
+    const avgSpendingPerDay = totalSpending / daysElapsed;
+    const projectedNet = (avgIncomePerDay - avgSpendingPerDay) * daysInMonth;
+
+    return {
+      projectedNet,
+      daysElapsed,
+      daysInMonth,
+      totalIncome,
+      totalSpending,
+    };
+  }
+
   // ============================================================
-  //  SIMPLE BAR CHART
+  //  SPEND VELOCITY + TOP CATEGORIES
   // ============================================================
-  function drawBarChart(canvas, dataObj) {
-    if (!canvas) return;
+  const BUDGET_COLUMNS = [
+    "housing",
+    "utilities",
+    "groceries",
+    "transportation",
+    "dining",
+    "health",
+    "entertainment",
+    "shopping",
+    "membership",
+    "miscellaneous",
+    "education",
+    "giving",
+    "savings",
+  ];
 
-    const parent = canvas.parentElement || canvas;
-    const parentWidth = parent.clientWidth || 600;
-    const dpr = window.devicePixelRatio || 1;
+  const sumBudgetSheet = (sheet) => {
+    if (!sheet) return 0;
+    const standard = BUDGET_COLUMNS.reduce((sum, key) => {
+      const val = Number(sheet?.[key] ?? 0);
+      return sum + (Number.isFinite(val) ? val : 0);
+    }, 0);
+    const custom = Array.isArray(sheet.custom_categories)
+      ? sheet.custom_categories.reduce((sum, entry) => {
+          const val = Number(entry?.amount ?? 0);
+          return sum + (Number.isFinite(val) ? val : 0);
+        }, 0)
+      : 0;
+    return standard + custom;
+  };
 
-    canvas.width = parentWidth * dpr;
-    canvas.height = 300 * dpr;
+  const getPeriodProgress = (range) => {
+    if (!range?.start || !range?.end) {
+      const now = new Date();
+      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      return { daysElapsed: now.getDate(), daysTotal: daysInMonth };
+    }
+    const start = new Date(range.start);
+    const end = new Date(range.end);
+    const now = new Date();
+    const totalMs = Math.max(1, end.getTime() - start.getTime());
+    const elapsedMs = Math.min(Math.max(0, now.getTime() - start.getTime()), totalMs);
+    const daysTotal = Math.max(1, Math.round(totalMs / 86400000) + 1);
+    const daysElapsed = Math.max(1, Math.round(elapsedMs / 86400000) + 1);
+    return { daysElapsed, daysTotal };
+  };
 
-    const ctx = canvas.getContext("2d");
-    // Reset transforms so repeated draws (resize/theme redraw) never accumulate scaling.
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.scale(dpr, dpr);
+  async function loadSpendVelocity() {
+    const cadence = "monthly";
+    const period = formatMonthKey(new Date());
+    try {
+      const sheet = await api.budgetSheets.lookup({ cadence, period });
+      const summary = await api.budgetSheets.summary({ cadence, period });
+      const budgetTotal = sumBudgetSheet(sheet);
+      const spent = Number(summary?.totals?.totalSpent || 0);
+      return {
+        hasBudget: budgetTotal > 0,
+        budgetTotal,
+        spent,
+        range: summary?.range,
+      };
+    } catch {
+      return { hasBudget: false, budgetTotal: 0, spent: 0, range: null };
+    }
+  }
 
-    const entries = Object.entries(dataObj || {}).sort((a, b) =>
-      a[0].localeCompare(b[0], undefined, { sensitivity: "base" })
-    );
-    const labels = entries.map((e) => e[0]);
-    const values = entries.map((e) => +e[1] || 0);
-    const max = Math.max(1, ...values);
+  function renderSpendVelocity(data, currency = CURRENCY_FALLBACK) {
+    setText("#velocityPeriodLabel", "This month");
+    const percentEl = $("#velocityPercent");
+    const budgetEl = $("#velocityBudget");
+    const spentEl = $("#velocitySpent");
+    const paceEl = $("#velocityPace");
+    const captionEl = $("#velocityCaption");
+    const progressEl = $("#spendVelocityProgress");
+    const markerEl = $("#spendVelocityMarker");
 
-    // Clear in CSS pixels (since we've scaled the context).
-    ctx.clearRect(0, 0, parentWidth, 300);
+    if (!percentEl || !budgetEl || !spentEl || !paceEl || !progressEl || !markerEl) return;
 
-    const P = { t: 20, r: 20, b: 70, l: 78 };
-    const innerW = canvas.width / dpr - P.l - P.r;
-    const innerH = canvas.height / dpr - P.t - P.b;
+    if (!data?.hasBudget) {
+      percentEl.textContent = "—";
+      budgetEl.textContent = "Set a budget";
+      spentEl.textContent = fmtMoney(data?.spent || 0, currency);
+      paceEl.textContent = "—";
+      if (captionEl) {
+        captionEl.textContent = "Set a monthly budget to track spend velocity.";
+      }
+      progressEl.style.strokeDasharray = "0 1";
+      progressEl.style.strokeDashoffset = "0";
+      markerEl.setAttribute("cx", "20");
+      markerEl.setAttribute("cy", "100");
+      return;
+    }
 
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = "#e5e7eb";
-    ctx.beginPath();
-    ctx.moveTo(P.l, P.t);
-    ctx.lineTo(P.l, P.t + innerH);
-    ctx.lineTo(P.l + innerW, P.t + innerH);
-    ctx.stroke();
+    const budgetTotal = Number(data.budgetTotal || 0);
+    const spent = Number(data.spent || 0);
+    const ratio = budgetTotal > 0 ? spent / budgetTotal : 0;
+    const { daysElapsed, daysTotal } = getPeriodProgress(data.range);
+    const paceRatio = clamp(daysElapsed / daysTotal, 0, 1);
+    const expected = budgetTotal * paceRatio;
 
-    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-    const palette = isDark
-      ? ["#60a5fa", "#38bdf8", "#818cf8", "#22d3ee", "#93c5fd", "#67e8f9", "#a5b4fc"]
-      : ["#0057b8", "#00a3e0", "#1e3a8a", "#0ea5e9", "#2563eb", "#0891b2", "#3b82f6"];
+    percentEl.textContent = `${Math.round(ratio * 100)}%`;
+    budgetEl.textContent = fmtMoney(budgetTotal, currency);
+    spentEl.textContent = fmtMoney(spent, currency);
 
-    const gap = 14;
-    const barW = Math.max(
-      10,
-      (innerW - gap * (values.length + 1)) / Math.max(values.length, 1)
-    );
+    const paceDiff = spent - expected;
+    const paceState =
+      Math.abs(paceDiff) < budgetTotal * 0.03
+        ? "On pace"
+        : paceDiff > 0
+        ? "Over pace"
+        : "Under pace";
+    paceEl.textContent = paceState;
 
-    values.forEach((v, i) => {
-      const h = (v / max) * (innerH - 10);
-      const x = P.l + gap + i * (barW + gap);
-      const y = P.t + innerH - h;
+    if (captionEl) {
+      captionEl.textContent = `${daysElapsed}/${daysTotal} days · ${fmtMoney(
+        expected,
+        currency
+      )} expected by now`;
+    }
 
-      ctx.fillStyle = palette[i % palette.length];
-      ctx.fillRect(x, y, barW, h);
+    const arcLength = progressEl.getTotalLength();
+    const clamped = clamp(ratio, 0, 1);
+    progressEl.style.strokeDasharray = `${arcLength} ${arcLength}`;
+    progressEl.style.strokeDashoffset = `${arcLength * (1 - clamped)}`;
+    progressEl.classList.toggle("is-over", ratio > 1);
 
-      ctx.fillStyle = isDark ? "#fff" : "#111827";
-      ctx.font = "12px system-ui";
-      ctx.textAlign = "center";
-      ctx.fillText(v.toFixed(2), x + barW / 2, y - 6);
-
-      ctx.fillStyle = "#6b7280";
-      ctx.save();
-      ctx.translate(x + barW / 2, P.t + innerH + 16);
-      ctx.rotate(-Math.PI / 10);
-      ctx.fillText(labels[i], 0, 0);
-      ctx.restore();
-    });
-
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "700 18px system-ui";
-    ctx.textAlign = "center";
-    ctx.fillText("Category", P.l + innerW / 2, P.t + innerH + 52);
-    ctx.save();
-    ctx.translate(28, P.t + innerH / 2);
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillText("Amount", 0, 0);
-    ctx.restore();
+    const angle = Math.PI * (1 - paceRatio);
+    const centerX = 100;
+    const centerY = 100;
+    const radius = 80;
+    const markerX = centerX + radius * Math.cos(angle);
+    const markerY = centerY - radius * Math.sin(angle);
+    markerEl.setAttribute("cx", markerX.toFixed(2));
+    markerEl.setAttribute("cy", markerY.toFixed(2));
   }
 
   // ============================================================
@@ -671,53 +766,30 @@ import { api } from "./api.js";
     }
   }
 
-  // ============================================================
-  //  UI HELPERS
-  // ============================================================
-  function renderLegend(container, categories) {
-    if (!container) return;
-    container.innerHTML = "";
-
-    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-    const palette = isDark
-      ? ["#60a5fa", "#38bdf8", "#818cf8", "#22d3ee", "#93c5fd", "#67e8f9", "#a5b4fc"]
-      : ["#0057b8", "#00a3e0", "#1e3a8a", "#0ea5e9", "#2563eb", "#0891b2", "#3b82f6"];
-
-    Object.keys(categories || {})
-      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
-      .forEach((name, i) => {
-      const chip = document.createElement("span");
-      chip.className = "chip";
-      chip.style.color = palette[i % palette.length];
-
-      const dot = document.createElement("span");
-      dot.className = "dot";
-      chip.appendChild(dot);
-      chip.appendChild(document.createTextNode(name));
-
-      container.appendChild(chip);
-    });
-  }
-
-  function renderBreakdown(listEl, categories, currency) {
+  function renderTopCategories(listEl, categories, currency) {
     if (!listEl) return;
     listEl.innerHTML = "";
 
-    const total = Object.values(categories || {}).reduce((a, b) => a + b, 0);
+    const entries = Object.entries(categories || {}).sort((a, b) => b[1] - a[1]);
+    if (!entries.length) {
+      const li = document.createElement("li");
+      li.className = "subtle";
+      li.textContent = "No spending yet.";
+      listEl.appendChild(li);
+      return;
+    }
 
-    Object.entries(categories || {})
-      .sort((a, b) => a[0].localeCompare(b[0], undefined, { sensitivity: "base" }))
-      .forEach(([name, amt]) => {
-        const pct = total ? Math.round((amt / total) * 100) : 0;
-        const li = document.createElement("li");
-        const left = document.createElement("span");
-        left.textContent = name;
-        const right = document.createElement("span");
-        right.textContent = `${fmtMoney(amt, currency)} (${pct}%)`;
-        li.appendChild(left);
-        li.appendChild(right);
-        listEl.appendChild(li);
-      });
+    const total = entries.reduce((sum, [, value]) => sum + value, 0) || 1;
+    entries.slice(0, 3).forEach(([name, amt]) => {
+      const li = document.createElement("li");
+      const left = document.createElement("span");
+      left.textContent = name;
+      const right = document.createElement("span");
+      right.textContent = `${fmtMoney(amt, currency)} • ${fmtPercent(amt / total)}`;
+      li.appendChild(left);
+      li.appendChild(right);
+      listEl.appendChild(li);
+    });
   }
 
   function renderUpcomingRecurring(listEl, items) {
@@ -787,6 +859,32 @@ import { api } from "./api.js";
       currency,
       last_updated: latestISO || new Date().toISOString(),
     };
+  }
+
+  function buildCashflowTrend(records, monthsBack = 6) {
+    const now = new Date();
+    const months = [];
+    for (let i = monthsBack - 1; i >= 0; i -= 1) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({
+        key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+        label: d.toLocaleDateString(undefined, { month: "short" }),
+        net: 0,
+      });
+    }
+
+    records.forEach((r) => {
+      if (!r.date) return;
+      const d = new Date(r.date);
+      if (Number.isNaN(d.getTime())) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const bucket = months.find((m) => m.key === key);
+      if (!bucket) return;
+      const amt = Number(r.amount || 0);
+      bucket.net += r.type === "income" ? amt : -amt;
+    });
+
+    return months;
   }
 
   // ============================================================
@@ -982,16 +1080,19 @@ import { api } from "./api.js";
     return select?.value || "all";
   };
 
-  function renderKpis(comp, viewLabel) {
+  function renderKpis(comp, viewLabel, projection) {
     setText("#kpiIncome", fmtMoney(comp.total_income, comp.currency));
     setText("#kpiSpending", fmtMoney(comp.total_spending, comp.currency));
     setText("#kpiBalance", fmtMoney(comp.net_balance, comp.currency));
-    setText("#heroProjectedSavings", fmtMoney(comp.net_balance, comp.currency));
+    setText("#heroProjectedSavings", fmtMoney(projection.projectedNet, comp.currency));
 
     setText("#kpiPeriodIncome", viewLabel);
     setText("#kpiPeriodSpending", viewLabel);
     setText("#kpiPeriodBalance", viewLabel);
-    setText("#heroProjectedDelta", `Net ${viewLabel.toLowerCase()}`);
+    setText(
+      "#heroProjectedDelta",
+      `Forecasted end of month (${projection.daysElapsed}/${projection.daysInMonth} days)`
+    );
 
     setText(
       "#lastUpdated",
@@ -1012,19 +1113,25 @@ import { api } from "./api.js";
       const hue = gradientProgress * 145;
       const lightness = 46 - gradientProgress * 6;
 
-      cashflowEl.textContent = fmtMoney(netCashflow, comp.currency);
-      cashflowEl.classList.add("value--gradient");
-      cashflowEl.style.setProperty("--cashflow-color", `hsl(${hue} 78% ${lightness}%)`);
+      if (income > 0) {
+        cashflowEl.textContent = fmtPercent(surplusRatio);
+        cashflowEl.classList.add("value--gradient");
+        cashflowEl.style.setProperty("--cashflow-color", `hsl(${hue} 78% ${lightness}%)`);
+      } else {
+        cashflowEl.textContent = "—";
+        cashflowEl.classList.remove("value--gradient");
+        cashflowEl.style.removeProperty("--cashflow-color");
+      }
 
       if (cashflowDeltaEl) {
-        if (netCashflow < 0) {
-          cashflowDeltaEl.textContent = "Spending is greater than income";
-        } else if (income <= 0) {
+        if (income <= 0) {
           cashflowDeltaEl.textContent = "Add income to evaluate surplus health";
+        } else if (netCashflow < 0) {
+          cashflowDeltaEl.textContent = `Deficit: ${fmtPercent(Math.abs(surplusRatio))} of income`;
         } else if (surplusRatio < 0.1) {
-          cashflowDeltaEl.textContent = `Orange zone: ${(surplusRatio * 100).toFixed(1)}% of income left after spending`;
+          cashflowDeltaEl.textContent = `Orange zone: ${fmtPercent(surplusRatio)} of income left after spending`;
         } else {
-          cashflowDeltaEl.textContent = `Healthy surplus: ${(surplusRatio * 100).toFixed(1)}% of income left after spending`;
+          cashflowDeltaEl.textContent = `Healthy surplus: ${fmtPercent(surplusRatio)} of income left after spending`;
         }
       }
     }
@@ -1363,26 +1470,26 @@ import { api } from "./api.js";
         : dashboardView === "All" || dashboardView === "All Time"
         ? "All Time"
         : "This Month";
+    currentViewLabel = viewLabel;
 
     const bankId = getSelectedBankId();
     const bankRecords = filterRecordsByBank(records, bankId);
     const filteredRecords = filterRecordsByView(bankRecords, dashboardView);
 
     const computed = computeOverview(filteredRecords);
+    const projection = computeMonthlyProjection(bankRecords);
+    const spendVelocity = await loadSpendVelocity();
     const netWorthData = await getNetWorthData(bankRecords, computed.currency);
 
     currentComputed = computed;
     currentNetWorth = netWorthData;
+    currentSpendVelocity = spendVelocity;
 
-    renderKpis(computed, viewLabel);
+    renderKpis(computed, viewLabel, projection);
+    renderSpendVelocity(spendVelocity, computed.currency);
     renderNetWorth(netWorthData);
     renderExpensesTable($("#txnTbody"), filteredRecords, computed.currency);
-
-    const canvas = $("#categoriesChart");
-    drawBarChart(canvas, computed.categories);
-
-    renderLegend($("#chartLegend"), computed.categories);
-    renderBreakdown($("#categoryList"), computed.categories, computed.currency);
+    renderTopCategories($("#topCategoriesList"), computed.categories, computed.currency);
   }
 
   async function init() {
@@ -1416,8 +1523,7 @@ import { api } from "./api.js";
 
       const redraw = debounce(() => {
         if (!currentComputed) return;
-        const canvas = $("#categoriesChart");
-        drawBarChart(canvas, currentComputed.categories);
+        renderSpendVelocity(currentSpendVelocity, currentComputed.currency);
         if (currentNetWorth?.trend?.length) {
           drawNetWorthChart($("#netWorthChart"), currentNetWorth.trend, currentNetWorth.currency);
         }

@@ -173,20 +173,50 @@
       </article>
     </section>
 
-    <!-- Chart + breakdown -->
-    <section class="chart-section">
-      <div class="chart-card card">
-        <div class="chart-header">
-          <h2>Spending by Category</h2>
-          <div class="legend" id="chartLegend"></div>
+    <!-- Summary + breakdown -->
+    <section class="summary-section">
+      <div class="summary-card card">
+        <div class="summary-header">
+          <h2>Spend Velocity</h2>
+          <span class="subtle" id="velocityPeriodLabel">This month</span>
         </div>
-        <canvas id="categoriesChart"></canvas>
-        <p class="chart-caption subtle">Bars scaled to the highest category.</p>
+        <div class="velocity-grid">
+          <div class="velocity-gauge">
+            <svg id="spendVelocityGauge" viewBox="0 0 200 120" role="img" aria-label="Budget usage gauge">
+              <path class="gauge-track" d="M 20 100 A 80 80 0 0 1 180 100"></path>
+              <path class="gauge-progress" id="spendVelocityProgress" d="M 20 100 A 80 80 0 0 1 180 100"></path>
+              <circle class="gauge-marker" id="spendVelocityMarker" cx="20" cy="100" r="4"></circle>
+            </svg>
+            <div class="velocity-center">
+              <strong id="velocityPercent">—</strong>
+              <span class="subtle">of budget used</span>
+            </div>
+          </div>
+          <div class="velocity-metrics">
+            <div class="velocity-row">
+              <span class="label">Budget</span>
+              <strong id="velocityBudget">—</strong>
+            </div>
+            <div class="velocity-row">
+              <span class="label">Spent</span>
+              <strong id="velocitySpent">—</strong>
+            </div>
+            <div class="velocity-row">
+              <span class="label">Pace</span>
+              <strong id="velocityPace">—</strong>
+            </div>
+            <p class="chart-caption subtle" id="velocityCaption">Set a monthly budget to track spend velocity.</p>
+            <a class="btn btn--link" href="budgeting.html">Adjust budget →</a>
+          </div>
+        </div>
       </div>
 
       <aside class="breakdown card">
-        <h3>Category Breakdown</h3>
-        <ul id="categoryList" class="cat-list"></ul>
+        <div class="summary-header">
+          <h3>Top spending categories</h3>
+          <a class="btn btn--link" href="reports.html">View report →</a>
+        </div>
+        <ul id="topCategoriesList" class="cat-list"></ul>
       </aside>
     </section>
 
