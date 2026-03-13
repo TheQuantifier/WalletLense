@@ -308,10 +308,22 @@ document.addEventListener("DOMContentLoaded", () => {
     return num.toLocaleString(undefined, { style: "currency", currency: "USD" });
   };
 
+  const parseDisplayDate = (dateStr) => {
+    if (!dateStr) return null;
+    const normalized = String(dateStr).trim();
+    const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) {
+      const [, year, month, day] = match;
+      return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), 12, 0, 0));
+    }
+
+    const parsed = new Date(normalized);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
   const formatDate = (dateStr) => {
-    if (!dateStr) return "—";
-    const d = new Date(dateStr);
-    if (Number.isNaN(d.getTime())) return "—";
+    const d = parseDisplayDate(dateStr);
+    if (!d) return "—";
     return d.toLocaleDateString();
   };
 
