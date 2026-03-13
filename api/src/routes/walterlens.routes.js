@@ -6,5 +6,6 @@ import * as controller from "../controllers/walterlens.controller.js";
 const router = express.Router();
 
 router.post("/chat", auth, controller.chat);
+router.post("/focus", auth, controller.focus);
 
 export default router;

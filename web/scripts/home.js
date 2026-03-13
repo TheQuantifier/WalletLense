@@ -1,5 +1,6 @@
 // ========== HOME DASHBOARD LOGIC (with dynamic dashboard view) ==========
 import { api } from "./api.js";
+import { exportSheets, getPreferredExportFormat } from "./export-utils.js";
 
 (() => {
   const CURRENCY_FALLBACK = "USD";
@@ -44,6 +45,7 @@ import { api } from "./api.js";
   let currentNetWorth = null;
   let currentViewLabel = "This Month";
   let currentSpendVelocity = null;
+  let currentFocusRequestId = 0;
 
   const NETWORTH_ITEMS_KEY = "netWorthItems";
 
@@ -465,6 +467,45 @@ import { api } from "./api.js";
     return map;
   }
 
+  function normalizeFocusCategory(category) {
+    return String(category || "").trim().toLowerCase();
+  }
+
+  function pushUniqueFocusItem(items, usedCategories, category, message) {
+    const key = normalizeFocusCategory(category);
+    if (key && usedCategories.has(key)) return false;
+    if (key) usedCategories.add(key);
+    items.push(message);
+    return true;
+  }
+
+  function extractFocusCategory(message) {
+    const text = String(message || "").trim();
+    if (!text) return "";
+    const startWithMatch = text.match(/start with ([^.]+)\.?$/i);
+    if (startWithMatch?.[1]) return normalizeFocusCategory(startWithMatch[1]);
+
+    const leadingCategoryMatch = text.match(/^(.+?)(?: is up | is | has used | near )/i);
+    if (leadingCategoryMatch?.[1]) {
+      return normalizeFocusCategory(leadingCategoryMatch[1]);
+    }
+    return "";
+  }
+
+  function dedupeFocusMessages(messages = []) {
+    const usedCategories = new Set();
+    const deduped = [];
+
+    messages.forEach((message) => {
+      const category = extractFocusCategory(message);
+      if (category && usedCategories.has(category)) return;
+      if (category) usedCategories.add(category);
+      deduped.push(message);
+    });
+
+    return deduped;
+  }
+
   function buildWeeklyFocus(records, currency = CURRENCY_FALLBACK) {
     const today = startOfLocalDay(new Date());
     const weekStart = addDays(today, -today.getDay());
@@ -494,6 +535,7 @@ import { api } from "./api.js";
     const previousByCategory = aggregateExpensesByCategory(previousWeek);
     const rankedCategories = Array.from(currentByCategory.entries()).sort((a, b) => b[1] - a[1]);
     const focusItems = [];
+    const usedCategories = new Set();
     const topCategory = rankedCategories[0] || null;
 
     if (topCategory && weeklySpent > 0) {
@@ -503,24 +545,45 @@ import { api } from "./api.js";
       const share = amount / weeklySpent;
 
       if (increase >= 20 && (previousAmount === 0 || increase / Math.max(previousAmount, 1) >= 0.15)) {
-        focusItems.push(`${category} is up ${fmtMoney(increase, currency)} from last week.`);
+        pushUniqueFocusItem(
+          focusItems,
+          usedCategories,
+          category,
+          `${category} is up ${fmtMoney(increase, currency)} from last week.`
+        );
       }
 
       if (share >= 0.3) {
-        focusItems.push(`${category} is ${Math.round(share * 100)}% of this week's spending.`);
+        pushUniqueFocusItem(
+          focusItems,
+          usedCategories,
+          category,
+          `${category} is ${Math.round(share * 100)}% of this week's spending.`
+        );
       }
     }
 
     if (weeklyNet < 0) {
+      const targetCategory =
+        rankedCategories.find(([category]) => !usedCategories.has(normalizeFocusCategory(category))) ||
+        topCategory;
       focusItems.push(
         `This week is running ${fmtMoney(Math.abs(weeklyNet), currency)} negative${
-          topCategory?.[0] ? `; start with ${topCategory[0]}.` : "."
+          targetCategory?.[0] ? `; start with ${targetCategory[0]}.` : "."
         }`
       );
-    } else if (topCategory) {
-      focusItems.push(
-        `Keep ${topCategory[0]} near ${fmtMoney(topCategory[1], currency)} or lower to protect this week's surplus.`
-      );
+    } else {
+      const targetCategory =
+        rankedCategories.find(([category]) => !usedCategories.has(normalizeFocusCategory(category))) ||
+        topCategory;
+      if (targetCategory) {
+        pushUniqueFocusItem(
+          focusItems,
+          usedCategories,
+          targetCategory[0],
+          `Keep ${targetCategory[0]} near ${fmtMoney(targetCategory[1], currency)} or lower to protect this week's surplus.`
+        );
+      }
     }
 
     if (!focusItems.length) {
@@ -544,6 +607,7 @@ import { api } from "./api.js";
     const standardSpent = spendVelocity.summary?.totals?.standard || {};
     const sheet = spendVelocity.sheet || {};
     const focusItems = [];
+    const usedCategories = new Set();
 
     const standardEntries = Object.entries(standardSpent)
       .map(([key, spent]) => ({
@@ -567,7 +631,10 @@ import { api } from "./api.js";
     if (biggestRisk && biggestRisk.usageRatio >= 0.6 && biggestRisk.pacePressure >= 1.35) {
       const label =
         biggestRisk.key.charAt(0).toUpperCase() + biggestRisk.key.slice(1);
-      focusItems.push(
+      pushUniqueFocusItem(
+        focusItems,
+        usedCategories,
+        label,
         `${label} has used ${Math.round(biggestRisk.usageRatio * 100)}% of its budget ${daysElapsed} days into the month.`
       );
     }
@@ -591,7 +658,10 @@ import { api } from "./api.js";
 
     const customRisk = customEntries[0] || null;
     if (customRisk && customRisk.usageRatio >= 0.6 && customRisk.pacePressure >= 1.35) {
-      focusItems.push(
+      pushUniqueFocusItem(
+        focusItems,
+        usedCategories,
+        customRisk.category,
         `${customRisk.category} has used ${Math.round(customRisk.usageRatio * 100)}% of its budget already.`
       );
     }
@@ -599,7 +669,10 @@ import { api } from "./api.js";
     if (!focusItems.length && biggestRisk && biggestRisk.usageRatio >= 0.45 && biggestRisk.pacePressure >= 1.15) {
       const label =
         biggestRisk.key.charAt(0).toUpperCase() + biggestRisk.key.slice(1);
-      focusItems.push(
+      pushUniqueFocusItem(
+        focusItems,
+        usedCategories,
+        label,
         `${label} is trending above budget pace by ${Math.round((biggestRisk.pacePressure - 1) * 100)}%.`
       );
     }
@@ -622,6 +695,26 @@ import { api } from "./api.js";
       li.appendChild(text);
       listEl.appendChild(li);
     });
+  }
+
+  async function enhanceWeeklyFocusWithAi(issues = [], context = {}) {
+    const normalizedIssues = Array.isArray(issues)
+      ? issues.map((item) => String(item || "").trim()).filter(Boolean).slice(0, 6)
+      : [];
+    if (!normalizedIssues.length) return [];
+
+    try {
+      const response = await api.walterlens.focus({
+        issues: normalizedIssues,
+        context,
+      });
+      const suggestions = Array.isArray(response?.suggestions)
+        ? response.suggestions.map((item) => String(item || "").trim()).filter(Boolean)
+        : [];
+      return suggestions.slice(0, 3);
+    } catch {
+      return [];
+    }
   }
 
   // ============================================================
@@ -1132,11 +1225,17 @@ import { api } from "./api.js";
 
   function renderNetWorth(data) {
     if (!data) return;
+    const netWorthSection = $("#netWorthSection");
+    const netWorthGrid = $("#netWorthGrid");
     const assetsTotal = (data.assets || []).reduce((s, a) => s + a.amount, 0);
     const liabilitiesTotal = (data.liabilities || []).reduce((s, l) => s + l.amount, 0);
     const netWorth = assetsTotal - liabilitiesTotal;
+    const hasNetWorthData = Boolean(data.hasData || data.assets?.length || data.liabilities?.length || data.trend?.length);
 
-    if (!data.hasData && !data.assets?.length && !data.liabilities?.length && !data.trend?.length) {
+    netWorthSection?.classList.toggle("net-worth--empty", !hasNetWorthData);
+    if (netWorthGrid) netWorthGrid.setAttribute("aria-hidden", hasNetWorthData ? "false" : "true");
+
+    if (!hasNetWorthData) {
       setText("#netWorthTotal", "—");
       setText("#assetsTotal", "—");
       setText("#liabilitiesTotal", "—");
@@ -1450,35 +1549,28 @@ import { api } from "./api.js";
   // ============================================================
   //  CSV EXPORT
   // ============================================================
-  function exportRecordsToCSV(records) {
+  async function exportRecords(records) {
     if (!records || !records.length) {
       alert("No records available to export.");
       return;
     }
-
-    const headers = ["Date", "Type", "Category", "Amount", "Notes"];
-    const rows = [headers.join(",")];
-
-    records.forEach((r) => {
-      const date = r.date ? new Date(r.date).toISOString().split("T")[0] : "";
-      const type = r.type || "";
-      const category = (r.category || "").replace(/,/g, ";");
-      const amount = r.amount ?? "";
-      const notes = (r.note || "").replace(/,/g, ";");
-      rows.push([date, type, category, amount, notes].join(","));
+    await exportSheets({
+      title: "Home Export",
+      filenameBase: `finance_records_${new Date().toISOString().slice(0, 10)}`,
+      format: getPreferredExportFormat(),
+      sheets: [
+        {
+          name: "All Records",
+          rows: records.map((r) => ({
+            Date: r.date ? new Date(r.date).toISOString().split("T")[0] : "",
+            Type: r.type || "",
+            Category: r.category || "",
+            Amount: Number(r.amount ?? 0),
+            Notes: r.note || "",
+          })),
+        },
+      ],
     });
-
-    const csv = rows.join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download =
-      `finance_records_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-
-    URL.revokeObjectURL(url);
   }
 
   // ============================================================
@@ -1525,9 +1617,9 @@ import { api } from "./api.js";
     $("#btnExport")?.addEventListener("click", async () => {
       try {
         const records = await api.records.getAll();
-        exportRecordsToCSV(records);
+        await exportRecords(records);
       } catch (err) {
-        alert("Failed to export CSV: " + err.message);
+        alert("Failed to export data: " + err.message);
       }
     });
 
@@ -1694,10 +1786,10 @@ import { api } from "./api.js";
     const computed = computeOverview(filteredRecords);
     const projection = computeMonthlyProjection(bankRecords);
     const spendVelocity = await loadSpendVelocity();
-    const weeklyFocus = [
+    const weeklyFocus = dedupeFocusMessages([
       ...buildBudgetFocus(spendVelocity, computed.currency),
       ...buildWeeklyFocus(bankRecords, computed.currency),
-    ].slice(0, 3);
+    ]).slice(0, 3);
     const netWorthData = await getNetWorthData(bankRecords, computed.currency);
 
     currentComputed = computed;
@@ -1710,6 +1802,26 @@ import { api } from "./api.js";
     renderNetWorth(netWorthData);
     renderExpensesTable($("#txnTbody"), filteredRecords, computed.currency);
     renderTopCategories($("#topCategoriesList"), computed.categories, computed.currency);
+
+    const focusRequestId = ++currentFocusRequestId;
+    const aiFocus = await enhanceWeeklyFocusWithAi(weeklyFocus, {
+      viewLabel,
+      currency: computed.currency,
+      totals: {
+        income: Number(computed.total_income || 0),
+        spending: Number(computed.total_spending || 0),
+        net: Number(computed.net_balance || 0),
+      },
+      budget: spendVelocity?.hasBudget
+        ? {
+            spent: Number(spendVelocity.spent || 0),
+            total: Number(spendVelocity.budgetTotal || 0),
+          }
+        : null,
+    });
+    if (focusRequestId === currentFocusRequestId && aiFocus.length) {
+      renderWeeklyFocus(dedupeFocusMessages(aiFocus).slice(0, 3));
+    }
   }
 
   async function init() {

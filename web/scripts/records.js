@@ -1,6 +1,7 @@
 // scripts/records.js
 import { api } from "./api.js";
 import { applyRulesToRecord } from "./rules-engine.js";
+import { exportSheets, getPreferredExportFormat } from "./export-utils.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   // ===============================
@@ -1004,8 +1005,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  const renderTable = (records, tbody, form, type) => {
-    if (!form) return;
+  const getFilteredRecords = (records, form) => {
+    if (!form) return [...records];
 
     const searchInput = form.querySelector("input[type=search], input[type=text]");
     const q = (searchInput?.value || "").toLowerCase();
@@ -1016,9 +1017,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const maxDate = maxDateStr ? new Date(maxDateStr) : null;
     const minAmt = parseFloat(form.querySelector("input[id^=minAmt]")?.value) || 0;
     const maxAmt = parseFloat(form.querySelector("input[id^=maxAmt]")?.value) || Infinity;
-    const pageSize = parseInt(form.querySelector("select[id^=pageSize]")?.value, 10) || 5;
 
-    let filtered = records.filter(r => {
+    return records.filter((r) => {
       const rDate = r.date ? Date.parse(`${toDateOnly(r.date)}T00:00:00Z`) : null;
       const haystack = buildSearchHaystack(r);
       return (!q || haystack.includes(q)) &&
@@ -1027,18 +1027,26 @@ document.addEventListener("DOMContentLoaded", () => {
              (!maxDate || (rDate && rDate <= maxDate)) &&
              r.amount >= minAmt && r.amount <= maxAmt;
     });
+  };
 
-    const sortCfg = tableSorts[type] || { key: "", dir: "" };
-    if (sortCfg.key && sortCfg.dir) {
-      const dir = sortCfg.dir === "desc" ? -1 : 1;
-      filtered.sort((a, b) => {
-        const av = getSortValue(a, sortCfg.key);
-        const bv = getSortValue(b, sortCfg.key);
-        if (av < bv) return -1 * dir;
-        if (av > bv) return 1 * dir;
-        return 0;
-      });
-    }
+  const sortRecords = (records, sortCfg) => {
+    const list = [...records];
+    if (!sortCfg?.key || !sortCfg?.dir) return list;
+    const dir = sortCfg.dir === "desc" ? -1 : 1;
+    list.sort((a, b) => {
+      const av = getSortValue(a, sortCfg.key);
+      const bv = getSortValue(b, sortCfg.key);
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    });
+    return list;
+  };
+
+  const renderTable = (records, tbody, form, type) => {
+    if (!form) return;
+    const pageSize = parseInt(form.querySelector("select[id^=pageSize]")?.value, 10) || 5;
+    const filtered = sortRecords(getFilteredRecords(records, form), tableSorts[type] || {});
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
     const clampPage = (p) => Math.min(Math.max(1, p), totalPages);
@@ -1326,36 +1334,30 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===============================
   // EXPORT CSV
   // ===============================
-  const exportToCSV = (records, typeLabel) => {
+  const exportRecords = async (records, typeLabel) => {
     const type = typeLabel === "income" ? "income" : "expense";
     if (!records.length) {
       showStatus(type, "No records to export.", "error");
       clearStatusSoon(type, 2500);
       return;
     }
-
-    const headers = ["Date", "Type", "Category", "Amount", "Notes"];
-    const rows = [headers.join(",")];
-
-    records.forEach((r) => {
-      rows.push(
-        [
-          r.date?.split("T")[0] || "",
-          r.type || "",
-          (r.category || "").replace(/,/g, ";"),
-          r.amount ?? "",
-          (r.note || "").replace(/,/g, ";"),
-        ].join(",")
-      );
+    await exportSheets({
+      title: `${typeLabel === "income" ? "Income" : "Expense"} Records`,
+      filenameBase: `${typeLabel}_records_${new Date().toISOString().slice(0, 10)}`,
+      format: getPreferredExportFormat(),
+      sheets: [
+        {
+          name: typeLabel === "income" ? "Income Records" : "Expense Records",
+          rows: records.map((r) => ({
+            Date: r.date?.split("T")[0] || "",
+            Type: r.type || "",
+            Category: r.category || "",
+            Amount: Number(r.amount ?? 0),
+            Notes: r.note || "",
+          })),
+        },
+      ],
     });
-
-    const blob = new Blob([rows.join("\n")], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${typeLabel}_records_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
 
     showStatus(type, "Export started.");
     clearStatusSoon(type, 2000);
@@ -1367,7 +1369,11 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!allRecordsCache.length) {
         await loadRecords();
       }
-      exportToCSV(allRecordsCache.filter((r) => r.type === "expense"), "expense");
+      const records = sortRecords(
+        getFilteredRecords(allRecordsCache.filter((r) => r.type === "expense"), filtersForm),
+        tableSorts.expense
+      );
+      await exportRecords(records, "expense");
     } catch (err) {
       showStatus("expense", "Export failed: " + (err?.message || "Unknown error"), "error");
       clearStatusSoon("expense", 3500);
@@ -1380,7 +1386,11 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!allRecordsCache.length) {
         await loadRecords();
       }
-      exportToCSV(allRecordsCache.filter((r) => r.type === "income"), "income");
+      const records = sortRecords(
+        getFilteredRecords(allRecordsCache.filter((r) => r.type === "income"), filtersFormIncome),
+        tableSorts.income
+      );
+      await exportRecords(records, "income");
     } catch (err) {
       showStatus("income", "Export failed: " + (err?.message || "Unknown error"), "error");
       clearStatusSoon("income", 3500);

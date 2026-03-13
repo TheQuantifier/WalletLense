@@ -351,10 +351,33 @@
   margin-bottom: 0.75rem;
 }
 
+.net-worth-status {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.net-worth-status #netWorthUpdated {
+  margin: 0;
+}
+
+.net-worth-empty-hint {
+  display: none;
+}
+
 .net-worth-grid {
   display: grid;
   grid-template-columns: minmax(0, 2.4fr) minmax(0, 1.6fr);
   gap: 1rem;
+}
+
+.net-worth--empty .net-worth-grid {
+  display: none;
+}
+
+.net-worth--empty .net-worth-empty-hint {
+  display: inline;
 }
 
 .net-worth-summary {

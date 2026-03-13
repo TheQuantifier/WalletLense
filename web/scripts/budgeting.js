@@ -1,5 +1,6 @@
 // scripts/budgeting.js
 import { api } from "./api.js";
+import { exportSheets, getPreferredExportFormat } from "./export-utils.js";
 
 (() => {
   const CURRENCY_FALLBACK = "USD";
@@ -1104,20 +1105,25 @@ import { api } from "./api.js";
 
     btnExportBudgetCsv?.addEventListener("click", async () => {
       await saveBudgetSheet({ silent: true });
-      const headers = ["Category", "Budget"];
-      const rows = [headers.join(",")];
-      state.categories.forEach((c) => {
-        const amount = Number.isFinite(c.budget) ? c.budget : "";
-        rows.push([`"${c.name.replace(/"/g, '""')}"`, amount].join(","));
+      await exportSheets({
+        title: `Budget ${state.cadence} ${state.periodKey}`,
+        filenameBase: `budget_${state.cadence}_${state.periodKey}`,
+        format: getPreferredExportFormat(),
+        sheets: [
+          {
+            name: "Budget",
+            rows: state.categories.map((c) => ({
+              Category: c.name,
+              Budget: Number.isFinite(c.budget) ? c.budget : "",
+              Spent: Number.isFinite(c.spent) ? c.spent : 0,
+              Remaining:
+                Number.isFinite(c.budget) && Number.isFinite(c.spent)
+                  ? Number((c.budget || 0) - (c.spent || 0))
+                  : "",
+            })),
+          },
+        ],
       });
-
-      const blob = new Blob([rows.join("\n")], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `budget_${state.cadence}_${state.periodKey}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
       showStatus("Export started.", "ok");
     });
 

@@ -1,9 +1,8 @@
 // src/services/walterlens_chat.service.js
 import env from "../config/env.js";
-import { GoogleGenAI } from "@google/genai";
 import { isSystemHealthServiceDeactivated } from "./system_health_controls.service.js";
+import { generateAiText } from "./ai_chat.service.js";
 
-const USE_GEMINI = (env.aiProvider || "gemini").toLowerCase() === "gemini";
 const MAX_CHARS = Number(env.aiMaxChars || 5000);
 const MAX_REPLY_CHARS = 1200;
 const MAX_ACTION_SUMMARY_CHARS = 300;
@@ -76,24 +75,6 @@ function sanitizeContext(context) {
       note: String(record?.note || "").slice(0, MAX_NOTE_CHARS),
     })),
   };
-}
-
-async function extractTextFromResponse(response) {
-  if (typeof response?.text === "function") {
-    return await response.text();
-  }
-
-  try {
-    const parts = response?.candidates?.[0]?.content?.parts;
-    if (Array.isArray(parts)) {
-      const textPart = parts.find((p) => p?.text);
-      if (textPart?.text) return textPart.text;
-    }
-  } catch (err) {
-    console.warn("⚠️ Could not read Gemini response:", err);
-  }
-
-  return "";
 }
 
 function extractJson(raw) {
@@ -327,7 +308,7 @@ export async function runWalterLensChat({ message, context }) {
       "AI chat is disconnected by admin. Please try again later."
     );
   }
-  if (!USE_GEMINI || !env.aiApiKey) {
+  if (!env.aiApiKey) {
     return fallbackResponse(
       "AI chat is not configured yet. I can still help with basic insights and record edits."
     );
@@ -341,28 +322,20 @@ export async function runWalterLensChat({ message, context }) {
     safeMessage = safeMessage.slice(0, MAX_CHARS);
   }
 
-  const ai = new GoogleGenAI({ apiKey: env.aiApiKey });
-  const modelName = env.aiChatModel || env.aiModel || "gemini-2.5-flash";
-
-  const contents = [
-    { role: "system", text: SYSTEM_PROMPT },
-    {
-      role: "user",
-      text: JSON.stringify({
-        message: safeMessage,
-        context: sanitizeContext(context),
-      }),
-    },
-  ];
-
-  let response = null;
-  try {
-    response = await ai.models.generateContent({ model: modelName, contents });
-  } catch {
-    return fallbackResponse("I couldn't reach the AI service. Please try again.");
+  const result = await generateAiText({
+    systemPrompt: SYSTEM_PROMPT,
+    userPrompt: JSON.stringify({
+      message: safeMessage,
+      context: sanitizeContext(context),
+    }),
+    model: env.aiChatModel || env.aiModel || "gemini-2.5-flash",
+    maxInputChars: MAX_CHARS,
+  });
+  if (!result.ok) {
+    return fallbackResponse(result.error || "I couldn't reach the AI service. Please try again.");
   }
 
-  const raw = await extractTextFromResponse(response);
+  const raw = result.text;
   const parsed = extractJson(raw);
   const normalized = validateWalterLensResponse(parsed);
 

@@ -382,6 +382,12 @@ export const walterlens = {
       body: JSON.stringify({ message, context }),
     });
   },
+  focus({ issues, context }) {
+    return request("/walterlens/focus", {
+      method: "POST",
+      body: JSON.stringify({ issues, context }),
+    });
+  },
 };
 
 // ======================================================================
@@ -648,6 +654,10 @@ export const settings = {
       method: "PUT",
       body: JSON.stringify(payload || {}),
     });
+  },
+
+  exportAllData() {
+    return request("/settings/export-all");
   },
 };
 

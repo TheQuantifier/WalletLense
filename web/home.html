@@ -87,7 +87,7 @@
         <div class="quick-actions" role="group" aria-label="Quick actions">
           <button class="btn btn--primary" id="btnUpload">Upload Receipt</button>
           <button class="btn" id="btnAddTxn">Add Transaction</button>
-          <button class="btn" id="btnExport">Export CSV</button>
+          <button class="btn" id="btnExport">Export</button>
           <a class="btn btn--link" href="reports.html" id="btnReports">Go to Reports →</a>
         </div>
       </div>
@@ -103,16 +103,19 @@
       </aside>
     </section>
 
-    <section class="net-worth" aria-label="Net worth dashboard">
+    <section class="net-worth" id="netWorthSection" aria-label="Net worth dashboard">
       <div class="net-worth-header">
         <div>
           <h2>Net Worth</h2>
-          <p class="subtle" id="netWorthUpdated">Loading net worth…</p>
+          <div class="net-worth-status">
+            <p class="subtle" id="netWorthUpdated">Loading net worth…</p>
+            <span class="subtle net-worth-empty-hint" id="netWorthEmptyHint">(Add a bank account to see net worth section)</span>
+          </div>
         </div>
         <a class="btn btn--link" href="reports.html">View full reports →</a>
       </div>
 
-      <div class="net-worth-grid">
+      <div class="net-worth-grid" id="netWorthGrid">
         <article class="card net-worth-summary">
           <div class="net-worth-total">
             <p class="label">Total Net Worth</p>

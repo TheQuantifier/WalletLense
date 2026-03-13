@@ -30,6 +30,13 @@
   color: var(--text);
 }
 
+.settings-split-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
 /* =========================================================
    FORM ROWS
    ========================================================= */
@@ -120,6 +127,10 @@
 @media (max-width: 768px) {
   .settings-row {
     flex-direction: column;
+  }
+
+  .settings-split-row {
+    grid-template-columns: 1fr;
   }
 }
 

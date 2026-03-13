@@ -1,5 +1,10 @@
 // scripts/settings.js
 import { api } from "./api.js";
+import {
+  exportAllUserData,
+  getPreferredExportFormat,
+  setPreferredExportFormat,
+} from "./export-utils.js";
 
 (() => {
   const $ = (sel, root = document) => root.querySelector(sel);
@@ -15,12 +20,15 @@ import { api } from "./api.js";
     timezone: $("#timezoneSelect"),
     dashboardView: $("#dashboardViewSelect"),
     language: $("#languageSelect"),
+    exportFormat: $("#exportFormatSelect"),
 
     notifEmail: $("#notif_email"),
     notifSms: $("#notif_sms"),
 
     save: $("#saveSettingsBtn"),
     status: $("#settingsStatus"),
+    exportAllBtn: $("#exportAllDataBtn"),
+    exportAllStatus: $("#exportAllStatus"),
 
     deleteBtn: $("#deleteAccountBtn"),
     deleteModal: $("#deleteAccountModal"),
@@ -268,12 +276,14 @@ import { api } from "./api.js";
     const savedTz = localStorage.getItem("settings_timezone");
     const savedLang = localStorage.getItem("settings_language");
     const savedDash = localStorage.getItem("settings_dashboard_view");
+    const savedExportFormat = getPreferredExportFormat();
 
     if (els.currency && savedCurrency) els.currency.value = savedCurrency;
     if (els.numberFormat && savedNumFmt) els.numberFormat.value = savedNumFmt;
     if (els.timezone && savedTz) els.timezone.value = savedTz;
     if (els.language && savedLang) els.language.value = savedLang;
     if (els.dashboardView && savedDash) els.dashboardView.value = savedDash;
+    if (els.exportFormat) els.exportFormat.value = savedExportFormat;
 
     if (els.notifEmail) els.notifEmail.checked = localStorage.getItem("settings_notif_email") === "true";
     if (els.notifSms) els.notifSms.checked = localStorage.getItem("settings_notif_sms") === "true";
@@ -312,6 +322,7 @@ import { api } from "./api.js";
       if (els.timezone) localStorage.setItem("settings_timezone", els.timezone.value);
       if (els.language) localStorage.setItem("settings_language", els.language.value);
       if (els.dashboardView) localStorage.setItem("settings_dashboard_view", els.dashboardView.value);
+      if (els.exportFormat) setPreferredExportFormat(els.exportFormat.value);
 
       if (els.notifEmail) localStorage.setItem("settings_notif_email", String(els.notifEmail.checked));
       if (els.notifSms) localStorage.setItem("settings_notif_sms", String(els.notifSms.checked));
@@ -486,6 +497,41 @@ import { api } from "./api.js";
       return;
     }
     api.auth.beginGoogleAuth("login", window.location.href);
+  };
+
+  const performFullExport = async () => {
+    if (els.exportAllBtn) {
+      els.exportAllBtn.disabled = true;
+      els.exportAllBtn.textContent = "Exporting…";
+    }
+    showStatus(els.exportAllStatus, "Preparing full export…");
+
+    try {
+      await exportAllUserData({
+        format: getPreferredExportFormat(),
+        localSettings: {
+          currency: localStorage.getItem("settings_currency") || "",
+          numberFormat: localStorage.getItem("settings_number_format") || "",
+          timezone: localStorage.getItem("settings_timezone") || "",
+          language: localStorage.getItem("settings_language") || "",
+          dashboardView: localStorage.getItem("settings_dashboard_view") || "",
+          exportFormat: getPreferredExportFormat(),
+        },
+      });
+      showStatus(els.exportAllStatus, "Full export started.", "ok");
+      clearStatusSoon(els.exportAllStatus, 2500);
+    } catch (err) {
+      showStatus(
+        els.exportAllStatus,
+        "Full export failed: " + (err?.message || "Unknown error"),
+        "error"
+      );
+    } finally {
+      if (els.exportAllBtn) {
+        els.exportAllBtn.disabled = false;
+        els.exportAllBtn.textContent = "Export Full Account";
+      }
+    }
   };
 
   const openEnableTwoFaModal = () => {
@@ -845,6 +891,7 @@ import { api } from "./api.js";
 
     // Connect Google account
     els.connectGoogleBtn?.addEventListener("click", connectGoogleAccount);
+    els.exportAllBtn?.addEventListener("click", performFullExport);
 
     els.passwordModal?.addEventListener("click", (e) => {
       if (e.target.classList.contains("modal")) closePasswordModal();

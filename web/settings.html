@@ -141,51 +141,80 @@
         </div>
       </section>
 
-      <!-- ACCOUNT -->
       <section class="settings-card">
-        <h2>Account</h2>
+        <h2>Exports</h2>
 
         <div class="settings-row">
-          <label>Two-Factor Authentication (Email)</label>
+          <label for="exportFormatSelect">Default Export Format</label>
+          <select class="settings-input" id="exportFormatSelect">
+            <option value="csv">CSV</option>
+            <option value="excel">Excel</option>
+            <option value="google-sheets">Google Sheets</option>
+            <option value="pdf">PDF</option>
+          </select>
+        </div>
+
+        <div class="settings-row">
+          <label>Export All User Data</label>
           <div class="settings-actions-inline">
-            <span id="twoFaStatus" class="subtle">Loading…</span>
-            <button class="settings-btn btn--primary" id="enableTwoFaBtn" type="button">Enable</button>
-            <button class="settings-btn btn--danger is-hidden" id="disableTwoFaBtn" type="button">Disable</button>
+            <button class="settings-btn btn--primary" id="exportAllDataBtn" type="button">Export Full Account</button>
           </div>
-        </div>
-
-        <div class="settings-row">
-          <label>Password</label>
-          <div class="settings-actions-inline">
-            <button class="settings-btn btn--primary" id="changePasswordBtn" type="button">Change Password</button>
-          </div>
-        </div>
-
-        <div class="settings-row is-hidden" id="googleConnectRow">
-          <label>Google Sign-In</label>
-          <div class="settings-actions-inline">
-            <span id="googleConnectStatus" class="subtle">Not connected</span>
-            <button class="settings-btn btn--primary" id="connectGoogleBtn" type="button">Connect Google</button>
-          </div>
-        </div>
-
-        <div class="settings-row">
-          <label>Active Sessions</label>
-          <div id="sessionsList" class="session-list">
-            <p class="subtle">Loading sessions…</p>
-          </div>
-        </div>
-
-        <div class="settings-row">
-          <label>Sign Out All Devices</label>
-          <button class="settings-btn btn--danger" id="signOutAllBtn" type="button">Sign Out All</button>
-        </div>
-
-        <div class="settings-row">
-          <label>Delete Account</label>
-          <button class="settings-btn btn--danger" id="deleteAccountBtn" type="button">Delete</button>
+          <p class="subtle">Includes personal info, records, receipts, budgets, recurring schedules, rules, net worth, achievements, and activity.</p>
+          <p id="exportAllStatus" class="status-banner subtle is-hidden" aria-live="polite"></p>
         </div>
       </section>
+
+      <div class="settings-split-row">
+        <!-- ACCOUNT -->
+        <section class="settings-card">
+          <h2>Account</h2>
+
+          <div class="settings-row">
+            <label>Two-Factor Authentication (Email)</label>
+            <div class="settings-actions-inline">
+              <span id="twoFaStatus" class="subtle">Loading…</span>
+              <button class="settings-btn btn--primary" id="enableTwoFaBtn" type="button">Enable</button>
+              <button class="settings-btn btn--danger is-hidden" id="disableTwoFaBtn" type="button">Disable</button>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <label>Password</label>
+            <div class="settings-actions-inline">
+              <button class="settings-btn btn--primary" id="changePasswordBtn" type="button">Change Password</button>
+            </div>
+          </div>
+
+          <div class="settings-row is-hidden" id="googleConnectRow">
+            <label>Google Sign-In</label>
+            <div class="settings-actions-inline">
+              <span id="googleConnectStatus" class="subtle">Not connected</span>
+              <button class="settings-btn btn--primary" id="connectGoogleBtn" type="button">Connect Google</button>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <label>Delete Account</label>
+            <button class="settings-btn btn--danger" id="deleteAccountBtn" type="button">Delete</button>
+          </div>
+        </section>
+
+        <section class="settings-card">
+          <h2>Active Sessions</h2>
+
+          <div class="settings-row">
+            <label>Signed-In Devices</label>
+            <div id="sessionsList" class="session-list">
+              <p class="subtle">Loading sessions…</p>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <label>Sign Out All Devices</label>
+            <button class="settings-btn btn--danger" id="signOutAllBtn" type="button">Sign Out All</button>
+          </div>
+        </section>
+      </div>
 
     </div>
   </main>
@@ -331,5 +360,3 @@
 
 </body>
 </html>
-
-
