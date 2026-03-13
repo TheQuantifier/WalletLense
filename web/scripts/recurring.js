@@ -170,9 +170,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const formatYearlyDisplay = (value) => {
     const [month, day] = String(value || "").split("-").map(Number);
     if (!month || !day) return String(value || "");
-    return new Date(Date.UTC(2026, month - 1, day, 12, 0, 0)).toLocaleDateString(undefined, {
+    const dateOnly = `2026-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    return new Date(`${dateOnly}T00:00:00Z`).toLocaleDateString(undefined, {
       month: "short",
       day: "numeric",
+      timeZone: "UTC",
     });
   };
 
@@ -308,23 +310,25 @@ document.addEventListener("DOMContentLoaded", () => {
     return num.toLocaleString(undefined, { style: "currency", currency: "USD" });
   };
 
-  const parseDisplayDate = (dateStr) => {
-    if (!dateStr) return null;
-    const normalized = String(dateStr).trim();
-    const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (match) {
-      const [, year, month, day] = match;
-      return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), 12, 0, 0));
+  const toDateOnly = (value) => {
+    if (!value) return "";
+    if (typeof value === "string") return value.split("T")[0];
+    try {
+      return new Date(value).toISOString().split("T")[0];
+    } catch {
+      return "";
     }
-
-    const parsed = new Date(normalized);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
   };
 
   const formatDate = (dateStr) => {
-    const d = parseDisplayDate(dateStr);
-    if (!d) return "—";
-    return d.toLocaleDateString();
+    const dateOnly = toDateOnly(dateStr);
+    if (!dateOnly) return "—";
+    return new Date(`${dateOnly}T00:00:00Z`).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      timeZone: "UTC",
+    });
   };
 
   const formatRuleSummary = (item) => {
