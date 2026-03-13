@@ -15,7 +15,11 @@ const app = express();
 // Logging
 // --------------------------------------------------
 if (env.nodeEnv !== "test") {
-  app.use(morgan("dev"));
+  app.use(
+    morgan("dev", {
+      skip: (req, res) => res.statusCode < 400,
+    })
+  );
 }
 
 // --------------------------------------------------
