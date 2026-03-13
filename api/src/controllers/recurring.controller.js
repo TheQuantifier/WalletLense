@@ -13,8 +13,10 @@ import {
   serializeRecurringSchedule,
   validateRecurringPayload,
 } from "../services/recurring.service.js";
+import { materializeRecurringRecordsForUser } from "../services/recurring_record.service.js";
 
 export const list = asyncHandler(async (req, res) => {
+  await materializeRecurringRecordsForUser(req.user.id);
   const active =
     req.query.active === undefined ? undefined : String(req.query.active) === "true";
   const rows = await listRecurringSchedules(req.user.id, { active });
@@ -29,6 +31,7 @@ export const create = asyncHandler(async (req, res) => {
   }
 
   const row = await createRecurringSchedule(req.user.id, payload);
+  await materializeRecurringRecordsForUser(req.user.id);
   res.status(201).json(serializeRecurringSchedule(row));
 });
 
@@ -43,12 +46,14 @@ export const update = asyncHandler(async (req, res) => {
     ...serializeRecurringSchedule(existing),
     ...payload,
   };
-  const validationError = validateRecurringPayload(merged);
+  const normalizedMerged = normalizeRecurringPayload(merged);
+  const validationError = validateRecurringPayload(normalizedMerged);
   if (validationError) {
     return res.status(400).json({ message: validationError });
   }
 
-  const row = await updateRecurringSchedule(req.user.id, req.params.id, payload);
+  const row = await updateRecurringSchedule(req.user.id, req.params.id, normalizedMerged);
+  await materializeRecurringRecordsForUser(req.user.id);
   res.json(serializeRecurringSchedule(row));
 });
 
@@ -61,6 +66,7 @@ export const remove = asyncHandler(async (req, res) => {
 });
 
 export const upcoming = asyncHandler(async (req, res) => {
+  await materializeRecurringRecordsForUser(req.user.id);
   const parsedDays = Number.parseInt(String(req.query.days ?? "30"), 10);
   const days = Number.isFinite(parsedDays) ? Math.min(Math.max(parsedDays, 1), 365) : 30;
   const from = formatDateOnly(new Date());

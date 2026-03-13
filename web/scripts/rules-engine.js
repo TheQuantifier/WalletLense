@@ -76,7 +76,12 @@ export const applyRulesToRecord = (record, rules, context = {}) => {
   const base = { ...(record || {}) };
   const origin =
     context.origin ||
-    (record?.linkedReceiptId || record?.linked_receipt_id ? "receipt" : "manual");
+    record?.origin ||
+    (record?.linkedReceiptId || record?.linked_receipt_id
+      ? "receipt"
+      : record?.linkedRecurringId || record?.linked_recurring_id
+        ? "recurring"
+        : "manual");
 
   const candidate = {
     ...base,

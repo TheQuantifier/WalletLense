@@ -127,6 +127,154 @@
   gap: 0.9rem;
 }
 
+.recurring-rule-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.recurring-rule-add {
+  min-width: 2.5rem;
+  padding-inline: 0.75rem;
+}
+
+.recurring-rule-add.hidden,
+.recurring-rule-menu.hidden,
+#recurringRuleInput.hidden,
+.recurring-yearly-menu.hidden {
+  display: none !important;
+}
+
+.recurring-floating-menus {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 260;
+}
+
+.recurring-rule-menu {
+  position: fixed;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.45rem;
+  padding: 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  max-height: 15.5rem;
+  width: min(220px, calc(100vw - 1rem));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  box-shadow: var(--shadow-md);
+  pointer-events: auto;
+}
+
+.recurring-yearly-menu {
+  position: fixed;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.75rem;
+  width: min(360px, calc(100vw - 1rem));
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-md);
+  pointer-events: auto;
+}
+
+.recurring-yearly-column {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.recurring-yearly-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.recurring-yearly-list {
+  display: grid;
+  gap: 0.45rem;
+  max-height: 15.5rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.recurring-yearly-list button {
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 0.45rem 0.7rem;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.recurring-yearly-list button:hover,
+.recurring-yearly-list button.is-selected {
+  background: color-mix(in srgb, var(--primary) 12%, var(--card-bg));
+  border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+}
+
+.recurring-rule-menu button {
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 0.45rem 0.7rem;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.recurring-rule-menu button:hover {
+  background: color-mix(in srgb, var(--primary) 8%, var(--card-bg));
+}
+
+.recurring-rule-selected {
+  margin-top: 0.45rem;
+  min-height: 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.recurring-rule-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.45rem 0.35rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card-bg);
+  color: var(--text);
+}
+
+.recurring-rule-chip__remove {
+  width: 1.3rem;
+  height: 1.3rem;
+  border: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  color: var(--muted);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.recurring-rule-chip__remove:hover {
+  background: color-mix(in srgb, var(--bad) 16%, transparent);
+  color: var(--bad);
+}
+
 @media (max-width: 840px) {
   .recurring-hero {
     flex-direction: column;

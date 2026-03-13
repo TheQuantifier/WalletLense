@@ -17,7 +17,16 @@ import { query } from "../config/db.js";
  */
 
 export async function createRecord(userId, data) {
-  const { type, amount, category, date, note = "", linkedReceiptId = null } = data;
+  const {
+    type,
+    amount,
+    category,
+    date,
+    note = "",
+    linkedReceiptId = null,
+    linkedRecurringId = null,
+    origin = linkedReceiptId ? "receipt" : linkedRecurringId ? "recurring" : "manual",
+  } = data;
 
   // keep your old behavior: store as UTC noon to avoid timezone shifting
   const dt = date ? new Date(date) : new Date();
@@ -28,12 +37,12 @@ export async function createRecord(userId, data) {
   const { rows } = await query(
     `
     INSERT INTO records
-      (user_id, type, amount, category, date, note, linked_receipt_id)
+      (user_id, type, amount, category, date, note, linked_receipt_id, origin, linked_recurring_id)
     VALUES
-      ($1, $2, $3, $4, $5, $6, $7)
+      ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     RETURNING *
     `,
-    [userId, type, amount, category, utcNoon.toISOString(), note, linkedReceiptId]
+    [userId, type, amount, category, utcNoon.toISOString(), note, linkedReceiptId, origin, linkedRecurringId]
   );
 
   return rows[0];
@@ -100,6 +109,8 @@ export async function updateRecord(userId, id, changes = {}) {
     category: "category",
     note: "note",
     linkedReceiptId: "linked_receipt_id",
+    linkedRecurringId: "linked_recurring_id",
+    origin: "origin",
   };
 
   const sets = [];
@@ -237,6 +248,8 @@ export async function updateRecordAdmin(id, changes = {}) {
     category: "category",
     note: "note",
     linkedReceiptId: "linked_receipt_id",
+    linkedRecurringId: "linked_recurring_id",
+    origin: "origin",
   };
 
   const sets = [];

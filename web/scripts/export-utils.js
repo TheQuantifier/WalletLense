@@ -264,14 +264,25 @@ function toDateOnly(value) {
 }
 
 function normalizeRecordRows(records = []) {
-  return records.map((record) => ({
-    Date: toDateOnly(record.date),
-    Type: record.type || "",
-    Category: record.category || "",
-    Amount: Number(record.amount || 0),
-    Notes: record.note || "",
-    Origin: record.linked_receipt_id || record.linkedReceiptId ? "Receipt" : "Manual",
-  }));
+  return records.map((record) => {
+    const origin = String(
+      record.origin ||
+        (record.linked_receipt_id || record.linkedReceiptId
+          ? "receipt"
+          : record.linked_recurring_id || record.linkedRecurringId
+            ? "recurring"
+            : "manual")
+    ).toLowerCase();
+
+    return {
+      Date: toDateOnly(record.date),
+      Type: record.type || "",
+      Category: record.category || "",
+      Amount: Number(record.amount || 0),
+      Notes: record.note || "",
+      Origin: origin.replace(/^./, (char) => char.toUpperCase()),
+    };
+  });
 }
 
 function normalizeReceiptRows(receipts = []) {

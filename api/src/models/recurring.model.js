@@ -47,11 +47,12 @@ export async function createRecurringSchedule(userId, data) {
       note,
       frequency,
       day_of_month,
+      recurrence_values,
       start_date,
       end_date,
       active
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12)
     RETURNING *
     `,
     [
@@ -63,6 +64,7 @@ export async function createRecurringSchedule(userId, data) {
       data.note ?? "",
       data.frequency,
       data.dayOfMonth ?? null,
+      JSON.stringify(data.recurrenceValues ?? []),
       data.startDate,
       data.endDate ?? null,
       data.active !== false,
@@ -81,6 +83,7 @@ export async function updateRecurringSchedule(userId, id, changes = {}) {
     note: "note",
     frequency: "frequency",
     dayOfMonth: "day_of_month",
+    recurrenceValues: "recurrence_values",
     startDate: "start_date",
     endDate: "end_date",
     active: "active",
@@ -92,7 +95,7 @@ export async function updateRecurringSchedule(userId, id, changes = {}) {
   for (const [key, column] of Object.entries(allowed)) {
     if (changes[key] === undefined) continue;
     sets.push(`${column} = $${params.length + 1}`);
-    params.push(changes[key]);
+    params.push(column === "recurrence_values" ? JSON.stringify(changes[key] ?? []) : changes[key]);
   }
 
   if (!sets.length) {

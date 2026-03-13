@@ -72,6 +72,42 @@
 
   <div id="footer"></div>
 
+  <div class="recurring-floating-menus" id="recurringFloatingMenus" aria-hidden="true">
+    <div class="recurring-rule-menu hidden" id="recurringWeekdayMenu">
+      <button type="button" data-weekday="1">Monday</button>
+      <button type="button" data-weekday="2">Tuesday</button>
+      <button type="button" data-weekday="3">Wednesday</button>
+      <button type="button" data-weekday="4">Thursday</button>
+      <button type="button" data-weekday="5">Friday</button>
+      <button type="button" data-weekday="6">Saturday</button>
+      <button type="button" data-weekday="0">Sunday</button>
+    </div>
+    <div class="recurring-rule-menu hidden" id="recurringMonthdayMenu"></div>
+    <div class="recurring-yearly-menu hidden" id="recurringYearlyMenu">
+      <div class="recurring-yearly-column">
+        <div class="recurring-yearly-title">Month</div>
+        <div class="recurring-yearly-list" id="recurringYearlyMonthList">
+          <button type="button" data-year-month="01">January</button>
+          <button type="button" data-year-month="02">February</button>
+          <button type="button" data-year-month="03">March</button>
+          <button type="button" data-year-month="04">April</button>
+          <button type="button" data-year-month="05">May</button>
+          <button type="button" data-year-month="06">June</button>
+          <button type="button" data-year-month="07">July</button>
+          <button type="button" data-year-month="08">August</button>
+          <button type="button" data-year-month="09">September</button>
+          <button type="button" data-year-month="10">October</button>
+          <button type="button" data-year-month="11">November</button>
+          <button type="button" data-year-month="12">December</button>
+        </div>
+      </div>
+      <div class="recurring-yearly-column">
+        <div class="recurring-yearly-title">Day</div>
+        <div class="recurring-yearly-list" id="recurringYearlyDayList"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Create/Edit Modal -->
   <div id="recurringModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="recurringModalTitle">
     <div class="modal-content recurring-modal">
@@ -117,15 +153,22 @@
             <span>Frequency</span>
             <select id="recurringFrequency">
               <option value="weekly">Weekly</option>
-              <option value="biweekly">Biweekly</option>
               <option value="monthly" selected>Monthly</option>
-              <option value="quarterly">Quarterly</option>
               <option value="yearly">Yearly</option>
             </select>
           </label>
           <label>
-            <span>Day of month</span>
-            <input type="number" id="recurringDayOfMonth" min="1" max="31" placeholder="e.g., 15" />
+            <span id="recurringRuleLabel">Days of month</span>
+            <div class="recurring-rule-input">
+              <input
+                type="text"
+                id="recurringRuleInput"
+                placeholder="e.g., 1, 15"
+                autocomplete="off"
+              />
+              <button type="button" class="btn recurring-rule-add" id="recurringRuleAddBtn" aria-haspopup="dialog">+</button>
+            </div>
+            <div class="recurring-rule-selected subtle" id="recurringRuleSelected"></div>
           </label>
         </div>
 

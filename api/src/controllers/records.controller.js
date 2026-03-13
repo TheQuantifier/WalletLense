@@ -16,6 +16,7 @@ import { evaluateAchievementsForUser } from "../services/achievements.service.js
 import { findUserById } from "../models/user.model.js";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../constants/categories.js";
 import { applyStoredRulesToRecordInput } from "../services/rules.service.js";
+import { materializeRecurringRecordsForUser } from "../services/recurring_record.service.js";
 
 // ==========================================================
 // Helper: Parse YYYY-MM-DD into a stable UTC-noon Date
@@ -46,6 +47,7 @@ export const getOne = asyncHandler(async (req, res) => {
 // GET /api/records
 // ==========================================================
 export const getAll = asyncHandler(async (req, res) => {
+  await materializeRecurringRecordsForUser(req.user.id);
   const type = req.query.type ? String(req.query.type) : undefined;
   const parsedLimit = Number.parseInt(String(req.query.limit ?? ""), 10);
   const parsedOffset = Number.parseInt(String(req.query.offset ?? ""), 10);
@@ -64,6 +66,7 @@ export const getAll = asyncHandler(async (req, res) => {
 // GET /api/records/stats
 // ==========================================================
 export const getStats = asyncHandler(async (req, res) => {
+  await materializeRecurringRecordsForUser(req.user.id);
   const totalRecords = await countRecordsByUser(req.user.id);
   res.json({ totalRecords });
 });
@@ -210,11 +213,18 @@ export const update = asyncHandler(async (req, res) => {
       date: changes.date ?? existing.date,
       note: changes.note ?? existing.note,
       linkedReceiptId: existing.linked_receipt_id ?? existing.linkedReceiptId ?? null,
+      linkedRecurringId: existing.linked_recurring_id ?? existing.linkedRecurringId ?? null,
+      origin: existing.origin || undefined,
     };
 
     const applied = await applyStoredRulesToRecordInput(req.user.id, candidate, {
       origin:
-        existing.linked_receipt_id || existing.linkedReceiptId ? "receipt" : "manual",
+        existing.origin ||
+        (existing.linked_receipt_id || existing.linkedReceiptId
+          ? "receipt"
+          : existing.linked_recurring_id || existing.linkedRecurringId
+            ? "recurring"
+            : "manual"),
     });
 
     changes.type = applied.record.type;

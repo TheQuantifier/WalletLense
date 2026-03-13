@@ -845,8 +845,18 @@ export const support = {
 
 /** Returns "Receipt" if the record is linked, otherwise "Manual". */
 export function getUploadType(record) {
-  // Postgres returns snake_case; keep compatibility with older camelCase
-  return record?.linked_receipt_id || record?.linkedReceiptId ? "Receipt" : "Manual";
+  const origin = String(
+    record?.origin ||
+      (record?.linked_receipt_id || record?.linkedReceiptId
+        ? "receipt"
+        : record?.linked_recurring_id || record?.linkedRecurringId
+          ? "recurring"
+          : "manual")
+  ).toLowerCase();
+
+  if (origin === "receipt") return "Receipt";
+  if (origin === "recurring") return "Recurring";
+  return "Manual";
 }
 
 export function getPayMethodLabel(method) {

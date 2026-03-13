@@ -492,6 +492,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Support both camelCase and snake_case for linked receipt id
   const getLinkedReceiptId = (r) => r?.linkedReceiptId ?? r?.linked_receipt_id ?? "";
+  const getLinkedRecurringId = (r) => r?.linkedRecurringId ?? r?.linked_recurring_id ?? "";
+  const getRecordOrigin = (record) =>
+    String(
+      record?.origin ||
+        (getLinkedReceiptId(record)
+          ? "receipt"
+          : getLinkedRecurringId(record)
+            ? "recurring"
+            : "manual")
+    ).toLowerCase();
   const getReceiptTaxAmount = (receipt) =>
     Number(
       receipt?.tax_amount ??
@@ -613,13 +623,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (key === "category") return normalizeText(record.category);
     if (key === "type") return normalizeText(record.type);
     if (key === "note") return normalizeText(record.note);
-    if (key === "origin") return getLinkedReceiptId(record) ? "receipt" : "manual";
+    if (key === "origin") return getRecordOrigin(record);
     return "";
   };
 
   const buildSearchHaystack = (record) => {
     const dateOnly = toDateOnly(record.date);
-    const origin = getLinkedReceiptId(record) ? "receipt" : "manual";
+    const origin = getRecordOrigin(record);
     const amount = Number(record.amount || 0);
     return [
       record.type || "",
@@ -667,9 +677,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const typeBadgeEl = (record) => {
     const span = document.createElement("span");
-    if (getLinkedReceiptId(record)) {
+    const origin = getRecordOrigin(record);
+    if (origin === "receipt") {
       span.className = "badge badge-receipt";
       span.textContent = "Receipt";
+    } else if (origin === "recurring") {
+      span.className = "badge badge-recurring";
+      span.textContent = "Recurring";
     } else {
       span.className = "badge badge-manual";
       span.textContent = "Manual";
@@ -681,9 +695,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const tr = document.createElement("tr");
     const recordId = getRecordId(record);
     const linkedReceiptId = getLinkedReceiptId(record);
+    const linkedRecurringId = getLinkedRecurringId(record);
 
     tr.dataset.recordId = recordId;
     tr.dataset.linkedReceiptId = linkedReceiptId;
+    tr.dataset.linkedRecurringId = linkedRecurringId;
 
     const tdDate = document.createElement("td");
     tdDate.textContent = fmtDate(record.date);
@@ -931,7 +947,7 @@ document.addEventListener("DOMContentLoaded", () => {
         category: record.category || "",
         note: record.note || "",
         amount: record.amount ?? "",
-        origin: getLinkedReceiptId(record) ? "receipt" : "manual",
+        origin: getRecordOrigin(record),
       });
       window.location.href = `rules.html?${params.toString()}`;
       return;
@@ -956,6 +972,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       modal.dataset.editId = getRecordId(record);
       modal.dataset.linkedReceiptId = getLinkedReceiptId(record);
+      modal.dataset.linkedRecurringId = getLinkedRecurringId(record);
       if (record.type === "expense" && applyRulesExpense) applyRulesExpense.checked = true;
       if (record.type === "income" && applyRulesIncome) applyRulesIncome.checked = true;
       showModal(modal);
@@ -1107,6 +1124,7 @@ document.addEventListener("DOMContentLoaded", () => {
   btnAddExpense?.addEventListener("click", () => {
     delete addExpenseModal.dataset.editId;
     delete addExpenseModal.dataset.linkedReceiptId;
+    delete addExpenseModal.dataset.linkedRecurringId;
     if (applyRulesExpense) applyRulesExpense.checked = true;
     expenseForm?.reset();
     populateBudgetCategorySelects();
@@ -1116,6 +1134,7 @@ document.addEventListener("DOMContentLoaded", () => {
   btnAddIncome?.addEventListener("click", () => {
     delete addIncomeModal.dataset.editId;
     delete addIncomeModal.dataset.linkedReceiptId;
+    delete addIncomeModal.dataset.linkedRecurringId;
     if (applyRulesIncome) applyRulesIncome.checked = true;
     incomeForm?.reset();
     populateBudgetCategorySelects();
@@ -1141,7 +1160,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const applyRulesServerSide = applyRules && !applyRulesClientSide;
 
     if (applyRulesClientSide) {
-      const origin = modal.dataset.linkedReceiptId ? "receipt" : "manual";
+      const origin =
+        modal.dataset.linkedReceiptId
+          ? "receipt"
+          : modal.dataset.linkedRecurringId
+            ? "recurring"
+            : "manual";
       payload = applyRulesToRecord(payload, automationRules, { origin });
       document.getElementById(`${type}Category`).value = payload.category || "";
       document.getElementById(`${type}Notes`).value = payload.note || "";

@@ -1,4 +1,6 @@
-const VALID_FREQUENCIES = new Set(["weekly", "biweekly", "monthly", "quarterly", "yearly"]);
+const VALID_FREQUENCIES = new Set(["weekly", "monthly", "yearly"]);
+const LEGACY_FREQUENCIES = new Set(["biweekly", "quarterly"]);
+const WEEKDAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export function isValidDateOnly(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) return false;
@@ -33,10 +35,9 @@ function addDays(date, days) {
 }
 
 function addMonths(date, months, preferredDay) {
-  const year = date.getUTCFullYear();
-  const monthIndex = date.getUTCMonth() + months;
-  const targetYear = year + Math.floor(monthIndex / 12);
-  const targetMonth = ((monthIndex % 12) + 12) % 12;
+  const totalMonths = date.getUTCFullYear() * 12 + date.getUTCMonth() + months;
+  const targetYear = Math.floor(totalMonths / 12);
+  const targetMonth = ((totalMonths % 12) + 12) % 12;
   const targetDay = Math.min(
     Number(preferredDay) || date.getUTCDate(),
     daysInMonth(targetYear, targetMonth)
@@ -44,25 +45,153 @@ function addMonths(date, months, preferredDay) {
   return new Date(Date.UTC(targetYear, targetMonth, targetDay, 12, 0, 0));
 }
 
-export function advanceOccurrence(date, schedule) {
+function normalizeWeekdays(values = []) {
+  return Array.from(
+    new Set(
+      values
+        .map((value) => Number.parseInt(String(value), 10))
+        .filter((value) => Number.isInteger(value) && value >= 0 && value <= 6)
+    )
+  ).sort((a, b) => a - b);
+}
+
+function normalizeMonthDays(values = []) {
+  return Array.from(
+    new Set(
+      values
+        .map((value) => Number.parseInt(String(value), 10))
+        .filter((value) => Number.isInteger(value) && value >= 1 && value <= 31)
+    )
+  ).sort((a, b) => a - b);
+}
+
+function normalizeYearDates(values = []) {
+  return Array.from(
+    new Set(
+      values
+        .map((value) => String(value || "").trim())
+        .filter((value) => /^\d{2}-\d{2}$/.test(value))
+        .filter((value) => {
+          const [month, day] = value.split("-").map(Number);
+          return month >= 1 && month <= 12 && day >= 1 && day <= 31;
+        })
+    )
+  ).sort();
+}
+
+function getLegacyPreferredDay(schedule, fallbackDate) {
+  return (
+    Number(schedule?.dayOfMonth ?? schedule?.day_of_month) ||
+    fallbackDate?.getUTCDate() ||
+    1
+  );
+}
+
+function getNormalizedValues(schedule, frequency, startDate) {
+  const rawValues = Array.isArray(schedule?.recurrenceValues)
+    ? schedule.recurrenceValues
+    : Array.isArray(schedule?.recurrence_values)
+      ? schedule.recurrence_values
+      : [];
+
+  if (frequency === "weekly") {
+    const values = normalizeWeekdays(rawValues);
+    if (values.length) return values;
+    return [startDate?.getUTCDay() ?? 0];
+  }
+
+  if (frequency === "monthly") {
+    const values = normalizeMonthDays(rawValues);
+    if (values.length) return values;
+    return [getLegacyPreferredDay(schedule, startDate)];
+  }
+
+  if (frequency === "yearly") {
+    const values = normalizeYearDates(rawValues);
+    if (values.length) return values;
+    const month = String((startDate?.getUTCMonth() ?? 0) + 1).padStart(2, "0");
+    const day = String(getLegacyPreferredDay(schedule, startDate)).padStart(2, "0");
+    return [`${month}-${day}`];
+  }
+
+  return [];
+}
+
+function matchesLegacyOccurrence(date, schedule, frequency, startDate) {
+  const preferredDay = getLegacyPreferredDay(schedule, startDate);
+
+  if (frequency === "biweekly") {
+    const diffDays = Math.floor((date.getTime() - startDate.getTime()) / 86400000);
+    return diffDays >= 0 && diffDays % 14 === 0;
+  }
+
+  if (frequency === "quarterly") {
+    const monthDiff =
+      (date.getUTCFullYear() - startDate.getUTCFullYear()) * 12 +
+      (date.getUTCMonth() - startDate.getUTCMonth());
+    if (monthDiff < 0 || monthDiff % 3 !== 0) return false;
+    return date.getUTCDate() === Math.min(preferredDay, daysInMonth(date.getUTCFullYear(), date.getUTCMonth()));
+  }
+
+  return false;
+}
+
+function matchesOccurrence(date, schedule) {
   const frequency = String(schedule?.frequency || "").toLowerCase();
   const startDate = parseDateOnly(schedule?.startDate ?? schedule?.start_date);
-  const preferredDay =
-    Number(schedule?.dayOfMonth ?? schedule?.day_of_month) ||
-    startDate?.getUTCDate() ||
-    date.getUTCDate();
+  const endDate = parseDateOnly(schedule?.endDate ?? schedule?.end_date);
 
-  if (frequency === "weekly") return addDays(date, 7);
+  if (!startDate) return false;
+  if (date < startDate) return false;
+  if (endDate && date > endDate) return false;
+
+  if (VALID_FREQUENCIES.has(frequency)) {
+    const values = getNormalizedValues(schedule, frequency, startDate);
+
+    if (frequency === "weekly") {
+      return values.includes(date.getUTCDay());
+    }
+
+    if (frequency === "monthly") {
+      return values.some((value) => date.getUTCDate() === Math.min(value, daysInMonth(date.getUTCFullYear(), date.getUTCMonth())));
+    }
+
+    if (frequency === "yearly") {
+      return values.some((value) => {
+        const [month, day] = value.split("-").map(Number);
+        const actualDay = Math.min(day, daysInMonth(date.getUTCFullYear(), month - 1));
+        return date.getUTCMonth() + 1 === month && date.getUTCDate() === actualDay;
+      });
+    }
+  }
+
+  if (LEGACY_FREQUENCIES.has(frequency)) {
+    return matchesLegacyOccurrence(date, schedule, frequency, startDate);
+  }
+
+  return false;
+}
+
+export function advanceOccurrence(date, schedule) {
+  const frequency = String(schedule?.frequency || "").toLowerCase();
   if (frequency === "biweekly") return addDays(date, 14);
-  if (frequency === "monthly") return addMonths(date, 1, preferredDay);
-  if (frequency === "quarterly") return addMonths(date, 3, preferredDay);
-  if (frequency === "yearly") return addMonths(date, 12, preferredDay);
-  throw new Error(`Unsupported recurring frequency: ${frequency}`);
+  if (frequency === "quarterly") {
+    return addMonths(date, 3, getLegacyPreferredDay(schedule, date));
+  }
+
+  let cursor = addDays(date, 1);
+  let guard = 0;
+  while (guard < 5000) {
+    if (matchesOccurrence(cursor, schedule)) return cursor;
+    cursor = addDays(cursor, 1);
+    guard += 1;
+  }
+  return null;
 }
 
 export function getOccurrenceDatesInRange(schedule, { from, to, limit = 100 } = {}) {
   const frequency = String(schedule?.frequency || "").toLowerCase();
-  if (!VALID_FREQUENCIES.has(frequency)) return [];
+  if (!VALID_FREQUENCIES.has(frequency) && !LEGACY_FREQUENCIES.has(frequency)) return [];
 
   const startDate = parseDateOnly(schedule?.startDate ?? schedule?.start_date);
   const endDate = parseDateOnly(schedule?.endDate ?? schedule?.end_date);
@@ -72,16 +201,13 @@ export function getOccurrenceDatesInRange(schedule, { from, to, limit = 100 } = 
   if (!startDate || !fromDate || !toDate || startDate > toDate || limit <= 0) return [];
 
   const dates = [];
-  let cursor = startDate;
-  let guard = 0;
+  let cursor = fromDate > startDate ? fromDate : startDate;
 
-  while (cursor && cursor <= toDate && guard < 1000 && dates.length < limit) {
-    if (cursor >= fromDate && (!endDate || cursor <= endDate)) {
+  while (cursor && cursor <= toDate && dates.length < limit) {
+    if ((!endDate || cursor <= endDate) && matchesOccurrence(cursor, schedule)) {
       dates.push(formatDateOnly(cursor));
     }
-    if (endDate && cursor >= endDate) break;
-    cursor = advanceOccurrence(cursor, schedule);
-    guard += 1;
+    cursor = addDays(cursor, 1);
   }
 
   return dates;
@@ -89,7 +215,7 @@ export function getOccurrenceDatesInRange(schedule, { from, to, limit = 100 } = 
 
 export function getNextOccurrenceDate(schedule, { from = formatDateOnly(new Date()) } = {}) {
   const frequency = String(schedule?.frequency || "").toLowerCase();
-  if (!VALID_FREQUENCIES.has(frequency)) return null;
+  if (!VALID_FREQUENCIES.has(frequency) && !LEGACY_FREQUENCIES.has(frequency)) return null;
 
   const startDate = parseDateOnly(schedule?.startDate ?? schedule?.start_date);
   const endDate = parseDateOnly(schedule?.endDate ?? schedule?.end_date);
@@ -97,19 +223,26 @@ export function getNextOccurrenceDate(schedule, { from = formatDateOnly(new Date
   if (!startDate || !fromDate) return null;
   if (endDate && endDate < fromDate) return null;
 
-  let cursor = startDate;
+  let cursor = fromDate > startDate ? fromDate : startDate;
   let guard = 0;
 
   while (cursor && guard < 5000) {
-    if (cursor >= fromDate && (!endDate || cursor <= endDate)) {
+    if (matchesOccurrence(cursor, schedule)) {
       return formatDateOnly(cursor);
     }
     if (endDate && cursor >= endDate) return null;
-    cursor = advanceOccurrence(cursor, schedule);
+    cursor = addDays(cursor, 1);
     guard += 1;
   }
 
   return null;
+}
+
+function normalizeRecurringValues(inputValues, frequency, startDate) {
+  if (frequency === "weekly") return getNormalizedValues({ recurrenceValues: inputValues }, frequency, startDate);
+  if (frequency === "monthly") return getNormalizedValues({ recurrenceValues: inputValues }, frequency, startDate);
+  if (frequency === "yearly") return getNormalizedValues({ recurrenceValues: inputValues }, frequency, startDate);
+  return [];
 }
 
 export function normalizeRecurringPayload(input = {}, { partial = false } = {}) {
@@ -128,6 +261,10 @@ export function normalizeRecurringPayload(input = {}, { partial = false } = {}) 
     out.dayOfMonth =
       raw === null || raw === "" || raw === undefined ? null : Number.parseInt(String(raw), 10);
   }
+  if (!partial || input.recurrenceValues !== undefined || input.recurrence_values !== undefined) {
+    const rawValues = input.recurrenceValues ?? input.recurrence_values;
+    out.recurrenceValues = Array.isArray(rawValues) ? rawValues : [];
+  }
   if (!partial || input.startDate !== undefined || input.start_date !== undefined) {
     out.startDate = String(input.startDate ?? input.start_date ?? "").trim();
   }
@@ -136,6 +273,11 @@ export function normalizeRecurringPayload(input = {}, { partial = false } = {}) 
     out.endDate = raw === null || raw === "" || raw === undefined ? null : String(raw).trim();
   }
   if (!partial || input.active !== undefined) out.active = Boolean(input.active);
+
+  if (out.frequency && out.startDate && out.recurrenceValues !== undefined) {
+    const startDate = parseDateOnly(out.startDate);
+    out.recurrenceValues = normalizeRecurringValues(out.recurrenceValues, out.frequency, startDate);
+  }
 
   return out;
 }
@@ -159,20 +301,10 @@ export function validateRecurringPayload(payload, { partial = false } = {}) {
     if (!payload.category) return "Category is required";
   }
 
+  const frequency = String(payload.frequency || "").toLowerCase();
   if (!partial || payload.frequency !== undefined) {
-    if (!VALID_FREQUENCIES.has(payload.frequency)) {
-      return "Frequency must be weekly, biweekly, monthly, quarterly, or yearly";
-    }
-  }
-
-  if (!partial || payload.dayOfMonth !== undefined) {
-    if (
-      payload.dayOfMonth !== null &&
-      (!Number.isInteger(payload.dayOfMonth) ||
-        payload.dayOfMonth < 1 ||
-        payload.dayOfMonth > 31)
-    ) {
-      return "Day of month must be between 1 and 31";
+    if (!VALID_FREQUENCIES.has(frequency)) {
+      return "Frequency must be weekly, monthly, or yearly";
     }
   }
 
@@ -194,10 +326,39 @@ export function validateRecurringPayload(payload, { partial = false } = {}) {
     return "End date must be on or after start date";
   }
 
+  if (!partial || payload.recurrenceValues !== undefined || payload.frequency !== undefined) {
+    const values = normalizeRecurringValues(payload.recurrenceValues || [], frequency, startDate);
+    if (!values.length) {
+      if (frequency === "weekly") return "Select at least one weekday";
+      if (frequency === "monthly") return "Enter at least one day of month";
+      if (frequency === "yearly") return "Select at least one yearly date";
+    }
+  }
+
   return null;
 }
 
+function buildRecurrenceLabel(schedule) {
+  const frequency = String(schedule.frequency || "").toLowerCase();
+  const values = Array.isArray(schedule.recurrenceValues) ? schedule.recurrenceValues : [];
+
+  if (frequency === "weekly") {
+    return values.map((value) => WEEKDAY_LABELS[value] || value).join(", ");
+  }
+
+  if (frequency === "monthly") {
+    return values.join(", ");
+  }
+
+  if (frequency === "yearly") {
+    return values.join(", ");
+  }
+
+  return "";
+}
+
 export function serializeRecurringSchedule(row) {
+  const startDate = formatDateOnly(row.start_date);
   const schedule = {
     id: row.id,
     name: row.name,
@@ -207,15 +368,23 @@ export function serializeRecurringSchedule(row) {
     note: row.note || "",
     frequency: row.frequency,
     dayOfMonth: row.day_of_month,
-    startDate: formatDateOnly(row.start_date),
+    recurrenceValues: getNormalizedValues(
+      {
+        recurrenceValues: row.recurrence_values,
+        day_of_month: row.day_of_month,
+      },
+      row.frequency,
+      parseDateOnly(startDate)
+    ),
+    startDate,
     endDate: formatDateOnly(row.end_date),
     active: row.active !== false,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
 
-  schedule.nextRun =
-    schedule.active === false ? null : getNextOccurrenceDate(schedule);
+  schedule.recurrenceLabel = buildRecurrenceLabel(schedule);
+  schedule.nextRun = schedule.active === false ? null : getNextOccurrenceDate(schedule);
 
   return schedule;
 }
@@ -238,6 +407,8 @@ export function buildUpcomingOccurrences(rows, { from, to, limit = 100 } = {}) {
         category: schedule.category,
         note: schedule.note,
         frequency: schedule.frequency,
+        recurrenceValues: schedule.recurrenceValues,
+        recurrenceLabel: schedule.recurrenceLabel,
         date,
         nextRun: date,
       });
