@@ -283,6 +283,29 @@ const formatDateOnly = (d) => {
   return `${y}-${m}-${day}`;
 };
 
+const formatDateLabel = (value) => {
+  const d = parseISODate(value);
+  if (!d || Number.isNaN(d.getTime())) return "";
+  return new Date(`${formatDateOnly(d)}T00:00:00Z`).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    timeZone: "UTC",
+  });
+};
+
+const formatMonthDayLabel = (value) => {
+  const raw = String(value || "").trim();
+  const match = raw.match(/^(\d{2})-(\d{2})$/);
+  if (!match) return raw;
+  const [, month, day] = match;
+  return new Date(`2026-${month}-${day}T00:00:00Z`).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+};
+
 const relativeDateToISO = (value) => {
   const key = normalizeKey(value);
   const now = new Date();
@@ -1313,6 +1336,8 @@ const parseRecurringSeed = (text) => {
   const category = categoryMatch ? categoryMatch[1].trim() : "";
   const nameMatch = text.match(/\brecurring\s+(.+?)(?:\s+(?:for|amount|category|start|frequency|on)\b|$)/i);
   const name = nameMatch ? nameMatch[1].trim() : "";
+  const noteMatch = text.match(/\bnote\s+(.+?)(?:\s+(?:start|starting|from|frequency|on)\b|$)/i);
+  const note = noteMatch ? noteMatch[1].trim() : "";
   const frequencyMatch = key.match(/\b(weekly|monthly|yearly)\b/);
   const frequency = frequencyMatch ? frequencyMatch[1] : "";
   const startDateMatch = text.match(/\b(start|starting|from)\s+(\d{4}-\d{2}-\d{2}|today|tomorrow)\b/i);
@@ -1332,6 +1357,7 @@ const parseRecurringSeed = (text) => {
     type,
     amount,
     category,
+    note,
     frequency,
     recurrenceValues,
     startDate,
@@ -2805,9 +2831,12 @@ export function initWalterLens() {
   };
 
   const startRuleFlow = (seed = {}) => {
+    const mode = seed.mode || "create";
     pendingRule = {
       step: "name",
-      name: seed.name || "",
+      mode,
+      id: seed.id || "",
+      name: seed.name || (mode === "update" ? "Updated rule" : ""),
       condition: seed.condition || null,
       action: seed.action || null,
     };
@@ -2827,6 +2856,19 @@ export function initWalterLens() {
         "assistant",
         "What should the rule do? (set category to X, append note Y, set type to expense)"
       );
+      return;
+    }
+    if (pendingRule.mode === "update" && pendingRule.id) {
+      confirmAction(`Update rule "${pendingRule.name}".`, {
+        resource: "rules",
+        kind: "update",
+        id: pendingRule.id,
+        updates: {
+          name: pendingRule.name,
+          conditions: [pendingRule.condition],
+          actions: [pendingRule.action],
+        },
+      });
       return;
     }
     confirmAction(`Create rule "${pendingRule.name}".`, {
@@ -3231,14 +3273,19 @@ export function initWalterLens() {
         return labels.length ? `weekly on ${labels.join(", ")}` : "weekly";
       }
       if (frequency === "monthly") {
-        const day =
-          (values.length ? Number(values[0]) : null) ||
-          Number(item?.dayOfMonth ?? item?.day_of_month);
-        return Number.isFinite(day) ? `monthly on ${day}` : "monthly";
+        const days = values
+          .map((value) => Number.parseInt(String(value), 10))
+          .filter((value) => Number.isInteger(value) && value >= 1 && value <= 31)
+          .sort((a, b) => a - b);
+        if (!days.length) {
+          const fallbackDay = Number(item?.dayOfMonth ?? item?.day_of_month);
+          return Number.isFinite(fallbackDay) ? `monthly on ${fallbackDay}` : "monthly";
+        }
+        return `monthly on ${days.join(", ")}`;
       }
       if (frequency === "yearly") {
-        const value = values.length ? String(values[0]) : "";
-        return value ? `yearly on ${value}` : "yearly";
+        const labels = values.map(formatMonthDayLabel).filter(Boolean);
+        return labels.length ? `yearly on ${labels.join(", ")}` : "yearly";
       }
       return frequency || "monthly";
     };
@@ -3268,7 +3315,7 @@ export function initWalterLens() {
     addMessage("assistant", `Upcoming recurring: ${items.length} item(s).`);
     items.slice(0, 5).forEach((item) => {
       const amountLabel = fmtMoney(item?.amount || 0);
-      const date = item?.date || item?.occurrence_date || "";
+      const date = formatDateLabel(item?.date || item?.occurrence_date || "");
       addMessage(
         "assistant",
         `- ${item.name || "Recurring"} · ${amountLabel} · ${date || "date unknown"}`
@@ -3711,7 +3758,22 @@ export function initWalterLens() {
           return;
         }
         if (ruleCmd.intent === "update" && ruleCmd.id) {
-          addMessage("assistant", "Please describe the updates for that rule.");
+          const ruleMatch = raw.match(/\bif\s+(.+?)\s+then\s+(.+)$/i);
+          if (ruleMatch) {
+            const condition = parseRuleCondition(ruleMatch[1]);
+            const action = parseRuleAction(ruleMatch[2]);
+            if (condition && action) {
+              startRuleFlow({
+                mode: "update",
+                id: ruleCmd.id,
+                name: "Updated rule",
+                condition,
+                action,
+              });
+              return;
+            }
+          }
+          startRuleFlow({ mode: "update", id: ruleCmd.id });
           return;
         }
         if (ruleCmd.intent === "create") {
